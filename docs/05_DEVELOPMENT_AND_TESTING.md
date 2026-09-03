@@ -96,3 +96,109 @@ flutter build apk --release
   - الإصدار المستهدف: **Android 14 (API 34)**.
   - المعماريات المدعومة: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 
+---
+
+# 💻 الجزء الثاني: التفاصيل التقنية والتنفيذية البرمجية (Technical & Implementation Details)
+
+## 🛠️ 1. بيئة ونماذج الاختبارات الآلية المعتمدة (Test Harness & Mocks)
+
+```dart
+/// Mock لاختبار عمليات التخزين دون الحاجة لـ Platform Channel
+class MockKeyValueStore implements KeyValueStore {
+  final Map<String, dynamic> _data = {};
+
+  @override
+  Future<Result<String?, StorageFailure>> getString(String key) async {
+    return Success(_data[key] as String?);
+  }
+
+  @override
+  Future<Result<void, StorageFailure>> setString(String key, String value) async {
+    _data[key] = value;
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<void, StorageFailure>> clear() async {
+    _data.clear();
+    return const Success(null);
+  }
+}
+```
+
+---
+
+## ⚙️ 2. إعدادات Gradle وحماية الكود وتوقيع حزمة الإنتاج (`android/app/build.gradle`)
+
+```groovy
+android {
+    namespace "com.siraj.app"
+    compileSdkVersion 34
+    ndkVersion flutter.ndkVersion
+
+    defaultConfig {
+        applicationId "com.siraj.app"
+        minSdkVersion 23
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0.0"
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+```
+
+---
+
+## 📜 3. سكريبت الفحص الآلي المستمر (CI/CD Pipeline Quality Gate)
+
+```bash
+#!/bin/bash
+set -e
+
+echo "=== 1. التحقق من تنسيق الكود والتحليل الساكن ==="
+flutter analyze
+
+echo "=== 2. تشغيل مصفوفة الاختبارات الكاملة ==="
+flutter test --coverage
+
+echo "=== 3. فحص سلامة وتكامل الأصول المدمجة ==="
+dart run tool/quran_pipeline/verify_asset.dart
+
+echo "=== 4. بناء حزمة الإنتاج النهائية ==="
+flutter build apk --release
+
+echo "=== تم التحقق وبناء الحزمة بنجاح 100% ==="
+```
+
+---
+
+# ⚖️ الجزء الثالث: الالتزامات والضوابط الإلزامية والمعايير الصارمة (Mandatory Invariants & Compliance Rules)
+
+## 🚨 1. بوابات الجودة الصارمة وغير القابلة للاستثناء (Release Quality Gates)
+
+1. **بوابة التحليل الصفري للتحذيرات (Zero Warning Gate)**:
+   - يُمنع دمج أو بناء أي حزمة تحتوي على أي تحذير (`warning`) أو خطأ (`error`) من `flutter analyze`.
+2. **بوابة الاختبارات الشاملة (100% Green Tests Gate)**:
+   - يجب أن تجتاز جميع اختبارات الـ Unit والـ Widget بنسبة نجاح **100%**. أي فشل في أي اختبار يعطل عملية البناء فوراً.
+3. **بوابة الأداء ومطابقة الذاكرة (Memory Leak Gate)**:
+   - يجب إجراء فحص تسريب الذاكرة أثناء فك حزم الـ ZIP والتحقق من عدم تجاوز استهلاك الذاكرة حاجز الـ 10 ميجابايت للعملية.
+
+---
+
+## 🛑 2. معايير النشر وتوقيع حزم الإنتاج
+
+1. **توقيع الحزم الرسمي (V2/V3 Signature Scheme)**:
+   - يجب توقيع حزم الأندرويد الرسمية بمفاتيح RSA 4096-bit المشفرة والمحمية.
+2. **حماية المخطوطات والبيانات في الـ ProGuard**:
+   - يجب استثناء نماذج البيانات القرآنية `ContentRecord` و `Ayah` و `Surah` من الـ Obfuscation لمنع تلف بنية الـ JSON أثناء فك التشفير.
+
+

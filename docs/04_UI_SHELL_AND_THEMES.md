@@ -81,7 +81,100 @@ sequenceDiagram
 
 ### الخيارات القابلة للتخصيص الكامل:
 - **حجم الخط القرآني**: شريط تمرير سلس من **18px** إلى **38px** مع شاشة معاينة حية وفورية لآية البسملة الشريفة.
-- **تباعد الأسطر (Line Height)**: تعديل انسيابي من **1.8x** إلى **2.8x** لتوفير راحة بصرية فائقة أثناء القراءة المتصلة.
-- **لغات الترجمة**: اختيار مباشر وفوري بين اللغات الـ 11 المعتمدة محلياً.
 - **الفواصل المرجعية المدمجة**: استعراض كافة الآيات والسور المحفوظة بفواصل مرجعية مع إمكانية حذفها أو القفز المباشر إليها.
+
+---
+
+# 💻 الجزء الثاني: التفاصيل التقنية والتنفيذية البرمجية (Technical & Implementation Details)
+
+## 🛠️ 1. نموذج إعدادات الطباعة والسمات (`QuranTypographyConfig`)
+
+```dart
+class QuranTypographyConfig {
+  final QuranFontFamily fontFamily;
+  final double fontSize;
+  final double lineHeight;
+  final QuranReaderMode readerMode;
+  final QuranReaderThemeMode themeMode;
+  final bool showTajweed;
+  final bool showTranslation;
+  final String translationLanguage;
+  final String reciter;
+  final double playbackSpeed;
+  final bool autoScroll;
+
+  const QuranTypographyConfig({
+    this.fontFamily = QuranFontFamily.amiri,
+    this.fontSize = 24.0,
+    this.lineHeight = 2.2,
+    this.readerMode = QuranReaderMode.mushaf,
+    this.themeMode = QuranReaderThemeMode.light,
+    this.showTajweed = false, // معطل افتراضياً للنقاء العثماني
+    this.showTranslation = false,
+    this.translationLanguage = 'en',
+    this.reciter = 'الشيخ عبد الباسط عبد الصمد',
+    this.playbackSpeed = 1.0,
+    this.autoScroll = true,
+  });
+
+  /// استنتاج ألوان الخلفية ديناميكياً بحسب السمة المعتمدة
+  Color resolveBackgroundColor(BuildContext context) {
+    switch (themeMode) {
+      case QuranReaderThemeMode.light:
+        return const Color(0xFFFDFBF7); // عاجي ناعم
+      case QuranReaderThemeMode.sepia:
+        return const Color(0xFFF4ECD8); // ورق مصحفي دافئ
+      case QuranReaderThemeMode.dark:
+        return const Color(0xFF121418); // كربوني ليلي
+    }
+  }
+}
+```
+
+---
+
+## 📱 2. نمط التصميم المتجاوب وخوارزمية احتواء العناصر (`Responsive Layout`)
+
+```dart
+Widget buildResponsiveSpeedSelector(QuranTypographyConfig config, Function(double) onSpeedChanged) {
+  const speeds = [0.75, 1.0, 1.25, 1.5, 2.0];
+  
+  // استخدام Wrap بدلاً من Row لمنع حدوث RenderFlex Overflow على الشاشات الصغيرة
+  return Wrap(
+    spacing: 6.0,
+    runSpacing: 6.0,
+    alignment: WrapAlignment.start,
+    children: speeds.map((speed) {
+      final isSelected = (config.playbackSpeed - speed).abs() < 0.01;
+      return ChoiceChip(
+        label: Text('${speed}x', style: const TextStyle(fontSize: 12)),
+        selected: isSelected,
+        onSelected: (_) => onSpeedChanged(speed),
+      );
+    }).toList(),
+  );
+}
+```
+
+---
+
+# ⚖️ الجزء الثالث: الالتزامات والضوابط الإلزامية والمعايير الصارمة (Mandatory Invariants & Compliance Rules)
+
+## 🚨 1. معايير التصميم والوصول والتباين البصري (Accessibility & Contrast Rules)
+
+1. **حظر أخطاء تجاوز الشاشة تماماً (Zero RenderFlex Overflow Invariant)**:
+   - يُلزم بفحص كافة الواجهات على شاشات بعرض **320px** و **360px** و **414px** والتأكد من خلوها تماماً من أي خطأ في تجاوز الشاشة أفقياً.
+2. **حد أدنى لمساحة اللمس التفاعلية (Touch Target Size $\ge 44 \times 44\text{ dp}$)**:
+   - كافة الأزرار والأيقونات وعناصر التنقل وقوائم الآيات يجب ألا يقل حجمها التفاعلي عن 44 بكسل لسهولة الاستخدام لكبار السن.
+3. **معايير التباين للنص القرآني (WCAG AAA Compliance)**:
+   - يجب ألا تقل نسبة التباين اللوني بين النص القرآني ولون الخلفية عن `7.0:1` في كافة السمات الثلاث لمنع أي إجهاد للعين.
+
+---
+
+## 🛑 2. ضوابط الاتجاه النصي وتكامل الترجمات
+
+1. **العزل التام لاتجاهات النصوص (Directionality Isolation)**:
+   - يُلزم بوضع النص القرآني داخل `Directionality(textDirection: TextDirection.rtl)`.
+   - يُلزم بوضع الترجمات الإنجليزية والفرنسية والإسبانية والروسية وغيرها داخل `Directionality(textDirection: TextDirection.ltr)` لمنع اختلاط علامات الترقيم أو انقلاب اتجاه الفقرات.
+
 

@@ -99,3 +99,117 @@ $$\theta = \text{atan2}\left(\sin(\lambda_k - \lambda), \cos\phi \tan\phi_k - \s
   - تنبيه مسبق قبل دخول وقت الصلاة بـ 15 دقيقة للاستعداد للوضوء والذهاب للمسجد.
   - تنبيه خاص لشروق الشمس وقيام الليل والثلث الأخير.
 
+---
+
+# 💻 الجزء الثاني: التفاصيل التقنية والتنفيذية البرمجية (Technical & Implementation Details)
+
+## 🛠️ 1. خوارزمية الحساب الفلكي البرمجية (`PrayerCalculationEngine`)
+
+```dart
+class PrayerCalculationEngine {
+  /// تحويل التاريخ والوقت إلى اليوم الجولياني (Julian Day)
+  static double getJulianDay(DateTime date) {
+    int year = date.year;
+    int month = date.month;
+    final day = date.day + (date.hour + date.minute / 60.0) / 24.0;
+
+    if (month <= 2) {
+      year -= 1;
+      month += 12;
+    }
+    final a = (year / 100).floor();
+    final b = 2 - a + (a / 4).floor();
+    return (365.25 * (year + 4716)).floor() + (30.6001 * (month + 1)).floor() + day + b - 1524.5;
+  }
+
+  /// حساب زاوية القبلة العظمى بدقة الراديان
+  static double calculateQiblaAzimuth({required double latitude, required double longitude}) {
+    const kaabaLat = 21.422487 * (pi / 180.0);
+    const kaabaLng = 39.826206 * (pi / 180.0);
+    final userLat = latitude * (pi / 180.0);
+    final userLng = longitude * (pi / 180.0);
+
+    final dLng = kaabaLng - userLng;
+    final y = sin(dLng);
+    final x = cos(userLat) * tan(kaabaLat) - sin(userLat) * cos(dLng);
+    final qiblaRad = atan2(y, x);
+    return (qiblaRad * (180.0 / pi) + 360.0) % 360.0;
+  }
+}
+```
+
+---
+
+## 🧭 2. خوارزمية تنعيم المستشعرات (Low-Pass Heading Filter)
+
+```dart
+class CompassSensorFilter {
+  double _filteredHeading = 0.0;
+  static const double _alpha = 0.15; // معامل التنعيم اللحظي
+
+  double updateHeading(double rawHeading) {
+    // معالجة الانتقال الدائري بين 0 و 360 درجة
+    double diff = rawHeading - _filteredHeading;
+    while (diff < -180.0) diff += 360.0;
+    while (diff > 180.0) diff -= 360.0;
+
+    _filteredHeading = (_filteredHeading + _alpha * diff + 360.0) % 360.0;
+    return _filteredHeading;
+  }
+}
+```
+
+---
+
+## 🏙️ 3. بنية قاعدة بيانات المدن المحلية المدمجة (`cities_db.json`)
+
+```json
+[
+  {
+    "id": "cairo_eg",
+    "nameArabic": "القاهرة",
+    "nameEnglish": "Cairo",
+    "countryCode": "EG",
+    "latitude": 30.0444,
+    "longitude": 31.2357,
+    "elevation": 23.0,
+    "timezone": "Africa/Cairo",
+    "defaultMethod": "egyptian"
+  },
+  {
+    "id": "makkah_sa",
+    "nameArabic": "مكة المكرمة",
+    "nameEnglish": "Makkah",
+    "countryCode": "SA",
+    "latitude": 21.4225,
+    "longitude": 39.8262,
+    "elevation": 277.0,
+    "timezone": "Asia/Riyadh",
+    "defaultMethod": "ummAlQura"
+  }
+]
+```
+
+---
+
+# ⚖️ الجزء الثالث: الالتزامات والضوابط الإلزامية والمعايير الصارمة (Mandatory Invariants & Compliance Rules)
+
+## 🚨 1. الالتزامات الشرعية والفلكية الصارمة
+
+1. **معيار الدقة الفلكية (Precision Invariant $\le 1 \text{ min}$)**:
+   - يجب أن تطابق نتائج حسابات مواقيت الصلاة التقاويم الرسمية للهيئات المعتمدة بهامش خطأ أقصاه **دقيقة واحدة فقط**.
+2. **التحكيم الفوري بدون انقطاع (Fail-Safe Location Invariant)**:
+   - في حال تعذر الحصول على إحداثيات GPS (بسبب رفض الإذن أو إغلاق الموقع)، يُحظر ترك الشاشة فارغة أو إظهار رسائل خطأ، ويجب التبديل فوراً إلى المدينة الافتراضية المحددة أو آخر موقع معروف.
+3. **التنبيه المبكر لوقت الصلاة (Prayer Horizon Boundary)**:
+   - يُلزم النظام باحتساب وحفظ أوقات الصلاة لـ 30 يوماً قادمة محلياً لضمان استمرار الأذان والتنبيهات حتى لو لم يفتح المستخدم التطبيق لأسابيع.
+
+---
+
+## 🛑 2. الضوابط التشغيلية للمستشعرات والبطارية
+
+1. **إيقاف المستشعرات فور مغادرة الشاشة (Sensor Battery Drain Prevention)**:
+   - يجب إلغاء اشتراك مستشعرات البوصلة والجيروسكوب فور انتقال المستخدم خارج شاشة القبلة لمنع استنزاف بطارية الهاتف.
+2. **تحرير أقفال التنبيه (WakeLock Release)**:
+   - يجب تحرير أي `WakeLock` فور انتهاء تشغيل صوت الأذان في الخلفية، مع عدم تشغيل أصوات الأذان أثناء المكالمات الهاتفية أو وضع الصامت التام للنظام.
+
+

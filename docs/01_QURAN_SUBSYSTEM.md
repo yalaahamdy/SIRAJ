@@ -129,3 +129,164 @@ sequenceDiagram
   - قائمة سريعة للانتقال المباشر لأي سورة أو آية أو جزء.
   - شريط الاستماع السفلي مع مزامنة التمرير التلقائي أثناء التلاوة.
 
+---
+
+# 💻 الجزء الثاني: التفاصيل التقنية والتنفيذية البرمجية (Technical & Implementation Details)
+
+## 🛠️ 1. خوارزمية استيراد وفك ضغط الـ ZIP بالتدفق من القرص للقرص
+
+### كود تنفيذ خدمة التلاوة بدون إنترنت (`QuranOfflineAudioService`):
+```dart
+Future<QuranZipImportResult> importZipFile({
+  required String reciterId,
+  required String zipFilePath,
+  void Function(int extractedCount)? onProgress,
+}) async {
+  await init();
+  final targetDir = await getReciterDirectory(reciterId);
+
+  try {
+    final zipFile = File(zipFilePath);
+    if (!zipFile.existsSync()) {
+      return const QuranZipImportResult(
+        isSuccess: false,
+        errorMessage: 'ملف ZIP المحدد غير موجود على الجهاز.',
+      );
+    }
+
+    // فتح ملف الـ ZIP بتدفق مباشر من القرص دون تحميله في RAM
+    final input = InputFileStream(zipFilePath);
+    final archive = ZipDecoder().decodeStream(input);
+
+    int importedCount = 0;
+    int totalBytes = 0;
+
+    for (final file in archive) {
+      if (file.isFile) {
+        final name = file.name;
+        final baseName = name.split(RegExp(r'[/\\]')).last.trim();
+
+        if (baseName.toLowerCase().endsWith('.mp3')) {
+          final destPath = '${targetDir.path}${Platform.pathSeparator}$baseName';
+          final output = OutputFileStream(destPath);
+          try {
+            file.writeContent(output);
+            importedCount++;
+            totalBytes += file.size;
+            onProgress?.call(importedCount);
+          } finally {
+            await output.close();
+          }
+          // تحرير الذاكرة العشوائية فوراً بعد كل ملف لمنع حدوث OutOfMemoryError
+          file.clear();
+        }
+      }
+    }
+
+    await input.close();
+
+    return QuranZipImportResult(
+      isSuccess: importedCount > 0,
+      importedVersesCount: importedCount,
+      totalBytes: totalBytes,
+      targetDirectory: targetDir.path,
+    );
+  } catch (e) {
+    return QuranZipImportResult(
+      isSuccess: false,
+      errorMessage: 'حدث خطأ أثناء فك ضغط ملف ZIP: $e',
+    );
+  }
+}
+```
+
+---
+
+## 🔍 2. هرمية حل مصادر الصوت والتشغيل المحلي (`resolveCandidateUris`)
+
+```mermaid
+graph TD
+    Request["طلب تشغيل آية (سورة s، آية a للقارئ r)"] --> CheckLocal{"هل الملف المحلي موجود في siraj_quran_audio/r/sssaaa.mp3؟"}
+    CheckLocal -->|نعم: الأولوية الأولى| PlayLocal["تشغيل محلي فوري عبر DeviceFileSource (بدون إنترنت)"]
+    CheckLocal -->|لا: الأولوية الثانية| CheckBundled{"هل الملف مدمج في أصول التطبيق assets/؟"}
+    CheckBundled -->|نعم| PlayAsset["تشغيل من حزمة الأصول المدمجة AssetSource"]
+    CheckBundled -->|لا: الخيار الأخير| PlayCDN["بث صوتي شبكي عبر CDN مع حفظ مؤقت"]
+```
+
+---
+
+## 🎨 3. خوارزمية بناء نصوص التجويد دون كسر اتصال الحروف (`TajweedRenderer`)
+
+```dart
+static List<TextSpan> buildSpans({
+  required String textUthmani,
+  required List<dynamic>? rawRules,
+  required TextStyle baseStyle,
+  bool isDark = false,
+}) {
+  if (rawRules == null || rawRules.isEmpty) {
+    return [TextSpan(text: textUthmani, style: baseStyle)];
+  }
+
+  final spans = rawRules.whereType<Map<String, dynamic>>().map(TajweedSpan.fromMap).toList()
+    ..sort((a, b) => a.start.compareTo(b.start));
+
+  final result = <TextSpan>[];
+  int cursor = 0;
+
+  for (final span in spans) {
+    if (span.start < 0 || span.start > textUthmani.length || span.end > textUthmani.length || span.start >= span.end) {
+      continue;
+    }
+
+    // إضافة النص غير الملون قبل الحكم
+    if (span.start > cursor) {
+      result.add(TextSpan(
+        text: textUthmani.substring(cursor, span.start),
+        style: baseStyle,
+      ));
+    }
+
+    // إضافة حكم التجويد الملون مع الحفاظ على نفس وزن الخط ونوعه
+    result.add(TextSpan(
+      text: textUthmani.substring(span.start, span.end),
+      style: baseStyle.copyWith(color: span.rule.color),
+    ));
+
+    cursor = span.end;
+  }
+
+  if (cursor < textUthmani.length) {
+    result.add(TextSpan(text: textUthmani.substring(cursor), style: baseStyle));
+  }
+
+  return result;
+}
+```
+
+---
+
+# ⚖️ الجزء الثالث: الالتزامات والضوابط الإلزامية والمعايير الصارمة (Mandatory Invariants & Compliance Rules)
+
+## 🚨 1. الالتزامات الشرعية والتقنية الصارمة للنص القرآني
+
+1. **الامتناع المطلق عن تطبيع أو تنظيف التشكيل القرآني**:
+   - يُمنع استخدام دوال حذف التشكيل (مثل إزالة التنوين أو الشدات أو علامات الوقف) على النصوص المعروضة في شاشات القراءة.
+   - النص القرآني يجب أن يُقرأ ويُعرض ببايتاته الأصلية كما وردت في مصحف المدينة النبوية.
+2. **عزل نصوص الترجمة والتفسير عن الرسم العثماني**:
+   - يجب أن يُعرض النص العثماني داخل كتلة نصية مستقلة باتجاه `RTL`، بينما تُعرض الترجمات اللاتينية باتجاه `LTR` والترجمات اليمينية (كالأردية) باتجاه `RTL` في حاويات منفصلة تماماً.
+3. **أولوية التشغيل المحلي الإلزامية**:
+   - لا يجوز استهلاك أي باقة إنترنت لتشغيل آية محملة محلياً أو مستوردة من ملف ZIP.
+
+---
+
+## 🛑 2. موازنة الذاكرة والضوابط التشغيلية للصوتيات
+
+1. **سقف الذاكرة الصارم (Heap Budget < 5MB for Audio Extraction)**:
+   - يجب أن تستخدم كافة أدوات فك الضغط دفقاً مستمراً من القرص للقرص. أي كود يقوم باستدعاء `readAsBytes()` على ملفات الـ ZIP يُعد مخالفة جسيمة تتسبب في انهيار التطبيق على أجهزة المستخدمين.
+2. **إلغاء التجويد الافتراضي (Default Tajweed Invariant)**:
+   - يجب أن يبدأ إعداد `showTajweed` بالقيمة `false` افتراضياً لضمان عرض النص القرآني النقي الأصيل بأعلى درجات الراحة والانسيابية.
+3. **التحقق من صحة أسماء ملفات الآيات المستوردة**:
+   - يجب أن يطابق اسم الملف التنسيق القياسي `SSSAAA.mp3` (حيث SSS هو رقم السورة من 001 إلى 114، و AAA هو رقم الآية)، وتجاهل أي ملفات غير مطابقة لحماية النظام من الملفات المشبوهة.
+
+

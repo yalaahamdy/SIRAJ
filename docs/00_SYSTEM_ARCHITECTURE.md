@@ -4,6 +4,8 @@
 
 ---
 
+# 📑 الجزء الأول: الوصف المعماري الشامل (Architectural Overview)
+
 ## 🏛️ 1. النموذج الطبقي المعماري (The 4-Tier Layering Model)
 
 تم تصميم النظام ليعمل باتجاه اعتمادية أحادي صارم (Strict Unidirectional Dependency)؛ حيث لا يُسمح لأي طبقة دنيا بمعرفة أو استدعاء أي طبقة تعلوها، مما يضمن قابلية الاختبار بنسبة 100%، وسهولة التوسع والصيانة.
@@ -99,44 +101,120 @@ graph TD
 
 ---
 
-## 💾 3. معمارية التخزين وإدارة البيانات المحلية (Storage Subsystem)
+# 💻 الجزء الثاني: التفاصيل التقنية والتنفيذية البرمجية (Technical & Implementation Details)
 
-يعتمد التطبيق على معمارية تخزين هجينة محكمة:
+## 🛠️ 1. عقود الواجهات البرمجية الأساسية (Core API Contracts & Interfaces)
 
-```mermaid
-graph LR
-    subgraph StorageEngine["منظومة التخزين المحلي"]
-        Assets["الأصول المدمجة (Read-Only Bundled Assets)"] --> CoreData["نصوص القرآن، التفاسير، الترجمات الـ 11، والأذكار"]
-        KVStore["مخزن المفاتيح (KeyValueStore)"] --> UserPrefs["الإعدادات، الفواصل، موقع القراءة، وتقدم الأذكار"]
-        DiskAudio["التخزين الصوتي المحلي (App Audio Storage)"] --> AudioFiles["تلاوات الشيوخ (ملفات MP3 مستوردة من ZIP أو محملة)"]
-    end
+### عقد التخزين المحلي (`KeyValueStore` Interface):
+```dart
+abstract class KeyValueStore {
+  Future<Result<String?, StorageFailure>> getString(String key);
+  Future<Result<void, StorageFailure>> setString(String key, String value);
+  Future<Result<int?, StorageFailure>> getInt(String key);
+  Future<Result<void, StorageFailure>> setInt(String key, int value);
+  Future<Result<bool?, StorageFailure>> getBool(String key);
+  Future<Result<void, StorageFailure>> setBool(String key, bool value);
+  Future<Result<void, StorageFailure>> remove(String key);
+  Future<Result<void, StorageFailure>> clear();
+}
 ```
 
-### استراتيجيات إدارة التخزين:
-1. **البيانات المرجعية الثابتة (Canonical Read-Only Assets)**:
-   - مدمجة في مسار `assets/` داخل حزمة التطبيق لضمان توفرها فور التثبيت وبدون استهلاك أي شبكة.
-2. **بيانات حالة المستخدم (User Mutable State)**:
-   - تحفظ بصيغة JSON خفيفة وذرية عبر `KeyValueStore` لضمان سرعة الاسترجاع والحفظ عند كل تنقل أو تفاعل.
-3. **الملفات الصوتية الضخمة (Large Audio Assets)**:
-   - تخزن في مسار التطبيق المحلي `siraj_quran_audio/<reciter_id>/001001.mp3`.
-   - يتم التحقق من وجود الملفات محلياً قبل أي محاولة للبث الشبكي لتوفير استهلاك البيانات.
+### نمط النتائج الوظيفية الصارمة (`Result<T, Failure>` Pattern):
+```dart
+sealed class Result<T, E> {
+  const Result();
+  bool get isSuccess => this is Success<T, E>;
+  bool get isFailure => this is FailureResult<T, E>;
+  T? get valueOrNull => isSuccess ? (this as Success<T, E>).value : null;
+  E? get failureOrNull => isFailure ? (this as FailureResult<T, E>).error : null;
+}
+
+final class Success<T, E> extends Result<T, E> {
+  final T value;
+  const Success(this.value);
+}
+
+final class FailureResult<T, E> extends Result<T, E> {
+  final E error;
+  const FailureResult(this.error);
+}
+```
 
 ---
 
-## ⚡ 4. الأداء وإدارة الذاكرة الصارمة (Memory & Performance Model)
+## 🔄 2. مخطط دورة حياة إقلاع وتهيئة النظام (Bootstrap & Lifecycle State Machine)
 
-| المجال | المعيار والتنفيذ في سِراج |
-| :--- | :--- |
-| **استهلاك الذاكرة العشوائية (RAM)** | لا يتجاوز **60 - 90 ميجابايت** في أقصى حالات القراءة وعرض المصحف والتفسير. |
-| **فك ضغط حزم ZIP الضخمة** | استخدام `InputFileStream` و `OutputFileStream` مع `file.clear()` المباشر، مما يخفض استهلاك الذاكرة من 1.5 جيجابايت إلى **أقل من 5 ميجابايت**. |
-| **معدل الإطارات (Frame Rate)** | استقرار كامل عند **60 - 120 إطار في الثانية (FPS)** على كافة الشاشات وأثناء التمرير السريع. |
-| **زمن الإقلاع والجاهزية** | زمن إقلاع بارد (Cold Start) أقل من **0.8 ثانية** مع تهيئة مسبقة وغير متزامنة للخدمات. |
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Main as main.dart
+    participant Binding as WidgetsFlutterBinding
+    participant Registry as StorageRegistry
+    participant Modules as Module Bootstrap (Quran, Prayer, Adhkar)
+    participant Shell as App Shell & Theme Engine
+
+    Main->>Binding: ensureInitialized()
+    Main->>Registry: initialize(StorageBackend.inMemory / persistent)
+    Main->>Modules: QuranModule.init(), PrayerModule.init(), AdhkarModule.init()
+    Note over Modules: تحميل الكتالوجات المرجعية والتحقق من سلامة البصمة المشفرة
+    Main->>Shell: runApp(SirajApp(themeController, quranModule))
+    Shell-->>Main: الشاشة الرئيسية جاهزة خلال < 0.8 ثانية
+```
 
 ---
 
-## 🛡️ 5. بروتوكولات الأمان والخصوصية (Privacy & Security Baseline)
-- **الخصوصية التامة 100% (Zero Telemetry & Zero External Tracking)**:
-  - لا يحتوي التطبيق على أي أدوات تتبع (Trackers)، أو إعلانات، أو تحليلات خارجية، أو جمع لبيانات المستخدم.
-- **المعالجة الصوتية والموقع محلياً**:
-  - إحداثيات GPS والتسجيلات الصوتية للتسميع تتم معالجتها وحفظها داخل الذاكرة المحلية للجهاز فقط ولا تغادره أبداً.
+## 🗄️ 3. هيكل ومخطط مسارات التخزين والبيانات المحلية (Local File System Layout)
+
+```
+<ApplicationDocumentsDirectory>/
+├── siraj_settings/
+│   └── quran_reader_settings_v1.json   # تفضيلات الخط، السمة، القارئ، والترجمة
+├── siraj_quran_audio/
+│   ├── abdul_basit/
+│   │   ├── 001001.mp3                  # آيات سورة الفاتحة
+│   │   └── ...                         # ملفات التلاوة المحلية
+│   ├── husary/
+│   └── minshawi/
+├── siraj_recitations/
+│   ├── sess_rec_1725350400.m4a         # تسجيلات التسميع الصوتي للحافظ
+│   └── sessions_metadata.json          # سجل جلسات التسميع ونسب الدقة
+└── siraj_bookmarks/
+    └── user_bookmarks_v1.json          # الفواصل المرجعية المحفوظة
+```
+
+---
+
+# ⚖️ الجزء الثالث: الالتزامات والضوابط الإلزامية والمعايير الصارمة (Mandatory Invariants & Compliance Rules)
+
+## 🚨 1. الالتزامات المعمارية غير القابلة للتفاوض (Non-Negotiable Architectural Invariants)
+
+1. **حظر الاعتماد على الشبكة في المهام الشرعية (Zero Network for Canonical Operations)**:
+   - يُحظر حظراً باتاً ربط فتح المصحف، قراءة الآيات، الاستماع للتلاوات المحملة محلياً، حساب مواقيت الصلاة، تحديد القبلة، أو عد الأذكار بأي اتصال شبكي.
+2. **الاتجاه الأحادي الإلزامي للتبعيات (Strict Layer Isolation)**:
+   - يُمنع استيراد أي ملف من الطبقة `L4` داخل `L2` أو `L1` أو `L3`.
+   - يُمنع استيراد أي عنصر من `L2` داخل `L1`. أي خرق لهذه القاعدة يُعد انتهاكاً معمارياً مرفوضاً في الفحص التلقائي.
+3. **حظر الاستثناءات غير المعالجة (Zero Unhandled Exceptions Policy)**:
+   - كافة العمليات التي تحتمل الفشل (قراءة ملف، تحويل JSON، فك ضغط ZIP، وصول لمستشعر) يجب أن تُغلّف داخل كائن `Result<T, Failure>` ولا يُسمح برمي `throw Exception` غير مراقب.
+
+---
+
+## 🛑 2. معايير النزاهة الشرعية والإغلاق عند الفشل (Sacred Integrity Compliance)
+
+1. **الرسم العثماني خط أحمر**:
+   - لا يجوز تحت أي ظرف تعديل أو استبدال أو تطبيع أي حرف من النص القرآني العثماني المعتمد.
+   - علامات الترقيم وأرقام الآيات تُعرض كعناصر نصية غنية ملحقة بالآية ولا تُدمج داخل النص الأصلي للآية.
+2. **الإغلاق عند الفشل (Fail-Closed Enforcement)**:
+   - إذا تم اكتشاف أي خطأ في فك تشفير أو مطابقة بصمة أي سورة أو آية أو حديث، يمتنع التطبيق فوراً عن عرض المحتوى ويظهر شاشة خطأ موثقة بدلاً من عرض نص غير محقق.
+
+---
+
+## 📊 3. موازنة الذاكرة والأنماط البرمجية الممنوعة (Forbidden Anti-Patterns)
+
+| النمط الممنوع (Forbidden Anti-Pattern) | السبب والمخاطر | البديل الإلزامي المعتمد |
+| :--- | :--- | :--- |
+| **تحميل ملفات ZIP في الذاكرة `readAsBytes()`** | استهلاك فوري لأكثر من 1.5GB من RAM وحدوث `OutOfMemoryError`. | استخدام `InputFileStream` و `OutputFileStream` مع `file.clear()`. |
+| **تغيير `FontWeight.bold` داخل الكلمة الواحدة** | يكسر الـ Cursive Ligature في HarfBuzz وتظهر الحروف العربية مقطعة. | توحيد سماكة الخط وتطبيق الألوان فقط عبر `baseStyle.copyWith(color: ...)`. |
+| **تخزين نصوص الآيات في المتغيرات العامة `global variables`** | تسريب الذاكرة وصعوبة إدارة دورة الحياة. | إدارة النصوص والبيانات عبر المخازن المعتمدة وحقن الاعتماديات المنضبط. |
+| **استخدام `print()` في كود الإنتاج** | تراجع الأداء وتلويث سجلات النظام. | استخدام مسجلات النظام المهيكلة أو نمط `debugPrint` المشروط. |
+
 
