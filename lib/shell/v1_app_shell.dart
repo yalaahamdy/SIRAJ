@@ -27,6 +27,7 @@ import 'routing/app_router.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme_controller.dart';
 import '../core/audio/siraj_feedback_audio_service.dart';
+import '../core/notifications/siraj_notification_manager.dart';
 import 'v1_more_screen.dart';
 import 'widgets/state_views.dart';
 
@@ -71,6 +72,10 @@ class _V1AppShellState extends State<V1AppShell> {
     _storage = widget.storageRegistry ?? MemoryStorageRegistry();
     AppThemeController(storageRegistry: _storage);
     SirajFeedbackAudioService(storageRegistry: _storage);
+
+    // Initialize notification channels & permissions
+    SirajNotificationManager.instance.init();
+    SirajNotificationManager.instance.requestPermissions();
 
     // Initialize location & compass services
     _locationEngine = LocationEngine(storageRegistry: _storage);

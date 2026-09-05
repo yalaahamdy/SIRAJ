@@ -113,6 +113,51 @@ class _QuranAudioRadioTabState extends State<QuranAudioRadioTab> {
     _audioService.playSurah(surahNumber, startAyah: 1);
   }
 
+  Future<void> _handleImportZip() async {
+    final reciter = _audioService.activeReciter;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('جارٍ اختيار وقراءة ملف الـ ZIP لتلاوات الشيخ ${reciter.nameArabic}...'),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    final res = await widget.quranModule.offlineAudioService.pickAndImportZip(reciterId: reciter.id);
+    if (!mounted || res == null) return;
+
+    if (res.isSuccess) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: AppColors.goldAccent),
+              SizedBox(width: 8),
+              Text('تم استيراد التلاوات بنجاح', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+          content: Text(
+            'تم استخراج واستيراد ${res.importedVersesCount} آية بصيغة MP3 للشيخ ${reciter.nameArabic} بنجاح!\n\nيمكنك الآن الاستماع لتلاوات هذه الآيات بالكامل بدون إنترنت.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('تم'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res.errorMessage ?? 'تعذر استيراد ملف الـ ZIP.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -273,6 +318,18 @@ class _QuranAudioRadioTabState extends State<QuranAudioRadioTab> {
                     ),
                   ),
                   const SizedBox(width: 4),
+
+                  // Import ZIP Recitations Icon Button
+                  IconButton(
+                    icon: const Icon(Icons.folder_zip_rounded, size: 19),
+                    tooltip: 'استيراد تلاوات القارئ من ملف ZIP',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    color: AppColors.goldAccent,
+                    onPressed: _handleImportZip,
+                  ),
+                  const SizedBox(width: 2),
 
                   // Open in Mushaf Icon Button
                   IconButton(

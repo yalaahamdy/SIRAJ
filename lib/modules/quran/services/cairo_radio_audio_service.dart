@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import '../domain/cairo_radio_station.dart';
+import '../domain/tawasheeh_item.dart';
+import 'tawasheeh_offline_audio_service.dart';
 
 /// Abstract adapter for radio stream audio player to allow 100% testability.
 abstract class RadioAudioPlayerAdapter {
@@ -8,14 +10,19 @@ abstract class RadioAudioPlayerAdapter {
   Future<void> pause();
   Future<void> stop();
   Future<void> setVolume(double volume);
+  Future<void> seek(Duration position);
+  Future<void> setPlaybackRate(double rate);
   Future<void> dispose();
   Stream<PlayerState> get onPlayerStateChanged;
+  Stream<Duration> get onPositionChanged;
+  Stream<Duration> get onDurationChanged;
 }
 
 /// Safe mock radio player adapter for unit tests and headless environments.
 class MockRadioPlayerAdapter implements RadioAudioPlayerAdapter {
   final List<String> playedUrls = [];
   final List<double> setVolumes = [];
+  double playbackRate = 1.0;
   bool isPaused = false;
   bool isStopped = false;
   bool isDisposed = false;
@@ -23,9 +30,19 @@ class MockRadioPlayerAdapter implements RadioAudioPlayerAdapter {
 
   final StreamController<PlayerState> _playerStateController =
       StreamController<PlayerState>.broadcast();
+  final StreamController<Duration> _positionController =
+      StreamController<Duration>.broadcast();
+  final StreamController<Duration> _durationController =
+      StreamController<Duration>.broadcast();
 
   @override
   Stream<PlayerState> get onPlayerStateChanged => _playerStateController.stream;
+
+  @override
+  Stream<Duration> get onPositionChanged => _positionController.stream;
+
+  @override
+  Stream<Duration> get onDurationChanged => _durationController.stream;
 
   @override
   Future<void> playUrl(String url) async {
@@ -57,9 +74,21 @@ class MockRadioPlayerAdapter implements RadioAudioPlayerAdapter {
   }
 
   @override
+  Future<void> seek(Duration position) async {
+    _positionController.add(position);
+  }
+
+  @override
+  Future<void> setPlaybackRate(double rate) async {
+    playbackRate = rate;
+  }
+
+  @override
   Future<void> dispose() async {
     isDisposed = true;
     await _playerStateController.close();
+    await _positionController.close();
+    await _durationController.close();
   }
 }
 
@@ -106,7 +135,11 @@ class ProductionRadioPlayerAdapter implements RadioAudioPlayerAdapter {
   Future<void> playUrl(String url) async {
     if (_player != null) {
       await _player!.stop();
-      await _player!.play(UrlSource(url));
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        await _player!.play(UrlSource(url));
+      } else {
+        await _player!.play(DeviceFileSource(url));
+      }
     } else {
       _fallbackController.add(PlayerState.playing);
     }
@@ -146,20 +179,57 @@ class ProductionRadioPlayerAdapter implements RadioAudioPlayerAdapter {
   }
 
   @override
+  Future<void> seek(Duration position) async {
+    if (_player != null) {
+      await _player!.seek(position);
+    }
+  }
+
+  @override
+  Future<void> setPlaybackRate(double rate) async {
+    if (_player != null) {
+      await _player!.setPlaybackRate(rate);
+    }
+  }
+
+  @override
   Stream<PlayerState> get onPlayerStateChanged {
     if (_player != null) {
       return _player!.onPlayerStateChanged;
     }
     return _fallbackController.stream;
   }
+
+  @override
+  Stream<Duration> get onPositionChanged =>
+      _player?.onPositionChanged ?? const Stream.empty();
+
+  @override
+  Stream<Duration> get onDurationChanged =>
+      _player?.onDurationChanged ?? const Stream.empty();
 }
 
-/// Dedicated live radio service orchestrating Cairo Quran Radio streaming (§14, §20).
+/// Operating mode of the Cairo Quran Radio audio engine (§14, §20).
+enum CairoRadioMode {
+  liveRadio,
+  tawasheeh,
+}
+
+/// Dedicated live radio service orchestrating Cairo Quran Radio streaming and Tawasheeh playback (§14, §20).
 class CairoRadioAudioService {
   static CairoRadioAudioService? _instance;
 
   final RadioAudioPlayerAdapter _player;
   final CairoRadioStation station;
+
+  CairoRadioMode _mode = CairoRadioMode.liveRadio;
+  TawasheehItem? _currentTawasheeh;
+  List<TawasheehItem> _tawasheehPlaylist = [];
+  int _currentTawasheehIndex = 0;
+  Duration _currentPosition = Duration.zero;
+  Duration _totalDuration = Duration.zero;
+  bool _isShuffle = false;
+  bool _isRepeat = false;
 
   CairoRadioStatus _status = CairoRadioStatus.idle;
   int _activeUrlIndex = 0;
@@ -176,7 +246,14 @@ class CairoRadioAudioService {
   // Broadcasters
   final _statusController = StreamController<CairoRadioStatus>.broadcast();
   final _sleepTimerController = StreamController<Duration?>.broadcast();
+  final _positionController = StreamController<Duration>.broadcast();
+  final _durationController = StreamController<Duration>.broadcast();
+  final _modeController = StreamController<CairoRadioMode>.broadcast();
+  final _tawasheehController = StreamController<TawasheehItem?>.broadcast();
+
   StreamSubscription<PlayerState>? _playerStateSub;
+  StreamSubscription<Duration>? _posSub;
+  StreamSubscription<Duration>? _durSub;
 
   /// External callback triggered when radio starts, used to halt Quran ayah recitation.
   void Function()? onPlaybackStarted;
@@ -208,6 +285,26 @@ class CairoRadioAudioService {
         _setStatus(CairoRadioStatus.paused);
       } else if (state == PlayerState.stopped && _status != CairoRadioStatus.idle) {
         _setStatus(CairoRadioStatus.idle);
+      } else if (state == PlayerState.completed) {
+        if (_mode == CairoRadioMode.tawasheeh) {
+          if (_isRepeat && _currentTawasheeh != null) {
+            playTawasheeh(_currentTawasheeh!);
+          } else {
+            nextTawasheeh();
+          }
+        }
+      }
+    });
+
+    _posSub = _player.onPositionChanged.listen((pos) {
+      _currentPosition = pos;
+      _positionController.add(pos);
+    });
+
+    _durSub = _player.onDurationChanged.listen((dur) {
+      if (dur > Duration.zero) {
+        _totalDuration = dur;
+        _durationController.add(dur);
       }
     });
   }
@@ -224,6 +321,18 @@ class CairoRadioAudioService {
   RadioSleepTimerDuration get activeSleepDuration => _activeSleepDuration;
   Duration? get sleepTimerRemaining => _sleepTimerRemaining;
 
+  CairoRadioMode get mode => _mode;
+  Stream<CairoRadioMode> get modeStream => _modeController.stream;
+  TawasheehItem? get currentTawasheeh => _currentTawasheeh;
+  Stream<TawasheehItem?> get currentTawasheehStream => _tawasheehController.stream;
+  List<TawasheehItem> get tawasheehPlaylist => List.unmodifiable(_tawasheehPlaylist);
+  Duration get currentPosition => _currentPosition;
+  Duration get totalDuration => _totalDuration;
+  Stream<Duration> get positionStream => _positionController.stream;
+  Stream<Duration> get durationStream => _durationController.stream;
+  bool get isShuffle => _isShuffle;
+  bool get isRepeat => _isRepeat;
+
   List<String> get _allUrls => [
         station.primaryStreamUrl,
         ...station.backupStreamUrls,
@@ -236,8 +345,118 @@ class CairoRadioAudioService {
     _statusController.add(_status);
   }
 
-  /// Starts or resumes the live radio stream with automatic fallback on connection error.
+  /// Switches operating mode between Live Radio and Tawasheeh.
+  void setMode(CairoRadioMode newMode) {
+    if (_mode == newMode) return;
+    _mode = newMode;
+    _modeController.add(_mode);
+  }
+
+  /// Plays a specific Tawasheeh item, optionally setting the active playlist.
+  Future<void> playTawasheeh(TawasheehItem item, {List<TawasheehItem>? playlist}) async {
+    _mode = CairoRadioMode.tawasheeh;
+    _modeController.add(_mode);
+    _currentTawasheeh = item;
+    _tawasheehController.add(item);
+
+    if (playlist != null && playlist.isNotEmpty) {
+      _tawasheehPlaylist = List.from(playlist);
+      _currentTawasheehIndex = _tawasheehPlaylist.indexWhere((it) => it.id == item.id);
+      if (_currentTawasheehIndex == -1) _currentTawasheehIndex = 0;
+    }
+
+    _currentPosition = Duration.zero;
+    _totalDuration = Duration(seconds: item.durationSeconds.toInt());
+    _positionController.add(_currentPosition);
+    _durationController.add(_totalDuration);
+
+    _errorMessage = null;
+    _setStatus(CairoRadioStatus.connecting);
+    onPlaybackStarted?.call();
+
+    final localPath = await TawasheehOfflineAudioService.instance.getLocalFilePath(item);
+    final audioSource = (localPath != null && localPath.isNotEmpty) ? localPath : item.url;
+
+    try {
+      await _player.setVolume(_isMuted ? 0.0 : _volume);
+      await _player.playUrl(audioSource);
+      _setStatus(CairoRadioStatus.playing);
+    } catch (e) {
+      _errorMessage = (localPath != null && localPath.isNotEmpty)
+          ? 'تعذر تشغيل الملف الصوتي المحلي.'
+          : 'تعذر تشغيل الابتهال، يرجى التحقق من اتصال الإنترنت.';
+      _setStatus(CairoRadioStatus.error);
+    }
+  }
+
+  /// Plays or resumes live Cairo radio stream.
+  Future<void> playLiveRadio() async {
+    _mode = CairoRadioMode.liveRadio;
+    _modeController.add(_mode);
+    await play();
+  }
+
+  /// Advances to the next Tawasheeh in playlist.
+  Future<void> nextTawasheeh() async {
+    if (_tawasheehPlaylist.isEmpty) return;
+    if (_isShuffle) {
+      final randIndex = (DateTime.now().millisecondsSinceEpoch % _tawasheehPlaylist.length);
+      _currentTawasheehIndex = randIndex;
+    } else {
+      _currentTawasheehIndex = (_currentTawasheehIndex + 1) % _tawasheehPlaylist.length;
+    }
+    await playTawasheeh(_tawasheehPlaylist[_currentTawasheehIndex]);
+  }
+
+  /// Returns to the previous Tawasheeh in playlist.
+  Future<void> previousTawasheeh() async {
+    if (_tawasheehPlaylist.isEmpty) return;
+    _currentTawasheehIndex =
+        (_currentTawasheehIndex - 1 + _tawasheehPlaylist.length) % _tawasheehPlaylist.length;
+    await playTawasheeh(_tawasheehPlaylist[_currentTawasheehIndex]);
+  }
+
+  /// Seeks to a specific timestamp in the current audio track.
+  Future<void> seek(Duration position) async {
+    _currentPosition = position;
+    _positionController.add(position);
+    await _player.seek(position);
+  }
+
+  /// Toggles shuffle mode for Tawasheeh playback.
+  void toggleShuffle() {
+    _isShuffle = !_isShuffle;
+  }
+
+  /// Toggles single track repeat mode.
+  void toggleRepeat() {
+    _isRepeat = !_isRepeat;
+  }
+
+  double _playbackSpeed = 1.0;
+  double get playbackSpeed => _playbackSpeed;
+
+  /// Updates audio playback rate (e.g. 0.75x, 1.0x, 1.25x, 1.5x, 2.0x).
+  Future<void> setPlaybackSpeed(double speed) async {
+    _playbackSpeed = speed;
+    await _player.setPlaybackRate(speed);
+  }
+
+  /// Starts or resumes audio playback depending on active mode.
   Future<void> play() async {
+    if (_mode == CairoRadioMode.tawasheeh && _currentTawasheeh != null) {
+      if (_status == CairoRadioStatus.paused) {
+        try {
+          await _player.playUrl(_currentTawasheeh!.url);
+          _setStatus(CairoRadioStatus.playing);
+          onPlaybackStarted?.call();
+          return;
+        } catch (_) {}
+      }
+      await playTawasheeh(_currentTawasheeh!);
+      return;
+    }
+
     if (_status == CairoRadioStatus.paused) {
       try {
         await _player.playUrl(currentActiveUrl);
@@ -364,8 +583,14 @@ class CairoRadioAudioService {
   Future<void> dispose() async {
     cancelSleepTimer();
     _playerStateSub?.cancel();
+    _posSub?.cancel();
+    _durSub?.cancel();
     await _player.dispose();
     await _statusController.close();
     await _sleepTimerController.close();
+    await _positionController.close();
+    await _durationController.close();
+    await _modeController.close();
+    await _tawasheehController.close();
   }
 }

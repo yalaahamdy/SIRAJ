@@ -44,7 +44,8 @@ null/
 /android/.gradle
 /android/local.properties
 
-# Large external raw audio source folders
+# Large external raw audio source folders and archives
 عبد الباسط عبد الصمد - المصحف المرتل/
 siraj_quran_audio/
+*.zip
 

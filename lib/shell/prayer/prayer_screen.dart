@@ -7,6 +7,7 @@ import '../../modules/prayer/domain/calculation_parameters.dart';
 import '../../modules/prayer/domain/calculation_status.dart';
 import '../../modules/prayer/domain/prayer_adjustments.dart';
 import '../../modules/prayer/domain/prayer_log_entry.dart';
+import '../../modules/prayer/domain/prayer_notification_settings.dart';
 import '../../modules/prayer/domain/prayer_schedule.dart';
 import '../../modules/prayer/domain/prayer_tracking_status.dart';
 import '../../modules/prayer/domain/prayer_type.dart';
@@ -104,13 +105,13 @@ class _PrayerScreenState extends State<PrayerScreen> {
     if (_todaySchedule == null) return;
     final now = widget.prayerModule.clock.nowLocal();
 
-    // Check obligatory prayers to trigger automatic Athan and notification
+    // Check obligatory prayers to trigger automatic Athan and notification (within 60s window)
     for (final entry in _todaySchedule!.obligatoryPrayers) {
       final diff = now.difference(entry.time).inSeconds;
       final key = '${entry.type.name}_${_todaySchedule!.date.year}_${_todaySchedule!.date.month}_${_todaySchedule!.date.day}';
 
-      // Trigger if at or within 4 seconds of prayer entry and not yet fired today
-      if (diff >= 0 && diff <= 4 && !_firedPrayersToday.contains(key)) {
+      // Trigger if at or within 60 seconds of prayer entry and not yet fired today
+      if (diff >= 0 && diff <= 59 && !_firedPrayersToday.contains(key)) {
         _firedPrayersToday.add(key);
         _triggerAthanAndNotification(entry.type, entry.time);
       }
@@ -132,16 +133,27 @@ class _PrayerScreenState extends State<PrayerScreen> {
   }
 
   void _triggerAthanAndNotification(PrayerType prayerType, DateTime prayerTime) {
-    // 1. Play authentic Athan audio
-    widget.prayerModule.athanAudioService.playAthan(
-      soundOption: AthanSoundOption.abdulbasit,
-    );
+    final settings = widget.prayerModule.notificationService.settings;
+    final perPrayer = settings.getSettingFor(prayerType);
+    if (perPrayer.mode == PrayerNotificationMode.disabled) return;
+
+    final shouldPlayAudio = perPrayer.mode == PrayerNotificationMode.fullAthan ||
+        perPrayer.mode == PrayerNotificationMode.takbeerOnly;
+
+    // 1. Play authentic Athan audio if configured
+    if (shouldPlayAudio) {
+      widget.prayerModule.athanAudioService.playAthan(
+        soundOption: AthanSoundOption.abdulbasit,
+        volume: settings.masterVolume,
+      );
+    }
 
     // 2. Send native system notification
     SirajNotificationManager.instance.showPrayerNotification(
       id: prayerType.index,
       title: 'حان الآن موعد أذان ${prayerType.nameArabic}',
       body: 'حي على الصلاة، حي على الفلاح — ${_location.cityName ?? "موقعك الحالي"}',
+      playAthanSound: shouldPlayAudio,
     );
 
     // 3. Show in-app interactive Athan modal
@@ -241,6 +253,11 @@ class _PrayerScreenState extends State<PrayerScreen> {
     if (todayRes.valueOrNull != null) {
       widget.prayerModule.notificationService.scheduleDailyPrayers(
         schedule: todayRes.valueOrNull!,
+      );
+    }
+    if (tomorrowRes.valueOrNull != null) {
+      widget.prayerModule.notificationService.scheduleDailyPrayers(
+        schedule: tomorrowRes.valueOrNull!,
       );
     }
 
@@ -743,9 +760,17 @@ class _PrayerScreenState extends State<PrayerScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'اتجاه القبلة: $degrees°',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      Row(
+                        children: [
+                          const Text(
+                            AppStrings.qiblaDirection,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          Text(
+                            ': $degrees°',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(

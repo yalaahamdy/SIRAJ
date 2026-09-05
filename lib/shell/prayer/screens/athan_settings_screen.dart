@@ -4,6 +4,7 @@ import '../../../modules/prayer/domain/athan_sound_option.dart';
 import '../../../modules/prayer/domain/prayer_notification_settings.dart';
 import '../../../modules/prayer/domain/prayer_type.dart';
 import '../../../modules/prayer/prayer_module.dart';
+import '../../../core/notifications/siraj_notification_manager.dart';
 import '../widgets/athan_preview_card.dart';
 
 /// Screen for configuring Athan audio, per-prayer alert modes, and reminders (§17, §32).
@@ -111,6 +112,44 @@ class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
             audioService: widget.prayerModule.athanAudioService,
             soundOption: AthanSoundOption.abdulbasit,
             volume: _settings.masterVolume,
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final res = await widget.prayerModule.athanAudioService.playAthan(
+                soundOption: AthanSoundOption.abdulbasit,
+                volume: _settings.masterVolume,
+              );
+              await SirajNotificationManager.instance.testAthanNotification();
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      res.isSuccess
+                          ? 'جاري إطلاق الأذان التجريبي والإشعار بنجاح! تأكد من رفع مستوى صوت الهاتف.'
+                          : 'تعذر تشغيل الصوت: ${res.failureOrNull?.message}',
+                    ),
+                    backgroundColor: res.isSuccess ? AppColors.primary : AppColors.error,
+                    duration: const Duration(seconds: 5),
+                    action: SnackBarAction(
+                      label: 'إيقاف',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        widget.prayerModule.athanAudioService.stopAthan();
+                      },
+                    ),
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.notifications_active_rounded, color: AppColors.primary),
+            label: const Text('اختبار الأذان الشريف والإشعار فوراً'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              side: const BorderSide(color: AppColors.primary, width: 1.2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           ),
           const SizedBox(height: 24),
 

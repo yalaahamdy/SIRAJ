@@ -3,6 +3,7 @@ import '../../../core/errors/result.dart';
 import '../../../core/events/app_events.dart';
 import '../../../core/events/event_bus.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../../core/notifications/siraj_notification_manager.dart';
 import '../../../core/time/clock.dart';
 import '../domain/prayer_notification_settings.dart';
 import '../domain/prayer_schedule.dart';
@@ -106,6 +107,18 @@ class PrayerNotificationService {
           soundOptionId: perPrayer.soundOptionId,
         );
         _activeSchedules.add(item);
+
+        try {
+          final notifId = (schedule.date.day * 10) + entry.type.index;
+          SirajNotificationManager.instance.schedulePrayerNotification(
+            id: notifId,
+            title: 'حان الآن موعد أذان ${entry.type.nameArabic}',
+            body: 'حي على الصلاة، حي على الفلاح — أقبل على صلاتك وذكر ربك',
+            scheduledTime: entry.time,
+            playAthanSound: perPrayer.mode == PrayerNotificationMode.fullAthan ||
+                perPrayer.mode == PrayerNotificationMode.takbeerOnly,
+          );
+        } catch (_) {}
       }
 
       // 3. Iqama Reminder (if configured and in the future)
@@ -134,6 +147,9 @@ class PrayerNotificationService {
   /// Cancels all scheduled reminders.
   void cancelAll() {
     _activeSchedules.clear();
+    try {
+      SirajNotificationManager.instance.cancelAll();
+    } catch (_) {}
     _logger?.info('Cancelled all prayer notifications.');
   }
 

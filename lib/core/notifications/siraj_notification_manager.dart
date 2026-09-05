@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 /// مدير إشعارات سِراج المحلية للصلوات والأذكار (§17, §32)
 class SirajNotificationManager {
@@ -11,12 +13,27 @@ class SirajNotificationManager {
 
   SirajNotificationManager._internal();
 
-  static const String prayerChannelId = 'siraj_prayer_channel';
-  static const String prayerChannelName = 'مواقيت وأذان الصلاة';
-  static const String prayerChannelDescription = 'تنبيهات وأذان الصلوات الخمس في أوقاتها المحددة';
+  // القناة المخصصة للأذان الصوتي الكامل ذو الأولوية القصوى
+  static const String athanChannelId = 'siraj_athan_channel_v3';
+  static const String athanChannelName = 'صوت وأذان الصلاة الشريف';
+  static const String athanChannelDescription = 'تنبيهات الأذان بصوت الشيخ عبد الباسط عبد الصمد في مواقيت الصلاة';
+
+  // القناة القياسية للتنبيهات الصامتة والمبكرة
+  static const String standardChannelId = 'siraj_standard_channel_v3';
+  static const String standardChannelName = 'تنبيهات الصلوات العامة';
+  static const String standardChannelDescription = 'إشعارات دخول الوقت والإقامة والتذكير قبل الأذان';
 
   Future<void> init() async {
     if (_isInitialized) return;
+
+    _initTimeZone();
+
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) {
+        _isInitialized = true;
+        return;
+      }
+    } catch (_) {}
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const darwinSettings = DarwinInitializationSettings(
@@ -41,26 +58,65 @@ class SirajNotificationManager {
         },
       );
 
-      // Create Android Notification Channel
+      // إنشاء قنوات أندرويد الرسمية
       if (!kIsWeb && Platform.isAndroid) {
         final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
         if (androidPlugin != null) {
-          const channel = AndroidNotificationChannel(
-            prayerChannelId,
-            prayerChannelName,
-            description: prayerChannelDescription,
+          // 1. قناة الأذان الصوتي الكامل (تنبيه منبه بأقصى أولوية مع صوت raw/athan_abdulbasit)
+          const athanChannel = AndroidNotificationChannel(
+            athanChannelId,
+            athanChannelName,
+            description: athanChannelDescription,
             importance: Importance.max,
+            playSound: true,
+            sound: RawResourceAndroidNotificationSound('athan_abdulbasit'),
+            enableVibration: true,
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+          );
+          await androidPlugin.createNotificationChannel(athanChannel);
+
+          // 2. قناة التنبيهات القياسية
+          const standardChannel = AndroidNotificationChannel(
+            standardChannelId,
+            standardChannelName,
+            description: standardChannelDescription,
+            importance: Importance.high,
             playSound: true,
             enableVibration: true,
           );
-          await androidPlugin.createNotificationChannel(channel);
+          await androidPlugin.createNotificationChannel(standardChannel);
         }
       }
 
       _isInitialized = true;
     } catch (e) {
       debugPrint('Error initializing SirajNotificationManager: $e');
+    }
+  }
+
+  void _initTimeZone() {
+    try {
+      tz.initializeTimeZones();
+      final now = DateTime.now();
+      final offset = now.timeZoneOffset;
+      tz.Location? matched;
+      for (final loc in tz.timeZoneDatabase.locations.values) {
+        if (loc.currentTimeZone.offset == offset) {
+          matched = loc;
+          break;
+        }
+      }
+      if (matched != null) {
+        tz.setLocalLocation(matched);
+      } else {
+        tz.setLocalLocation(tz.UTC);
+      }
+    } catch (e) {
+      debugPrint('Error setting up timezone: $e');
+      try {
+        tz.setLocalLocation(tz.UTC);
+      } catch (_) {}
     }
   }
 
@@ -71,6 +127,7 @@ class SirajNotificationManager {
             AndroidFlutterLocalNotificationsPlugin>();
         if (androidPlugin != null) {
           final granted = await androidPlugin.requestNotificationsPermission();
+          await androidPlugin.requestExactAlarmsPermission();
           return granted ?? false;
         }
       } else if (!kIsWeb && Platform.isIOS) {
@@ -89,33 +146,38 @@ class SirajNotificationManager {
     return false;
   }
 
-  /// إرسال إشعار فوري بحلول وقت الصلاة
+  /// إرسال إشعار فوري بحلول وقت الصلاة مع تشغيل صوت الأذان
   Future<void> showPrayerNotification({
     required int id,
     required String title,
     required String body,
+    bool playAthanSound = true,
     String? payload,
   }) async {
     if (!_isInitialized) await init();
 
-    const androidDetails = AndroidNotificationDetails(
-      prayerChannelId,
-      prayerChannelName,
-      channelDescription: prayerChannelDescription,
+    final androidDetails = AndroidNotificationDetails(
+      playAthanSound ? athanChannelId : standardChannelId,
+      playAthanSound ? athanChannelName : standardChannelName,
+      channelDescription: playAthanSound ? athanChannelDescription : standardChannelDescription,
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
+      sound: playAthanSound ? const RawResourceAndroidNotificationSound('athan_abdulbasit') : null,
       enableVibration: true,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
       icon: '@mipmap/ic_launcher',
+      fullScreenIntent: true,
     );
 
     const darwinDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      sound: 'athan_abdulbasit.mp3',
     );
 
-    const notificationDetails = NotificationDetails(
+    final notificationDetails = NotificationDetails(
       android: androidDetails,
       iOS: darwinDetails,
     );
@@ -131,6 +193,80 @@ class SirajNotificationManager {
     } catch (e) {
       debugPrint('Error showing prayer notification: $e');
     }
+  }
+
+  /// جدولة إشعار ومنبه دقيق في موعد الصلاة في الخلفية (Exact Alarm)
+  Future<void> schedulePrayerNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+    bool playAthanSound = true,
+    String? payload,
+  }) async {
+    if (!_isInitialized) await init();
+
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) {
+        return;
+      }
+    } catch (_) {}
+
+    final now = DateTime.now();
+    if (!scheduledTime.isAfter(now)) return;
+
+    try {
+      final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
+
+      final androidDetails = AndroidNotificationDetails(
+        playAthanSound ? athanChannelId : standardChannelId,
+        playAthanSound ? athanChannelName : standardChannelName,
+        channelDescription: playAthanSound ? athanChannelDescription : standardChannelDescription,
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        sound: playAthanSound ? const RawResourceAndroidNotificationSound('athan_abdulbasit') : null,
+        enableVibration: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        icon: '@mipmap/ic_launcher',
+        fullScreenIntent: true,
+      );
+
+      const darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'athan_abdulbasit.mp3',
+      );
+
+      final notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: darwinDetails,
+      );
+
+      await _notifications.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tzTime,
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: payload,
+      );
+      debugPrint('Successfully scheduled prayer alarm notification for: $scheduledTime (id: $id)');
+    } catch (e) {
+      debugPrint('Error scheduling prayer notification: $e');
+    }
+  }
+
+  /// إرسال إشعار تجريبي فوري للتأكد من خروج صوت الأذان على هاتف المستخدم
+  Future<void> testAthanNotification() async {
+    await showPrayerNotification(
+      id: 99999,
+      title: 'تجربة أذان سِراج — الله أكبر',
+      body: 'هذا إشعار تجريبي للتأكد من انطلاق صوت الأذان الشريف بنقاء',
+      playAthanSound: true,
+    );
   }
 
   Future<void> cancel(int id) async {

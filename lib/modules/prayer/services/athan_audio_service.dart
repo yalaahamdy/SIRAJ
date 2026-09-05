@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 import '../../../core/errors/app_failure.dart';
@@ -34,8 +36,8 @@ class ProductionAthanAudioPlayerAdapter implements AthanAudioPlayerAdapter {
             isSpeakerphoneOn: true,
             stayAwake: true,
             contentType: AndroidContentType.music,
-            usageType: AndroidUsageType.media,
-            audioFocus: AndroidAudioFocus.gain,
+            usageType: AndroidUsageType.alarm,
+            audioFocus: AndroidAudioFocus.gainTransientExclusive,
           ),
           iOS: AudioContextIOS(
             category: AVAudioSessionCategory.playback,
@@ -52,18 +54,22 @@ class ProductionAthanAudioPlayerAdapter implements AthanAudioPlayerAdapter {
   Future<void> playAsset(String assetPath) async {
     await _player.stop();
 
-    final fullAssetPath = assetPath.startsWith('assets/')
-        ? assetPath
-        : 'assets/$assetPath';
     final cleanPath = assetPath.startsWith('assets/')
         ? assetPath.substring('assets/'.length)
         : assetPath;
 
     try {
-      final byteData = await rootBundle.load(fullAssetPath);
-      await _player.play(BytesSource(byteData.buffer.asUint8List()));
-    } catch (_) {
       await _player.play(AssetSource(cleanPath));
+    } catch (_) {
+      try {
+        final fullAssetPath = assetPath.startsWith('assets/')
+            ? assetPath
+            : 'assets/$assetPath';
+        final byteData = await rootBundle.load(fullAssetPath);
+        await _player.play(BytesSource(byteData.buffer.asUint8List()));
+      } catch (e) {
+        debugPrint('ProductionAthanAudioPlayerAdapter play error: $e');
+      }
     }
   }
 
@@ -153,12 +159,32 @@ class AthanAudioService {
   final _playerStateController = StreamController<bool>.broadcast();
   final _positionController = StreamController<Duration>.broadcast();
 
+  /// Checks if code is executing in a unit/headless test environment
+  static bool get isTestEnvironment {
+    try {
+      return Platform.environment.containsKey('FLUTTER_TEST');
+    } catch (_) {
+      return false;
+    }
+  }
+
   AthanAudioService({
     AthanAudioPlayerAdapter? adapter,
     AppLogger? logger,
-  })  : _adapter = adapter ?? MockAthanAudioPlayerAdapter(),
+  })  : _adapter = adapter ??
+            (isTestEnvironment
+                ? MockAthanAudioPlayerAdapter()
+                : ProductionAthanAudioPlayerAdapter()),
         _logger = logger {
     _initListeners();
+  }
+
+  /// Convenience factory for mock runtime.
+  factory AthanAudioService.mock({AppLogger? logger}) {
+    return AthanAudioService(
+      adapter: MockAthanAudioPlayerAdapter(),
+      logger: logger,
+    );
   }
 
   /// Convenience factory for production runtime.

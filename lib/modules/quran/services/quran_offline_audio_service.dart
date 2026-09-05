@@ -149,11 +149,10 @@ class QuranOfflineAudioService {
 
       for (final file in archive) {
         if (file.isFile) {
-          final name = file.name;
-          final baseName = name.split(RegExp(r'[/\\]')).last.trim();
+          final normalizedName = normalizeVerseFileName(file.name);
 
-          if (baseName.toLowerCase().endsWith('.mp3')) {
-            final destPath = '${targetDir.path}${Platform.pathSeparator}$baseName';
+          if (normalizedName != null && normalizedName.toLowerCase().endsWith('.mp3')) {
+            final destPath = '${targetDir.path}${Platform.pathSeparator}$normalizedName';
             final output = OutputFileStream(destPath);
             try {
               file.writeContent(output);
@@ -300,5 +299,50 @@ class QuranOfflineAudioService {
       await targetDir.delete(recursive: true);
       await targetDir.create(recursive: true);
     }
+  }
+
+  /// Normalizes Quranic verse audio file names from various archive formats
+  /// (e.g. 001001.mp3, 1_1.mp3, 001_001.mp3, 001/001.mp3) into standard 6-digit form 001001.mp3.
+  static String? normalizeVerseFileName(String fullPathInArchive) {
+    final cleanPath = fullPathInArchive.replaceAll('\\', '/');
+    final segments = cleanPath.split('/').where((s) => s.trim().isNotEmpty).toList();
+    if (segments.isEmpty) return null;
+
+    final baseName = segments.last.trim();
+    if (!baseName.toLowerCase().endsWith('.mp3')) return null;
+
+    final nameWithoutExt = baseName.substring(0, baseName.length - 4).trim();
+
+    // Pattern 1: Exactly 6 digits (e.g. 001001)
+    if (RegExp(r'^\d{6}$').hasMatch(nameWithoutExt)) {
+      return '$nameWithoutExt.mp3';
+    }
+
+    // Pattern 2: Separator between surah and ayah (e.g. 001_001, 1_1, 001-001, 1-1)
+    final sepMatch = RegExp(r'^(\d{1,3})[\s\-_]+(\d{1,3})$').firstMatch(nameWithoutExt);
+    if (sepMatch != null) {
+      final s = int.tryParse(sepMatch.group(1)!);
+      final a = int.tryParse(sepMatch.group(2)!);
+      if (s != null && s >= 1 && s <= 114 && a != null && a >= 1) {
+        final sPad = s.toString().padLeft(3, '0');
+        final aPad = a.toString().padLeft(3, '0');
+        return '$sPad$aPad.mp3';
+      }
+    }
+
+    // Pattern 3: Subdirectory is surah, file is ayah (e.g. 001/001.mp3 or 1/1.mp3)
+    if (segments.length >= 2) {
+      final dirName = segments[segments.length - 2].trim();
+      final s = int.tryParse(dirName.replaceAll(RegExp(r'[^\d]'), ''));
+      final a = int.tryParse(nameWithoutExt.replaceAll(RegExp(r'[^\d]'), ''));
+      if (s != null && s >= 1 && s <= 114 && a != null && a >= 1) {
+        final sPad = s.toString().padLeft(3, '0');
+        final aPad = a.toString().padLeft(3, '0');
+        return '$sPad$aPad.mp3';
+      }
+    }
+
+    // Fallback: preserve original base name
+    return baseName;
   }
 }
