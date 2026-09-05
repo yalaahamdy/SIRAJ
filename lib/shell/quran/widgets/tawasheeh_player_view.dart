@@ -6,6 +6,7 @@ import '../../../../modules/quran/services/cairo_radio_audio_service.dart';
 import '../../../../modules/quran/services/tawasheeh_offline_audio_service.dart';
 import '../../../../modules/quran/store/tawasheeh_store.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 import 'tawasheeh_offline_action_bar.dart';
 
 /// Interactive player and catalog interface for the 80 rare Tawasheeh recordings (§14, §20).
@@ -30,20 +31,14 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
 
   StreamSubscription<CairoRadioStatus>? _statusSub;
   StreamSubscription<TawasheehItem?>? _tawasheehSub;
-  StreamSubscription<Duration>? _posSub;
-  StreamSubscription<Duration>? _durSub;
   StreamSubscription<Duration?>? _sleepSub;
 
   CairoRadioStatus _status = CairoRadioStatus.idle;
   TawasheehItem? _currentTawasheeh;
-  Duration _currentPos = Duration.zero;
-  Duration _totalDur = Duration.zero;
   Duration? _sleepRemaining;
 
   String _selectedReciter = 'الكل';
   String _searchQuery = '';
-  bool _isSeeking = false;
-  double _dragSeekSec = 0.0;
   final Set<String> _downloadingIds = {};
 
   Future<void> _handleDownloadTrack(TawasheehItem item) async {
@@ -93,8 +88,6 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
 
     _status = widget.radioService.status;
     _currentTawasheeh = widget.radioService.currentTawasheeh;
-    _currentPos = widget.radioService.currentPosition;
-    _totalDur = widget.radioService.totalDuration;
     _sleepRemaining = widget.radioService.sleepTimerRemaining;
 
     _waveAnimController = AnimationController(
@@ -121,16 +114,6 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
       if (mounted) setState(() => _currentTawasheeh = it);
     });
 
-    _posSub = widget.radioService.positionStream.listen((pos) {
-      if (mounted && !_isSeeking) {
-        setState(() => _currentPos = pos);
-      }
-    });
-
-    _durSub = widget.radioService.durationStream.listen((dur) {
-      if (mounted) setState(() => _totalDur = dur);
-    });
-
     _sleepSub = widget.radioService.sleepTimerStream.listen((rem) {
       if (mounted) setState(() => _sleepRemaining = rem);
     });
@@ -142,8 +125,6 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
     _searchController.dispose();
     _statusSub?.cancel();
     _tawasheehSub?.cancel();
-    _posSub?.cancel();
-    _durSub?.cancel();
     _sleepSub?.cancel();
     super.dispose();
   }
@@ -163,33 +144,60 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
     );
     final reciters = widget.tawasheehStore.getReciters();
 
-    return Column(
-      children: [
-        // 1. Hero Player Card for Current Track
-        _buildHeroPlayer(context, isDark, filteredItems),
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              children: [
+                // 1. Hero Player Card for Current Track
+                _buildHeroPlayer(context, isDark, filteredItems),
 
-        const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-        // 2. Sleep Timer Strip
-        _buildSleepTimerStrip(context, isDark),
+                // 2. Sleep Timer Strip
+                _buildSleepTimerStrip(context, isDark),
 
-        const SizedBox(height: 10),
+                const SizedBox(height: 10),
 
-        // 3. Offline Storage & ZIP Import Action Bar
-        TawasheehOfflineActionBar(
-          tawasheehStore: widget.tawasheehStore,
-          onDataChanged: () => setState(() {}),
+                // 3. Offline Storage & ZIP Import Action Bar
+                TawasheehOfflineActionBar(
+                  tawasheehStore: widget.tawasheehStore,
+                  onDataChanged: () => setState(() {}),
+                ),
+
+                const SizedBox(height: 12),
+
+                // 4. Search and Reciter Filter Chips
+                _buildSearchAndFilters(context, isDark, reciters, filteredItems.length),
+
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
         ),
 
-        const SizedBox(height: 12),
+        if (filteredItems.isEmpty)
+          SliverToBoxAdapter(
+            child: _buildEmptyState(isDark),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+            sliver: SliverList.separated(
+              itemCount: filteredItems.length,
+              itemBuilder: (context, index) {
+                final item = filteredItems[index];
+                return _buildRecordingCard(context, isDark, item, index, filteredItems);
+              },
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+            ),
+          ),
 
-        // 4. Search and Reciter Filter Chips
-        _buildSearchAndFilters(context, isDark, reciters, filteredItems.length),
-
-        const SizedBox(height: 10),
-
-        // 5. Playlist of Recordings
-        _buildRecordingsList(context, isDark, filteredItems),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 24),
+        ),
       ],
     );
   }
@@ -202,14 +210,6 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
     final isPlaying = _status == CairoRadioStatus.playing;
     final isConnecting = _status == CairoRadioStatus.connecting;
     final hasTrack = _currentTawasheeh != null;
-
-    final effectivePosSec = _isSeeking
-        ? _dragSeekSec
-        : _currentPos.inSeconds.toDouble();
-    final totalSec = _totalDur.inSeconds > 0
-        ? _totalDur.inSeconds.toDouble()
-        : (_currentTawasheeh?.durationSeconds ?? 1.0);
-    final sliderVal = effectivePosSec.clamp(0.0, totalSec);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
@@ -428,61 +428,12 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
             const SizedBox(height: 24),
 
           // Interactive Progress Slider
-          if (hasTrack) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: AppColors.goldAccent,
-                  inactiveTrackColor: isDark ? Colors.grey[800] : Colors.grey[300],
-                  thumbColor: AppColors.goldAccent,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                  trackHeight: 4,
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                ),
-                child: Slider(
-                  value: sliderVal,
-                  min: 0.0,
-                  max: totalSec > 0 ? totalSec : 1.0,
-                  onChangeStart: (val) {
-                    setState(() {
-                      _isSeeking = true;
-                      _dragSeekSec = val;
-                    });
-                  },
-                  onChanged: (val) {
-                    setState(() => _dragSeekSec = val);
-                  },
-                  onChangeEnd: (val) async {
-                    _isSeeking = false;
-                    await widget.radioService.seek(Duration(seconds: val.toInt()));
-                  },
-                ),
-              ),
+          if (hasTrack)
+            _TawasheehProgressSlider(
+              radioService: widget.radioService,
+              isDark: isDark,
+              currentTrack: _currentTawasheeh,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _formatDuration(Duration(seconds: sliderVal.toInt())),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                  ),
-                  Text(
-                    _formatDuration(Duration(seconds: totalSec.toInt())),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
 
           const SizedBox(height: 10),
 
@@ -506,7 +457,10 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                 tooltip: 'ترجيع 10 ثوانٍ',
                 onPressed: hasTrack
                     ? () {
-                        final newPos = Duration(seconds: (_currentPos.inSeconds - 10).clamp(0, totalSec.toInt()));
+                        final cur = widget.radioService.currentPosition;
+                        final total = widget.radioService.totalDuration;
+                        final maxSec = total.inSeconds > 0 ? total.inSeconds : 3600;
+                        final newPos = Duration(seconds: (cur.inSeconds - 10).clamp(0, maxSec));
                         widget.radioService.seek(newPos);
                       }
                     : null,
@@ -576,7 +530,10 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                 tooltip: 'تقديم 10 ثوانٍ',
                 onPressed: hasTrack
                     ? () {
-                        final newPos = Duration(seconds: (_currentPos.inSeconds + 10).clamp(0, totalSec.toInt()));
+                        final cur = widget.radioService.currentPosition;
+                        final total = widget.radioService.totalDuration;
+                        final maxSec = total.inSeconds > 0 ? total.inSeconds : 3600;
+                        final newPos = Duration(seconds: (cur.inSeconds + 10).clamp(0, maxSec));
                         widget.radioService.seek(newPos);
                       }
                     : null,
@@ -913,243 +870,236 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
     );
   }
 
-  Widget _buildRecordingsList(
+  Widget _buildEmptyState(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 36),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          Icon(Icons.search_off_rounded, size: 40, color: Colors.grey.shade400),
+          const SizedBox(height: 8),
+          Text(
+            'لا توجد ابتهالات تطابق بحثك',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecordingCard(
     BuildContext context,
     bool isDark,
+    TawasheehItem item,
+    int index,
     List<TawasheehItem> items,
   ) {
-    if (items.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 36),
-        alignment: Alignment.center,
-        child: Column(
-          children: [
-            Icon(Icons.search_off_rounded, size: 40, color: Colors.grey.shade400),
-            const SizedBox(height: 8),
-            Text(
-              'لا توجد ابتهالات تطابق بحثك',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    final isCurrentItem = _currentTawasheeh?.id == item.id;
+    final isPlayingThis = isCurrentItem && _status == CairoRadioStatus.playing;
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final isCurrentItem = _currentTawasheeh?.id == item.id;
-        final isPlayingThis = isCurrentItem && _status == CairoRadioStatus.playing;
-
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          if (isCurrentItem) {
+            if (isPlayingThis) {
+              widget.radioService.pause();
+            } else {
+              widget.radioService.play();
+            }
+          } else {
+            widget.radioService.playTawasheeh(item, playlist: items);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isCurrentItem
+                ? AppColors.goldAccent.withValues(alpha: isDark ? 0.16 : 0.12)
+                : (isDark ? const Color(0xFF161E2E) : const Color(0xFFFAF8F5)),
             borderRadius: BorderRadius.circular(14),
-            onTap: () {
-              if (isCurrentItem) {
-                if (isPlayingThis) {
-                  widget.radioService.pause();
-                } else {
-                  widget.radioService.play();
-                }
-              } else {
-                widget.radioService.playTawasheeh(item, playlist: items);
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: isCurrentItem
-                    ? AppColors.goldAccent.withValues(alpha: isDark ? 0.16 : 0.12)
-                    : (isDark ? const Color(0xFF161E2E) : const Color(0xFFFAF8F5)),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
+            border: Border.all(
+              color: isCurrentItem
+                  ? AppColors.goldAccent.withValues(alpha: 0.7)
+                  : (isDark ? AppColors.borderDark : AppColors.borderLight).withValues(alpha: 0.5),
+              width: isCurrentItem ? 1.4 : 1.0,
+            ),
+          ),
+          child: Row(
+            children: [
+              // Play Indicator / Number Circle
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
                   color: isCurrentItem
-                      ? AppColors.goldAccent.withValues(alpha: 0.7)
-                      : (isDark ? AppColors.borderDark : AppColors.borderLight).withValues(alpha: 0.5),
-                  width: isCurrentItem ? 1.4 : 1.0,
+                      ? AppColors.goldAccent
+                      : AppColors.goldAccent.withValues(alpha: 0.12),
+                ),
+                child: Center(
+                  child: isPlayingThis
+                      ? const Icon(Icons.pause_rounded, size: 20, color: Colors.white)
+                      : (isCurrentItem
+                          ? const Icon(Icons.play_arrow_rounded, size: 20, color: Colors.white)
+                          : Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? AppColors.goldAccentLight : AppColors.primary,
+                              ),
+                            )),
                 ),
               ),
-              child: Row(
-                children: [
-                  // Play Indicator / Number Circle
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isCurrentItem
-                          ? AppColors.goldAccent
-                          : AppColors.goldAccent.withValues(alpha: 0.12),
-                    ),
-                    child: Center(
-                      child: isPlayingThis
-                          ? const Icon(Icons.pause_rounded, size: 20, color: Colors.white)
-                          : (isCurrentItem
-                              ? const Icon(Icons.play_arrow_rounded, size: 20, color: Colors.white)
-                              : Text(
-                                  '${index + 1}',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? AppColors.goldAccentLight : AppColors.primary,
-                                  ),
-                                )),
-                    ),
-                  ),
 
-                  const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-                  // Title and Reciter + Duration
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              // Title and Reciter + Duration
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.cleanTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Amiri',
+                        fontSize: 15,
+                        height: 1.3,
+                        fontWeight: isCurrentItem ? FontWeight.bold : FontWeight.w600,
+                        color: isCurrentItem
+                            ? (isDark ? AppColors.goldAccentLight : AppColors.primary)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
                       children: [
-                        Text(
-                          item.cleanTitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Amiri',
-                            fontSize: 15,
-                            height: 1.3,
-                            fontWeight: isCurrentItem ? FontWeight.bold : FontWeight.w600,
-                            color: isCurrentItem
-                                ? (isDark ? AppColors.goldAccentLight : AppColors.primary)
-                                : null,
-                          ),
+                        Icon(
+                          Icons.person_outline_rounded,
+                          size: 13,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.person_outline_rounded,
-                              size: 13,
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            item.reciter,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
                               color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                             ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                item.reciter,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                ),
+                          ),
+                        ),
+                        if (item.duration.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: Text(
+                              '•',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
                               ),
                             ),
-                            if (item.duration.isNotEmpty) ...[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 5),
-                                child: Text(
-                                  '•',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.access_time_rounded,
-                                size: 11,
-                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                item.duration,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                          ),
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 11,
+                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            item.duration,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                  ),
+                  ],
+                ),
+              ),
 
-                  const SizedBox(width: 6),
+              const SizedBox(width: 6),
 
-                  // Actions Group: Offline Status, Download, and Favorite
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Offline Status or Download Action
-                      if (item.isOfflineAvailable)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 4),
-                          child: Tooltip(
-                            message: 'متاح بدون إنترنت',
-                            child: Icon(
-                              Icons.offline_pin_rounded,
-                              size: 19,
-                              color: Colors.green,
-                            ),
-                          ),
-                        )
-                      else if (_downloadingIds.contains(item.id))
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 5),
-                          child: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.goldAccent,
-                            ),
-                          ),
-                        )
-                      else if (item.url.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.download_for_offline_outlined, size: 20),
-                          tooltip: 'تنزيل للاستماع بدون إنترنت',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                          onPressed: () => _handleDownloadTrack(item),
-                        ),
-
-                      const SizedBox(width: 2),
-
-                      // Favorite Action
-                      IconButton(
-                        icon: Icon(
-                          widget.tawasheehStore.isFavorite(item.id)
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
+              // Actions Group: Offline Status, Download, and Favorite
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Offline Status or Download Action
+                  if (item.isOfflineAvailable)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Tooltip(
+                        message: 'متاح بدون إنترنت',
+                        child: Icon(
+                          Icons.offline_pin_rounded,
                           size: 19,
-                          color: widget.tawasheehStore.isFavorite(item.id)
-                              ? Colors.redAccent
-                              : (isDark ? Colors.grey[500] : Colors.grey[400]),
+                          color: Colors.green,
                         ),
-                        tooltip: widget.tawasheehStore.isFavorite(item.id)
-                            ? 'في المفضلة'
-                            : 'إضافة للمفضلة',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                        onPressed: () async {
-                          await widget.tawasheehStore.toggleFavorite(item.id);
-                          setState(() {});
-                        },
                       ),
-                    ],
+                    )
+                  else if (_downloadingIds.contains(item.id))
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 5),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.goldAccent,
+                        ),
+                      ),
+                    )
+                  else if (item.url.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.download_for_offline_outlined, size: 20),
+                      tooltip: 'تنزيل للاستماع بدون إنترنت',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      onPressed: () => _handleDownloadTrack(item),
+                    ),
+
+                  const SizedBox(width: 2),
+
+                  // Favorite Action
+                  IconButton(
+                    icon: Icon(
+                      widget.tawasheehStore.isFavorite(item.id)
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 19,
+                      color: widget.tawasheehStore.isFavorite(item.id)
+                          ? Colors.redAccent
+                          : (isDark ? Colors.grey[500] : Colors.grey[400]),
+                    ),
+                    tooltip: widget.tawasheehStore.isFavorite(item.id)
+                        ? 'في المفضلة'
+                        : 'إضافة للمفضلة',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                    onPressed: () async {
+                      await widget.tawasheehStore.toggleFavorite(item.id);
+                      setState(() {});
+                    },
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -1162,6 +1112,144 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
         color: color,
         borderRadius: BorderRadius.circular(3),
       ),
+    );
+  }
+}
+
+/// Localized progress slider widget that listens to audio player position ticks,
+/// isolating high-frequency UI updates from the parent Tawasheeh playlist.
+class _TawasheehProgressSlider extends StatefulWidget {
+  final CairoRadioAudioService radioService;
+  final bool isDark;
+  final TawasheehItem? currentTrack;
+
+  const _TawasheehProgressSlider({
+    required this.radioService,
+    required this.isDark,
+    required this.currentTrack,
+  });
+
+  @override
+  State<_TawasheehProgressSlider> createState() => _TawasheehProgressSliderState();
+}
+
+class _TawasheehProgressSliderState extends State<_TawasheehProgressSlider> {
+  StreamSubscription<Duration>? _posSub;
+  StreamSubscription<Duration>? _durSub;
+
+  Duration _currentPos = Duration.zero;
+  Duration _totalDur = Duration.zero;
+  bool _isSeeking = false;
+  double _dragSeekSec = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPos = widget.radioService.currentPosition;
+    _totalDur = widget.radioService.totalDuration;
+
+    _posSub = widget.radioService.positionStream.listen((pos) {
+      if (mounted && !_isSeeking) {
+        setState(() => _currentPos = pos);
+      }
+    });
+
+    _durSub = widget.radioService.durationStream.listen((dur) {
+      if (mounted) {
+        setState(() => _totalDur = dur);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _TawasheehProgressSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentTrack?.id != widget.currentTrack?.id) {
+      _currentPos = widget.radioService.currentPosition;
+      _totalDur = widget.radioService.totalDuration;
+    }
+  }
+
+  @override
+  void dispose() {
+    _posSub?.cancel();
+    _durSub?.cancel();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes.toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final effectivePosSec = _isSeeking
+        ? _dragSeekSec
+        : _currentPos.inSeconds.toDouble();
+    final totalSec = _totalDur.inSeconds > 0
+        ? _totalDur.inSeconds.toDouble()
+        : (widget.currentTrack?.durationSeconds ?? 1.0);
+    final sliderVal = effectivePosSec.clamp(0.0, totalSec);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: AppColors.goldAccent,
+              inactiveTrackColor: widget.isDark ? Colors.grey[800] : Colors.grey[300],
+              thumbColor: AppColors.goldAccent,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              trackHeight: 4,
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+            ),
+            child: Slider(
+              value: sliderVal,
+              min: 0.0,
+              max: totalSec > 0 ? totalSec : 1.0,
+              onChangeStart: (val) {
+                setState(() {
+                  _isSeeking = true;
+                  _dragSeekSec = val;
+                });
+              },
+              onChanged: (val) {
+                setState(() => _dragSeekSec = val);
+              },
+              onChangeEnd: (val) async {
+                _isSeeking = false;
+                await widget.radioService.seek(Duration(seconds: val.toInt()));
+              },
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _formatDuration(Duration(seconds: sliderVal.toInt())),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: widget.isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              Text(
+                _formatDuration(Duration(seconds: totalSec.toInt())),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: widget.isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

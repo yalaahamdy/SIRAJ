@@ -138,7 +138,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       // Scroll down to reveal items on short screen
-      await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -350));
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -350));
       await tester.pump(const Duration(milliseconds: 300));
 
       final itemFinder = find.text('ابتهال: إلهى . إن يكن ذنبى عظيما');
@@ -147,6 +147,49 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(TawasheehPlayerView), findsOneWidget);
+    });
+
+    testWidgets('TawasheehOfflineActionBar toggles collapsed and expanded states smoothly', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CairoRadioLiveView(
+              radioService: radioService,
+              tawasheehStore: tawasheehStore,
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Switch to Tawasheeh
+      await tester.tap(find.text('التواشيح والابتهالات'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // By default, the offline action bar is collapsed (shows 'إدارة', not 'إخفاء')
+      expect(find.text('إدارة'), findsOneWidget);
+      expect(find.text('إخفاء'), findsNothing);
+
+      // Tap on the header to expand
+      await tester.tap(find.text('إدارة'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Now expanded (shows 'إخفاء', not 'إدارة')
+      expect(find.text('إخفاء'), findsOneWidget);
+      expect(find.text('إدارة'), findsNothing);
+
+      // Tap again to collapse
+      await tester.tap(find.text('إخفاء'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Collapsed again
+      expect(find.text('إدارة'), findsOneWidget);
+      expect(find.text('إخفاء'), findsNothing);
     });
   });
 }

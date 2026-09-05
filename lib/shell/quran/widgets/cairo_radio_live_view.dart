@@ -23,9 +23,12 @@ class CairoRadioLiveView extends StatefulWidget {
 }
 
 class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late AnimationController _waveAnimController;
   late final TawasheehStore _tawasheehStore;
+
+  @override
+  bool get wantKeepAlive => true;
 
   StreamSubscription<CairoRadioStatus>? _statusSub;
   StreamSubscription<Duration?>? _sleepSub;
@@ -99,48 +102,50 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isPlaying = _status == CairoRadioStatus.playing;
     final isConnecting = _status == CairoRadioStatus.connecting;
     final isError = _status == CairoRadioStatus.error;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Top Switcher: Live Radio vs Historic Tawasheeh
-          _buildModeSwitcher(isDark),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Top Switcher: Live Radio vs Historic Tawasheeh
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+          child: _buildModeSwitcher(isDark),
+        ),
 
-          const SizedBox(height: 12),
-
-          if (_activeMode == CairoRadioMode.tawasheeh) ...[
-            if (_isLoadingStore)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: Column(
-                    children: [
-                      CircularProgressIndicator(color: AppColors.goldAccent),
-                      SizedBox(height: 12),
-                      Text(
-                        'جارٍ تحميل أرشيف التواشيح والابتهالات النادرة...',
-                        style: TextStyle(fontFamily: 'Amiri', fontSize: 16),
+        Expanded(
+          child: _activeMode == CairoRadioMode.tawasheeh
+              ? (_isLoadingStore
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: AppColors.goldAccent),
+                          SizedBox(height: 12),
+                          Text(
+                            'جارٍ تحميل أرشيف التواشيح والابتهالات النادرة...',
+                            style: TextStyle(fontFamily: 'Amiri', fontSize: 16),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              )
-            else
-              TawasheehPlayerView(
-                radioService: widget.radioService,
-                tawasheehStore: _tawasheehStore,
-              ),
-          ] else ...[
-            // 1. Radio Station Hero Identity Card
-            Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
+                    )
+                  : TawasheehPlayerView(
+                      radioService: widget.radioService,
+                      tawasheehStore: _tawasheehStore,
+                    ))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. Radio Station Hero Identity Card
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isDark
                     ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
@@ -574,11 +579,14 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
               ],
             ),
           ),
-        ],
+          const SizedBox(height: 16),
         ],
       ),
-    );
-  }
+    ),
+  ),
+],
+);
+}
 
   Widget _buildModeSwitcher(bool isDark) {
     return Container(

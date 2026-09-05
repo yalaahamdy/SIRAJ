@@ -197,162 +197,216 @@ class _QuranAudioRadioTabState extends State<QuranAudioRadioTab> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Row 1: Surah Title & Verse Indicator + Reciter Selector & Mushaf Button
+              // Level 1: Surah Title, Ayah Badge, Revelation Type & Quick Action Buttons
               Row(
                 children: [
-                  Icon(
-                    isPlaying ? Icons.graphic_eq_rounded : Icons.radio_rounded,
-                    color: AppColors.goldAccent,
-                    size: 18,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.goldAccent.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        isPlaying ? Icons.graphic_eq_rounded : Icons.radio_rounded,
+                        color: AppColors.goldAccent,
+                        size: 17,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'سورة ${currentSurah.nameArabic}',
-                          style: const TextStyle(
-                            fontFamily: 'Amiri',
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            '(آية $_selectedAyahNumber/${currentSurah.ayahCount})',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'سورة ${currentSurah.nameArabic}',
+                                style: const TextStyle(
+                                  fontFamily: 'Amiri',
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: AppColors.goldAccent.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                currentSurah.revelationType.nameArabic,
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? AppColors.goldAccentLight : AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'آية $_selectedAyahNumber من ${currentSurah.ayahCount}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // Reciter Selector Dropdown Chip
-                  PopupMenuButton<QuranReciter>(
-                    tooltip: 'اختيار القارئ',
-                    initialValue: _audioService.activeReciter,
-                    onSelected: _onReciterChanged,
-                    itemBuilder: (context) {
-                      return kAvailableReciters.map((reciter) {
-                        final isSelected = reciter.id == _audioService.activeReciter.id;
-                        return PopupMenuItem<QuranReciter>(
-                          value: reciter,
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSelected
-                                    ? Icons.radio_button_checked_rounded
-                                    : Icons.radio_button_unchecked_rounded,
-                                size: 15,
-                                color: isSelected ? AppColors.goldAccent : Colors.grey,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      reciter.nameArabic,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      ),
-                                    ),
-                                    Text(
-                                      reciter.subTitle,
-                                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (reciter.isDefault)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.goldAccent.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'الافتراضي',
-                                    style: TextStyle(fontSize: 9, color: AppColors.goldAccent),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }).toList();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.goldAccent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: AppColors.goldAccent.withValues(alpha: 0.3),
-                          width: 0.8,
-                        ),
+                  // Quick Action Buttons
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Import ZIP Recitations
+                      IconButton(
+                        icon: const Icon(Icons.folder_zip_rounded, size: 20),
+                        tooltip: 'استيراد تلاوات القارئ من ملف ZIP',
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        color: AppColors.goldAccent,
+                        onPressed: _handleImportZip,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.person_rounded, size: 13, color: AppColors.goldAccent),
-                          const SizedBox(width: 4),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 100),
-                            child: Text(
-                              _audioService.activeReciter.nameArabic,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const Icon(Icons.arrow_drop_down_rounded, size: 16),
-                        ],
+                      const SizedBox(width: 2),
+                      // Open in Mushaf
+                      IconButton(
+                        icon: const Icon(Icons.menu_book_rounded, size: 20),
+                        tooltip: 'قراءة في المصحف',
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        color: AppColors.goldAccent,
+                        onPressed: () {
+                          widget.onOpenSurah(
+                            _selectedSurahNumber,
+                            targetAyah: _selectedAyahNumber,
+                            targetPage: currentSurah.startPage,
+                          );
+                        },
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-
-                  // Import ZIP Recitations Icon Button
-                  IconButton(
-                    icon: const Icon(Icons.folder_zip_rounded, size: 19),
-                    tooltip: 'استيراد تلاوات القارئ من ملف ZIP',
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                    color: AppColors.goldAccent,
-                    onPressed: _handleImportZip,
-                  ),
-                  const SizedBox(width: 2),
-
-                  // Open in Mushaf Icon Button
-                  IconButton(
-                    icon: const Icon(Icons.menu_book_rounded, size: 18),
-                    tooltip: 'قراءة في المصحف',
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                    color: AppColors.goldAccent,
-                    onPressed: () {
-                      widget.onOpenSurah(
-                        _selectedSurahNumber,
-                        targetAyah: _selectedAyahNumber,
-                        targetPage: currentSurah.startPage,
-                      );
-                    },
+                    ],
                   ),
                 ],
               ),
 
-              // Row 2: Compact Verse Scrubber Slider
+              const SizedBox(height: 8),
+
+              // Level 2: Dedicated Reciter Selector Bar
+              PopupMenuButton<QuranReciter>(
+                tooltip: 'اختيار القارئ',
+                initialValue: _audioService.activeReciter,
+                onSelected: _onReciterChanged,
+                itemBuilder: (context) {
+                  return kAvailableReciters.map((reciter) {
+                    final isSelected = reciter.id == _audioService.activeReciter.id;
+                    return PopupMenuItem<QuranReciter>(
+                      value: reciter,
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected
+                                ? Icons.radio_button_checked_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            size: 15,
+                            color: isSelected ? AppColors.goldAccent : Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  reciter.nameArabic,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                                Text(
+                                  reciter.subTitle,
+                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (reciter.isDefault)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.goldAccent.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'الافتراضي',
+                                style: TextStyle(fontSize: 9, color: AppColors.goldAccent),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.goldAccent.withValues(alpha: isDark ? 0.12 : 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.goldAccent.withValues(alpha: isDark ? 0.35 : 0.25),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.record_voice_over_rounded, size: 15, color: AppColors.goldAccent),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'القارئ: ',
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.goldAccent),
+                      ),
+                      Flexible(
+                        child: Text(
+                          _audioService.activeReciter.nameArabic,
+                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '(${_audioService.activeReciter.subTitle})',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.goldAccent),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Level 3: Compact Verse Scrubber Slider
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
+                padding: const EdgeInsets.only(top: 4, bottom: 2),
                 child: Row(
                   children: [
                     Text(
@@ -390,7 +444,7 @@ class _QuranAudioRadioTabState extends State<QuranAudioRadioTab> {
                 ),
               ),
 
-              // Row 3: Compact Media Controls & Speed Selector
+              // Level 4: Media Controls & Playback Speed
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -510,22 +564,8 @@ class _QuranAudioRadioTabState extends State<QuranAudioRadioTab> {
                     ],
                   ),
 
-                  // Surah Revelation Type Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.goldAccent.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      currentSurah.revelationType.nameArabic,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.goldAccent : AppColors.primary,
-                      ),
-                    ),
-                  ),
+                  // Balance placeholder with same width as speed chip
+                  const SizedBox(width: 48),
                 ],
               ),
             ],
