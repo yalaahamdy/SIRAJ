@@ -35,21 +35,21 @@ class PrayerSchedule extends Equatable {
 
   /// List of the 5 primary obligatory prayer entries ordered chronologically.
   List<PrayerTimeEntry> get obligatoryPrayers => [
-        ?fajr,
-        ?dhuhr,
-        ?asr,
-        ?maghrib,
-        ?isha,
+        if (fajr != null) fajr!,
+        if (dhuhr != null) dhuhr!,
+        if (asr != null) asr!,
+        if (maghrib != null) maghrib!,
+        if (isha != null) isha!,
       ];
 
   /// List of all standard daily transitions (Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha).
   List<PrayerTimeEntry> get dailyScheduleList => [
-        ?fajr,
-        ?sunrise,
-        ?dhuhr,
-        ?asr,
-        ?maghrib,
-        ?isha,
+        if (fajr != null) fajr!,
+        if (sunrise != null) sunrise!,
+        if (dhuhr != null) dhuhr!,
+        if (asr != null) asr!,
+        if (maghrib != null) maghrib!,
+        if (isha != null) isha!,
       ];
 
   @override
