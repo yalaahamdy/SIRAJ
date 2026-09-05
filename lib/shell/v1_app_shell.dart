@@ -18,7 +18,10 @@ import '../modules/quran/services/quran_audio_service.dart';
 import '../modules/seerah/seerah_module.dart';
 import '../modules/zakat/zakat_module.dart';
 import '../core/location/location_engine.dart';
+import '../core/location/location_models.dart';
 import '../core/location/sensor_compass_service.dart';
+import '../modules/prayer/domain/calculation_parameters.dart';
+import '../modules/prayer/domain/prayer_adjustments.dart';
 import 'adhkar/adhkar_home_screen.dart';
 import 'companion/home_dashboard_view.dart';
 import 'prayer/prayer_screen.dart';
@@ -157,6 +160,50 @@ class _V1AppShellState extends State<V1AppShell> {
     AppRouter.defaultLearningModule = _learningModule;
     AppRouter.defaultSeerahModule = _seerahModule;
     AppRouter.defaultHajjModule = _hajjModule;
+
+    // Automatic background scheduling of Athan & daily prayers for today and tomorrow
+    _scheduleBackgroundPrayerAlarms();
+    _locationEngine.locationStream.listen((newLoc) {
+      _scheduleBackgroundPrayerAlarms(location: newLoc);
+    });
+  }
+
+  Future<void> _scheduleBackgroundPrayerAlarms({GeoCoordinates? location}) async {
+    try {
+      final loc = location ?? _locationEngine.currentEffectiveLocation;
+      final now = _prayerModule.clock.nowLocal();
+      final tomorrow = now.add(const Duration(days: 1));
+
+      final adjRes = await _prayerModule.calibrationService.getAdjustments();
+      final adjustments = adjRes.valueOrNull ?? PrayerAdjustments.zero;
+      const params = CalculationParameters.egyptian;
+
+      final todayRes = await _prayerModule.getSchedule(
+        date: now,
+        location: loc,
+        parameters: params,
+        adjustments: adjustments,
+      );
+      if (todayRes.isSuccess && todayRes.valueOrNull != null) {
+        _prayerModule.notificationService.scheduleDailyPrayers(
+          schedule: todayRes.valueOrNull!,
+          clearPrevious: true,
+        );
+      }
+
+      final tomorrowRes = await _prayerModule.getSchedule(
+        date: tomorrow,
+        location: loc,
+        parameters: params,
+        adjustments: adjustments,
+      );
+      if (tomorrowRes.isSuccess && tomorrowRes.valueOrNull != null) {
+        _prayerModule.notificationService.scheduleDailyPrayers(
+          schedule: tomorrowRes.valueOrNull!,
+          clearPrevious: false,
+        );
+      }
+    } catch (_) {}
   }
 
   @override

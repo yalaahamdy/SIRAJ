@@ -253,11 +253,13 @@ class _PrayerScreenState extends State<PrayerScreen> {
     if (todayRes.valueOrNull != null) {
       widget.prayerModule.notificationService.scheduleDailyPrayers(
         schedule: todayRes.valueOrNull!,
+        clearPrevious: true,
       );
     }
     if (tomorrowRes.valueOrNull != null) {
       widget.prayerModule.notificationService.scheduleDailyPrayers(
         schedule: tomorrowRes.valueOrNull!,
+        clearPrevious: false,
       );
     }
 

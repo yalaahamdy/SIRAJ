@@ -14,12 +14,12 @@ class SirajNotificationManager {
   SirajNotificationManager._internal();
 
   // القناة المخصصة للأذان الصوتي الكامل ذو الأولوية القصوى
-  static const String athanChannelId = 'siraj_athan_channel_v3';
+  static const String athanChannelId = 'siraj_athan_channel_v4';
   static const String athanChannelName = 'صوت وأذان الصلاة الشريف';
   static const String athanChannelDescription = 'تنبيهات الأذان بصوت الشيخ عبد الباسط عبد الصمد في مواقيت الصلاة';
 
   // القناة القياسية للتنبيهات الصامتة والمبكرة
-  static const String standardChannelId = 'siraj_standard_channel_v3';
+  static const String standardChannelId = 'siraj_standard_channel_v4';
   static const String standardChannelName = 'تنبيهات الصلوات العامة';
   static const String standardChannelDescription = 'إشعارات دخول الوقت والإقامة والتذكير قبل الأذان';
 
@@ -63,6 +63,18 @@ class SirajNotificationManager {
         final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
         if (androidPlugin != null) {
+          // تنظيف القنوات السابقة لضمان تحديث إعدادات صوت المنبه على نظام أندرويد
+          for (final oldId in [
+            'siraj_athan_channel_v1',
+            'siraj_athan_channel_v2',
+            'siraj_athan_channel_v3',
+            'siraj_standard_channel_v3',
+          ]) {
+            try {
+              await androidPlugin.deleteNotificationChannel(channelId: oldId);
+            } catch (_) {}
+          }
+
           // 1. قناة الأذان الصوتي الكامل (تنبيه منبه بأقصى أولوية مع صوت raw/athan_abdulbasit)
           const athanChannel = AndroidNotificationChannel(
             athanChannelId,
@@ -166,8 +178,11 @@ class SirajNotificationManager {
       sound: playAthanSound ? const RawResourceAndroidNotificationSound('athan_abdulbasit') : null,
       enableVibration: true,
       audioAttributesUsage: AudioAttributesUsage.alarm,
+      category: AndroidNotificationCategory.alarm,
+      visibility: NotificationVisibility.public,
       icon: '@mipmap/ic_launcher',
       fullScreenIntent: true,
+      ticker: title,
     );
 
     const darwinDetails = DarwinNotificationDetails(
@@ -216,7 +231,16 @@ class SirajNotificationManager {
     if (!scheduledTime.isAfter(now)) return;
 
     try {
-      final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
+      // بناء التوقيت المحلي بدقة بالغة وفق منطقة الجهاز الزمنية
+      final tzTime = tz.TZDateTime(
+        tz.local,
+        scheduledTime.year,
+        scheduledTime.month,
+        scheduledTime.day,
+        scheduledTime.hour,
+        scheduledTime.minute,
+        scheduledTime.second,
+      );
 
       final androidDetails = AndroidNotificationDetails(
         playAthanSound ? athanChannelId : standardChannelId,
@@ -228,8 +252,11 @@ class SirajNotificationManager {
         sound: playAthanSound ? const RawResourceAndroidNotificationSound('athan_abdulbasit') : null,
         enableVibration: true,
         audioAttributesUsage: AudioAttributesUsage.alarm,
+        category: AndroidNotificationCategory.alarm,
+        visibility: NotificationVisibility.public,
         icon: '@mipmap/ic_launcher',
         fullScreenIntent: true,
+        ticker: title,
       );
 
       const darwinDetails = DarwinNotificationDetails(
@@ -244,15 +271,28 @@ class SirajNotificationManager {
         iOS: darwinDetails,
       );
 
-      await _notifications.zonedSchedule(
-        id: id,
-        title: title,
-        body: body,
-        scheduledDate: tzTime,
-        notificationDetails: notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: payload,
-      );
+      try {
+        await _notifications.zonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: tzTime,
+          notificationDetails: notificationDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload: payload,
+        );
+      } catch (exactAlarmEx) {
+        debugPrint('Exact alarm failed (permission/battery saver), fallback to inexact: $exactAlarmEx');
+        await _notifications.zonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: tzTime,
+          notificationDetails: notificationDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+        );
+      }
       debugPrint('Successfully scheduled prayer alarm notification for: $scheduledTime (id: $id)');
     } catch (e) {
       debugPrint('Error scheduling prayer notification: $e');

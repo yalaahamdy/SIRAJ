@@ -281,15 +281,17 @@ class _PrayerSettingsScreenState extends State<PrayerSettingsScreen> {
                         title: const Text('إعدادات صوت الأذان والتخصيص'),
                         subtitle: const Text('أذان الشيخ عبد الباسط عبد الصمد، ومستوى الصوت، والاهتزاز، وتخصيص كل صلاة'),
                         trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => AthanSettingsScreen(
                                 prayerModule: widget.prayerModule,
+                                onSettingsChanged: widget.onSettingsChanged,
                               ),
                             ),
                           );
+                          widget.onSettingsChanged();
                         },
                       ),
                       const Divider(height: 1),

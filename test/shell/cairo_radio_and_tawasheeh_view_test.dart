@@ -68,8 +68,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // Check mode switcher exists
-      expect(find.text('إذاعة القاهرة (FM 98.2)'), findsOneWidget);
-      expect(find.text('تواشيح كبار المبتهلين (2)'), findsOneWidget);
+      expect(find.text('إذاعة القرآن (القاهرة)'), findsOneWidget);
+      expect(find.text('التواشيح والابتهالات'), findsOneWidget);
 
       // Check Live Radio Hero elements exist
       expect(find.text('FM 98.2 MHz'), findsOneWidget);
@@ -96,7 +96,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // Tap on Tawasheeh tab
-      await tester.tap(find.text('تواشيح كبار المبتهلين (2)'));
+      await tester.tap(find.text('التواشيح والابتهالات'));
       await tester.pump(const Duration(milliseconds: 300));
 
       // Expect TawasheehPlayerView to be rendered
@@ -112,6 +112,41 @@ void main() {
 
       expect(radioService.currentTawasheeh?.id, equals('tawasheeh_001'));
       expect(radioService.isPlaying, isTrue);
+    });
+
+    testWidgets('Renders without any RenderFlex overflow on narrow 360px mobile screen', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CairoRadioLiveView(
+              radioService: radioService,
+              tawasheehStore: tawasheehStore,
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(tester.takeException(), isNull);
+
+      // Switch to Tawasheeh
+      await tester.tap(find.text('التواشيح والابتهالات'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Scroll down to reveal items on short screen
+      await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -350));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final itemFinder = find.text('ابتهال: إلهى . إن يكن ذنبى عظيما');
+      await tester.tap(itemFinder.first);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(TawasheehPlayerView), findsOneWidget);
     });
   });
 }

@@ -10,10 +10,12 @@ import '../widgets/athan_preview_card.dart';
 /// Screen for configuring Athan audio, per-prayer alert modes, and reminders (§17, §32).
 class AthanSettingsScreen extends StatefulWidget {
   final PrayerModule prayerModule;
+  final VoidCallback? onSettingsChanged;
 
   const AthanSettingsScreen({
     super.key,
     required this.prayerModule,
+    this.onSettingsChanged,
   });
 
   @override
@@ -32,6 +34,7 @@ class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
   void _updateSettings(PrayerNotificationSettings newSettings) {
     setState(() => _settings = newSettings);
     widget.prayerModule.notificationService.updateSettings(newSettings);
+    widget.onSettingsChanged?.call();
   }
 
   void _showPrayerModeDialog(PrayerType type) {

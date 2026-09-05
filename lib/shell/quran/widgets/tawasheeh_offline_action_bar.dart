@@ -205,19 +205,22 @@ class _TawasheehOfflineActionBarState extends State<TawasheehOfflineActionBar> {
                 color: _downloadedCount > 0 ? Colors.green : AppColors.goldAccent,
               ),
               const SizedBox(width: 8),
-              Text(
-                _downloadedCount > 0
-                    ? 'متوفر بدون إنترنت: $_downloadedCount تسجيلاً'
-                    : 'الاستماع بدون إنترنت (تخزين محلي)',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.bold,
-                  color: _downloadedCount > 0
-                      ? (isDark ? Colors.greenAccent : Colors.green.shade800)
-                      : null,
+              Expanded(
+                child: Text(
+                  _downloadedCount > 0
+                      ? 'متوفر بدون إنترنت: $_downloadedCount تسجيلاً'
+                      : 'الاستماع بدون إنترنت (تخزين محلي)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                    color: _downloadedCount > 0
+                        ? (isDark ? Colors.greenAccent : Colors.green.shade800)
+                        : null,
+                  ),
                 ),
               ),
-              const Spacer(),
               if (_downloadedCount > 0)
                 IconButton(
                   icon: const Icon(Icons.delete_sweep_rounded, size: 18, color: AppColors.error),

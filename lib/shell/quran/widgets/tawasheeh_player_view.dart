@@ -212,7 +212,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
     final sliderVal = effectivePosSec.clamp(0.0, totalSec);
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
@@ -240,36 +240,43 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.goldAccent.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.goldAccent.withValues(alpha: 0.5),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.goldAccent.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppColors.goldAccent.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.mic_external_on_rounded,
+                        size: 14,
+                        color: isDark ? AppColors.goldAccentLight : AppColors.goldAccent,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'ابتهالات وتواشيح نادرة',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? AppColors.goldAccentLight : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.mic_external_on_rounded,
-                      size: 14,
-                      color: isDark ? AppColors.goldAccentLight : AppColors.goldAccent,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'ابتهالات وتواشيح نادرة',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.goldAccentLight : AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
               ),
-              if (hasTrack)
+              if (hasTrack) ...[
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -296,7 +303,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                       Text(
                         isPlaying ? 'قيد الاستماع' : (isConnecting ? 'تحميل...' : 'متوقف'),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10.5,
                           fontWeight: FontWeight.bold,
                           color: isPlaying ? Colors.green : Colors.grey,
                         ),
@@ -304,6 +311,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                     ],
                   ),
                 ),
+              ],
             ],
           ),
 
@@ -327,18 +335,22 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.goldAccent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    'الشيخ ${_currentTawasheeh!.reciter}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.goldAccent,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.goldAccent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      'الشيخ ${_currentTawasheeh!.reciter}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.goldAccent,
+                      ),
                     ),
                   ),
                 ),
@@ -383,7 +395,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
             ),
             const SizedBox(height: 4),
             Text(
-              'تراث عريق يضم 80 تسجيلاً لكبار مبتهلي مصر والعالم الإسلامي',
+              'تراث عريق يضم ${widget.tawasheehStore.allItems.isNotEmpty ? widget.tawasheehStore.allItems.length : 317} تسجيلاً نادراً لكبار مبتهلي مصر والعالم الإسلامي',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 11.5,
@@ -474,27 +486,10 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
 
           const SizedBox(height: 10),
 
-          // Control Buttons Row
+          // Level 1: Main Playback Transport Controls
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Repeat Button
-              IconButton(
-                icon: Icon(
-                  widget.radioService.isRepeat
-                      ? Icons.repeat_one_rounded
-                      : Icons.repeat_rounded,
-                ),
-                iconSize: 22,
-                color: widget.radioService.isRepeat
-                    ? AppColors.goldAccent
-                    : (isDark ? Colors.grey[500] : Colors.grey[400]),
-                tooltip: widget.radioService.isRepeat ? 'إلغاء التكرار' : 'تكرار الابتهال',
-                onPressed: () {
-                  setState(() => widget.radioService.toggleRepeat());
-                },
-              ),
-
               // Previous Track
               IconButton(
                 icon: const Icon(Icons.skip_previous_rounded),
@@ -502,6 +497,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                 tooltip: 'الابتهال السابق',
                 onPressed: hasTrack ? () => widget.radioService.previousTawasheeh() : null,
               ),
+              const SizedBox(width: 4),
 
               // Seek -10s
               IconButton(
@@ -515,14 +511,13 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                       }
                     : null,
               ),
-
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
 
               // Main Hero Play/Pause
               if (isConnecting)
                 const SizedBox(
-                  width: 58,
-                  height: 58,
+                  width: 54,
+                  height: 54,
                   child: Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
@@ -542,8 +537,8 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFFDAA520).withValues(alpha: 0.4),
-                        blurRadius: 14,
-                        spreadRadius: 2,
+                        blurRadius: 12,
+                        spreadRadius: 1,
                       ),
                     ],
                   ),
@@ -564,16 +559,15 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                     },
                     icon: Icon(
                       isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                      size: 36,
+                      size: 32,
                       color: Colors.white,
                     ),
-                    iconSize: 44,
-                    padding: const EdgeInsets.all(10),
+                    iconSize: 42,
+                    padding: const EdgeInsets.all(8),
                     tooltip: isPlaying ? 'إيقاف مؤقت' : 'تشغيل',
                   ),
                 ),
-
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
 
               // Seek +10s
               IconButton(
@@ -587,6 +581,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                       }
                     : null,
               ),
+              const SizedBox(width: 4),
 
               // Next Track
               IconButton(
@@ -595,56 +590,139 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                 tooltip: 'الابتهال التالي',
                 onPressed: hasTrack ? () => widget.radioService.nextTawasheeh() : null,
               ),
+            ],
+          ),
 
-              // Shuffle Button
-              IconButton(
-                icon: const Icon(Icons.shuffle_rounded),
-                iconSize: 22,
-                color: widget.radioService.isShuffle
-                    ? AppColors.goldAccent
-                    : (isDark ? Colors.grey[500] : Colors.grey[400]),
-                tooltip: widget.radioService.isShuffle ? 'إلغاء الخلط' : 'تشغيل عشوائي',
-                onPressed: () {
-                  setState(() => widget.radioService.toggleShuffle());
-                },
-              ),
+          const SizedBox(height: 8),
 
-              const SizedBox(width: 4),
-
-              // Playback Speed Button
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () {
-                  const speeds = [0.75, 1.0, 1.25, 1.5, 2.0];
-                  final curIndex = speeds.indexOf(widget.radioService.playbackSpeed);
-                  final nextSpeed = speeds[(curIndex + 1) % speeds.length];
-                  widget.radioService.setPlaybackSpeed(nextSpeed);
-                  setState(() {});
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: widget.radioService.playbackSpeed != 1.0
-                        ? AppColors.goldAccent.withValues(alpha: 0.25)
-                        : AppColors.goldAccent.withValues(alpha: 0.1),
+          // Level 2: Secondary Controls (Repeat, Shuffle, Playback Speed)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.black.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                // Repeat Button
+                Expanded(
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: widget.radioService.playbackSpeed != 1.0
-                          ? AppColors.goldAccent
-                          : AppColors.goldAccent.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    '${widget.radioService.playbackSpeed}x',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.goldAccentLight : AppColors.primary,
+                    onTap: () {
+                      setState(() => widget.radioService.toggleRepeat());
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            widget.radioService.isRepeat
+                                ? Icons.repeat_one_rounded
+                                : Icons.repeat_rounded,
+                            size: 16,
+                            color: widget.radioService.isRepeat
+                                ? AppColors.goldAccent
+                                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'تكرار',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: widget.radioService.isRepeat ? FontWeight.bold : FontWeight.normal,
+                              color: widget.radioService.isRepeat
+                                  ? AppColors.goldAccent
+                                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+
+                Container(width: 1, height: 16, color: isDark ? Colors.white12 : Colors.black12),
+
+                // Shuffle Button
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      setState(() => widget.radioService.toggleShuffle());
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.shuffle_rounded,
+                            size: 16,
+                            color: widget.radioService.isShuffle
+                                ? AppColors.goldAccent
+                                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'عشوائي',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: widget.radioService.isShuffle ? FontWeight.bold : FontWeight.normal,
+                              color: widget.radioService.isShuffle
+                                  ? AppColors.goldAccent
+                                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                Container(width: 1, height: 16, color: isDark ? Colors.white12 : Colors.black12),
+
+                // Playback Speed Button
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      const speeds = [0.75, 1.0, 1.25, 1.5, 2.0];
+                      final curIndex = speeds.indexOf(widget.radioService.playbackSpeed);
+                      final nextSpeed = speeds[(curIndex + 1) % speeds.length];
+                      widget.radioService.setPlaybackSpeed(nextSpeed);
+                      setState(() {});
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.speed_rounded,
+                            size: 16,
+                            color: widget.radioService.playbackSpeed != 1.0
+                                ? AppColors.goldAccent
+                                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${widget.radioService.playbackSpeed}x',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: widget.radioService.playbackSpeed != 1.0
+                                  ? AppColors.goldAccent
+                                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -653,7 +731,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
 
   Widget _buildSleepTimerStrip(BuildContext context, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1B2129) : const Color(0xFFF9F7F4),
         borderRadius: BorderRadius.circular(14),
@@ -663,47 +741,63 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
       ),
       child: Row(
         children: [
-          const Icon(Icons.bedtime_rounded, size: 16, color: AppColors.goldAccent),
-          const SizedBox(width: 8),
-          const Text(
-            'مؤقت النوم',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.bedtime_rounded, size: 16, color: AppColors.goldAccent),
+              const SizedBox(width: 6),
+              const Text(
+                'مؤقت النوم',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ],
           ),
-          const Spacer(),
-          if (_sleepRemaining != null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.goldAccent.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'متبقٍ ${_formatDuration(_sleepRemaining!)}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.goldAccent,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(Icons.close_rounded, size: 14),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              tooltip: 'إلغاء المؤقت',
-              onPressed: () => widget.radioService.cancelSleepTimer(),
-            ),
-          ] else ...[
-            Wrap(
-              spacing: 6,
-              children: [
-                _buildSleepChip(RadioSleepTimerDuration.fifteenMinutes),
-                _buildSleepChip(RadioSleepTimerDuration.thirtyMinutes),
-                _buildSleepChip(RadioSleepTimerDuration.fortyFiveMinutes),
-              ],
-            ),
-          ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: _sleepRemaining != null
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.goldAccent.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'متبقٍ ${_formatDuration(_sleepRemaining!)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.goldAccent,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 14),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'إلغاء المؤقت',
+                        onPressed: () => widget.radioService.cancelSleepTimer(),
+                      ),
+                    ],
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    reverse: true,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildSleepChip(RadioSleepTimerDuration.fifteenMinutes),
+                        const SizedBox(width: 4),
+                        _buildSleepChip(RadioSleepTimerDuration.thirtyMinutes),
+                        const SizedBox(width: 4),
+                        _buildSleepChip(RadioSleepTimerDuration.fortyFiveMinutes),
+                      ],
+                    ),
+                  ),
+          ),
         ],
       ),
     );
@@ -913,25 +1007,26 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
 
                   const SizedBox(width: 12),
 
-                  // Title and Reciter
+                  // Title and Reciter + Duration
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           item.cleanTitle,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontFamily: 'Amiri',
                             fontSize: 15,
+                            height: 1.3,
                             fontWeight: isCurrentItem ? FontWeight.bold : FontWeight.w600,
                             color: isCurrentItem
                                 ? (isDark ? AppColors.goldAccentLight : AppColors.primary)
                                 : null,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Row(
                           children: [
                             Icon(
@@ -940,13 +1035,43 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                               color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              item.reciter,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            Flexible(
+                              child: Text(
+                                item.reciter,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
                               ),
                             ),
+                            if (item.duration.isNotEmpty) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 5),
+                                child: Text(
+                                  '•',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 11,
+                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                item.duration,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -955,94 +1080,69 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
 
                   const SizedBox(width: 6),
 
-                  // Offline Status or Download Action
-                  if (item.isOfflineAvailable)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 2),
-                      child: Tooltip(
-                        message: 'متاح بدون إنترنت',
-                        child: Icon(
-                          Icons.offline_pin_rounded,
-                          size: 18,
-                          color: Colors.green,
-                        ),
-                      ),
-                    )
-                  else if (_downloadingIds.contains(item.id))
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: SizedBox(
-                        width: 15,
-                        height: 15,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.goldAccent,
-                        ),
-                      ),
-                    )
-                  else if (item.url.isNotEmpty)
-                    IconButton(
-                      icon: const Icon(Icons.download_for_offline_outlined, size: 19),
-                      tooltip: 'تنزيل للاستماع بدون إنترنت',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                      onPressed: () => _handleDownloadTrack(item),
-                    ),
-                  const SizedBox(width: 4),
-
-                  // Favorite Action
-                  IconButton(
-                    icon: Icon(
-                      widget.tawasheehStore.isFavorite(item.id)
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      size: 18,
-                      color: widget.tawasheehStore.isFavorite(item.id)
-                          ? Colors.redAccent
-                          : (isDark ? Colors.grey[500] : Colors.grey[400]),
-                    ),
-                    tooltip: widget.tawasheehStore.isFavorite(item.id)
-                        ? 'في المفضلة'
-                        : 'إضافة للمفضلة',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                    onPressed: () async {
-                      await widget.tawasheehStore.toggleFavorite(item.id);
-                      setState(() {});
-                    },
-                  ),
-
-                  const SizedBox(width: 4),
-
-                  // Duration Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1E293B)
-                          : AppColors.goldAccent.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.access_time_rounded,
-                          size: 11,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          item.duration,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                  // Actions Group: Offline Status, Download, and Favorite
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Offline Status or Download Action
+                      if (item.isOfflineAvailable)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Tooltip(
+                            message: 'متاح بدون إنترنت',
+                            child: Icon(
+                              Icons.offline_pin_rounded,
+                              size: 19,
+                              color: Colors.green,
+                            ),
                           ),
+                        )
+                      else if (_downloadingIds.contains(item.id))
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 5),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.goldAccent,
+                            ),
+                          ),
+                        )
+                      else if (item.url.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.download_for_offline_outlined, size: 20),
+                          tooltip: 'تنزيل للاستماع بدون إنترنت',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          onPressed: () => _handleDownloadTrack(item),
                         ),
-                      ],
-                    ),
+
+                      const SizedBox(width: 2),
+
+                      // Favorite Action
+                      IconButton(
+                        icon: Icon(
+                          widget.tawasheehStore.isFavorite(item.id)
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          size: 19,
+                          color: widget.tawasheehStore.isFavorite(item.id)
+                              ? Colors.redAccent
+                              : (isDark ? Colors.grey[500] : Colors.grey[400]),
+                        ),
+                        tooltip: widget.tawasheehStore.isFavorite(item.id)
+                            ? 'في المفضلة'
+                            : 'إضافة للمفضلة',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                        onPressed: () async {
+                          await widget.tawasheehStore.toggleFavorite(item.id);
+                          setState(() {});
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),

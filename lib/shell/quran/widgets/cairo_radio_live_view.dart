@@ -469,11 +469,14 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
                   children: [
                     const Icon(Icons.bedtime_rounded, size: 18, color: AppColors.goldAccent),
                     const SizedBox(width: 8),
-                    const Text(
-                      'مؤقت النوم (إيقاف تلقائي للبث)',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                    const Expanded(
+                      child: Text(
+                        'مؤقت النوم (إيقاف تلقائي للبث)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                      ),
                     ),
-                    const Spacer(),
                     if (_sleepRemaining != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -549,9 +552,13 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
                   children: [
                     const Icon(Icons.history_edu_rounded, size: 18, color: AppColors.goldAccent),
                     const SizedBox(width: 8),
-                    const Text(
-                      'أصالة إذاعة القرآن الكريم من القاهرة',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                    const Expanded(
+                      child: Text(
+                        'أصالة إذاعة القرآن الكريم من القاهرة',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                      ),
                     ),
                   ],
                 ),
@@ -587,7 +594,7 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
         children: [
           Expanded(
             child: _buildModeTab(
-              title: 'إذاعة القاهرة (FM 98.2)',
+              title: 'إذاعة القرآن (القاهرة)',
               icon: Icons.radio_rounded,
               isSelected: _activeMode == CairoRadioMode.liveRadio,
               onTap: () {
@@ -600,7 +607,7 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
           const SizedBox(width: 4),
           Expanded(
             child: _buildModeTab(
-              title: 'تواشيح كبار المبتهلين (${widget.tawasheehStore?.allItems.isNotEmpty == true ? widget.tawasheehStore!.allItems.length : 317})',
+              title: 'التواشيح والابتهالات',
               icon: Icons.mic_external_on_rounded,
               isSelected: _activeMode == CairoRadioMode.tawasheeh,
               onTap: () {

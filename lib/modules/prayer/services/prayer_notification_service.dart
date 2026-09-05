@@ -66,8 +66,11 @@ class PrayerNotificationService {
     required PrayerSchedule schedule,
     DateTime? now,
     PrayerNotificationSettings? customSettings,
+    bool clearPrevious = true,
   }) {
-    _activeSchedules.clear();
+    if (clearPrevious) {
+      _activeSchedules.clear();
+    }
     final current = now ?? _clock.nowLocal();
     final effectiveSettings = customSettings ?? _settings;
 
@@ -92,6 +95,17 @@ class PrayerNotificationService {
               isPreAthan: true,
             ),
           );
+
+          try {
+            final preNotifId = 1000 + (schedule.date.day * 10) + entry.type.index;
+            SirajNotificationManager.instance.schedulePrayerNotification(
+              id: preNotifId,
+              title: 'اقترب وقت صلاة ${entry.type.nameArabic}',
+              body: 'بقي ${perPrayer.preAthanMinutes} دقيقة على دخول الوقت',
+              scheduledTime: preTime,
+              playAthanSound: false,
+            );
+          } catch (_) {}
         }
       }
 
@@ -136,6 +150,17 @@ class PrayerNotificationService {
               isIqama: true,
             ),
           );
+
+          try {
+            final iqamaNotifId = 2000 + (schedule.date.day * 10) + entry.type.index;
+            SirajNotificationManager.instance.schedulePrayerNotification(
+              id: iqamaNotifId,
+              title: 'حان وقت إقامة صلاة ${entry.type.nameArabic}',
+              body: 'استعد للصلاة بخشوع وإقبال',
+              scheduledTime: iqamaTime,
+              playAthanSound: false,
+            );
+          } catch (_) {}
         }
       }
     }
