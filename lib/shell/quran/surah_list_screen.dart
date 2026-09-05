@@ -7,6 +7,7 @@ import '../../../modules/quran/search/quran_search_engine.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/state_views.dart';
+import 'widgets/cairo_radio_live_view.dart';
 import 'widgets/quran_audio_radio_tab.dart';
 import 'widgets/quran_settings_tab.dart';
 
@@ -40,7 +41,7 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadAllData();
   }
 
@@ -99,8 +100,11 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
             child: TabBar(
               controller: _tabController,
               indicatorColor: AppColors.goldAccent,
+              isScrollable: true,
+              tabAlignment: TabAlignment.center,
               tabs: const [
                 Tab(text: 'السور'),
+                Tab(text: 'إذاعة القاهرة'),
                 Tab(text: 'التلاوة'),
                 Tab(text: 'الأجزاء'),
                 Tab(text: 'الإعدادات'),
@@ -149,6 +153,9 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
                       controller: _tabController,
                       children: [
                         _buildSurahsTab(context, isDark),
+                        CairoRadioLiveView(
+                          radioService: widget.quranModule.radioService,
+                        ),
                         QuranAudioRadioTab(
                           quranModule: widget.quranModule,
                           surahs: _surahs,

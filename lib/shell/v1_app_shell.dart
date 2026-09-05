@@ -12,6 +12,7 @@ import '../modules/learning/learning_module.dart';
 import '../modules/memorization/memorization_module.dart';
 import '../modules/prayer/prayer_module.dart';
 import '../modules/quran/quran_module.dart';
+import '../modules/quran/services/cairo_radio_audio_service.dart';
 import '../modules/quran/services/flutter_audio_player_adapter.dart';
 import '../modules/quran/services/quran_audio_service.dart';
 import '../modules/seerah/seerah_module.dart';
@@ -91,10 +92,15 @@ class _V1AppShellState extends State<V1AppShell> {
       store: baseQuranModule.store,
       player: audioAdapter,
     );
+    final realRadioService = CairoRadioAudioService(
+      player: ProductionRadioPlayerAdapter(),
+    );
+    CairoRadioAudioService.setMockInstance(realRadioService);
     _quranModule = QuranModule(
       storageRegistry: _storage,
       storeInstance: baseQuranModule.store,
       audioServiceInstance: realAudioService,
+      radioServiceInstance: realRadioService,
     );
     AppRouter.defaultQuranModule = _quranModule;
     _memorizationModule = MemorizationModule(

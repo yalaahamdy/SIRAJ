@@ -11,6 +11,8 @@ import 'widgets/daily_journey_timeline.dart';
 import 'widgets/home_hero_now_card.dart';
 import '../widgets/siraj_app_logo.dart';
 import '../widgets/siraj_about_dialog.dart';
+import '../../../modules/quran/domain/cairo_radio_station.dart';
+import '../../../modules/quran/services/cairo_radio_audio_service.dart';
 
 class HomeDashboardView extends StatefulWidget {
   final CompanionModule module;
@@ -183,6 +185,103 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
                         ),
                       ),
                     ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          // 4. Cairo Quran Radio Live Quick Card
+          StreamBuilder<CairoRadioStatus>(
+            stream: CairoRadioAudioService.instance.statusStream,
+            initialData: CairoRadioAudioService.instance.status,
+            builder: (context, snapshot) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final status = snapshot.data ?? CairoRadioStatus.idle;
+              final isPlaying = status == CairoRadioStatus.playing;
+              final isConnecting = status == CairoRadioStatus.connecting;
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF131F2E) : const Color(0xFFFBF8F3),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.goldAccent.withValues(alpha: isDark ? 0.35 : 0.45),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.goldAccent.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.radio_rounded,
+                        color: isDark ? AppColors.goldAccentLight : AppColors.goldAccent,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'إذاعة القرآن الكريم من القاهرة',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isPlaying ? Colors.green : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isPlaying
+                                ? 'بث حي ومباشر يعمل الآن • FM 98.2'
+                                : 'البث المباشر على مدار الساعة • FM 98.2',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isConnecting)
+                      const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.goldAccent),
+                      )
+                    else
+                      IconButton(
+                        icon: Icon(isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded),
+                        iconSize: 34,
+                        color: AppColors.goldAccent,
+                        onPressed: () {
+                          if (isPlaying) {
+                            CairoRadioAudioService.instance.pause();
+                          } else {
+                            CairoRadioAudioService.instance.play();
+                          }
+                        },
+                      ),
                   ],
                 ),
               );

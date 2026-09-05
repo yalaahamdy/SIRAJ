@@ -14,6 +14,7 @@ import 'domain/quran_reading_progress.dart';
 import 'domain/surah.dart';
 import 'recitation/services/quran_recitation_session_store.dart';
 import 'search/quran_search_engine.dart';
+import 'services/cairo_radio_audio_service.dart';
 import 'services/quran_audio_service.dart';
 import 'services/quran_offline_audio_service.dart';
 import 'services/quran_reader_service.dart';
@@ -32,6 +33,7 @@ class QuranModule implements QuranModuleContract {
   final QuranReaderService readerService;
   final QuranAudioService audioService;
   final QuranOfflineAudioService offlineAudioService;
+  final CairoRadioAudioService radioService;
   final QuranTafsirService tafsirService;
   final QuranContentDiffEngine diffEngine;
   final StorageRegistry storageRegistry;
@@ -43,12 +45,14 @@ class QuranModule implements QuranModuleContract {
     ReadOnlyCanonicalQuranStore? storeInstance,
     QuranAudioService? audioServiceInstance,
     QuranTafsirService? tafsirServiceInstance,
+    CairoRadioAudioService? radioServiceInstance,
   }) : this._internal(
           store: storeInstance ?? ReadOnlyCanonicalQuranStore(),
           storageRegistry: storageRegistry,
           clock: clock,
           audioService: audioServiceInstance,
           tafsirService: tafsirServiceInstance,
+          radioService: radioServiceInstance,
         );
 
   QuranModule._internal({
@@ -57,6 +61,7 @@ class QuranModule implements QuranModuleContract {
     Clock? clock,
     QuranAudioService? audioService,
     QuranTafsirService? tafsirService,
+    CairoRadioAudioService? radioService,
   })  : recitationSessionStore = QuranRecitationSessionStore(
           storageRegistry: storageRegistry,
         ),
@@ -75,8 +80,19 @@ class QuranModule implements QuranModuleContract {
         ),
         audioService = audioService ?? QuranAudioService(store: store),
         offlineAudioService = QuranOfflineAudioService.instance..init(),
+        radioService = radioService ?? CairoRadioAudioService(),
         tafsirService = tafsirService ?? DefaultQuranTafsirService(),
-        diffEngine = QuranContentDiffEngine(clock: clock);
+        diffEngine = QuranContentDiffEngine(clock: clock) {
+    // Coordinate mutual audio exclusivity
+    this.radioService.onPlaybackStarted = () {
+      this.audioService.stop();
+    };
+    this.audioService.reportStream.listen((report) {
+      if (report.status == AudioPlaybackStatus.playing) {
+        this.radioService.pause();
+      }
+    });
+  }
 
   /// Mounts a canonical Quran package into the module.
   Result<bool, Failure> mountPackage(CanonicalQuranPackage package) {
