@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/images/siraj_logo.png" alt="SIRAJ Logo" width="120" height="120" onerror="this.src='icon.png'"/>
+  <img src="assets/images/siraj_logo.png" alt="SIRAJ Logo" width="140" height="140" />
 </p>
 
 <h1 align="center">سِراج | SIRAJ</h1>
