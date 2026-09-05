@@ -6,6 +6,7 @@ import '../../../../modules/quran/domain/surah.dart';
 import '../../../../modules/quran/recitation/domain/quran_recitation_target.dart';
 import '../../../../modules/quran/recitation/domain/quran_recitation_word.dart';
 import '../../../../modules/quran/services/quran_typography_service.dart';
+import '../../../../core/audio/siraj_feedback_audio_service.dart';
 import '../../theme/app_colors.dart';
 
 /// Authentic horizontal page-by-page Mushaf view (§1, §2, §3).
@@ -445,6 +446,9 @@ class _QuranMushafPageViewState extends State<QuranMushafPageView> {
               controller: _pageController,
               itemCount: _pageNumbers.length,
               onPageChanged: (idx) {
+                if (_currentPageIndex != idx) {
+                  SirajFeedbackAudioService.instance.playPageFlip();
+                }
                 setState(() => _currentPageIndex = idx);
                 widget.onPageChanged?.call(_pageNumbers[idx]);
               },

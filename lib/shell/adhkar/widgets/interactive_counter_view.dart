@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../core/audio/siraj_feedback_audio_service.dart';
 import '../../theme/app_colors.dart';
 
 /// Premium interactive accessible counter widget for Adhkar repetition (§17..§25, §58..§72).
@@ -26,6 +27,9 @@ class InteractiveCounterView extends StatelessWidget {
     HapticFeedback.lightImpact();
     if (currentCount + 1 >= targetCount && targetCount > 0) {
       HapticFeedback.mediumImpact();
+      SirajFeedbackAudioService.instance.playCompletion();
+    } else {
+      SirajFeedbackAudioService.instance.playTasbih();
     }
     onIncrement();
   }
@@ -154,6 +158,7 @@ class InteractiveCounterView extends StatelessWidget {
                 TextButton.icon(
                   onPressed: () {
                     HapticFeedback.selectionClick();
+                    SirajFeedbackAudioService.instance.playTap();
                     onUndo!();
                   },
                   icon: const Icon(Icons.undo_rounded, size: 16),
@@ -165,6 +170,7 @@ class InteractiveCounterView extends StatelessWidget {
               TextButton.icon(
                 onPressed: () {
                   HapticFeedback.selectionClick();
+                  SirajFeedbackAudioService.instance.playTap();
                   onReset();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 16),

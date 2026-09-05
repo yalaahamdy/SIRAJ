@@ -10,6 +10,7 @@ import '../../modules/quran/domain/surah.dart';
 import '../../modules/quran/quran_module.dart';
 import '../../modules/quran/services/quran_audio_service.dart';
 import '../../modules/quran/services/quran_typography_service.dart';
+import '../../core/audio/siraj_feedback_audio_service.dart';
 import '../../modules/quran/store/canonical_quran_loader.dart';
 import '../routing/app_router.dart';
 import '../theme/app_colors.dart';
@@ -128,6 +129,10 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     _recitationRecorder = widget.recorder ?? QuranRecitationRecorder();
     _recitationGateway = widget.recognitionGateway ?? FastConformerQuranRecognitionGateway();
 
+    SirajFeedbackAudioService.instance.isQuranPlaying = () {
+      return widget.quranModule.audioService.currentReport.status == AudioPlaybackStatus.playing;
+    };
+
     _settingsController = QuranReaderSettingsController(
       store: widget.quranModule.userDataService.store,
     );
@@ -229,6 +234,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     _settingsController.dispose();
     _recitationRecorder.dispose();
     _recitationGateway.dispose();
+    SirajFeedbackAudioService.instance.isQuranPlaying = null;
     super.dispose();
   }
 
@@ -332,6 +338,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       );
       if (target != null) {
         await widget.quranModule.deleteBookmark(target.id);
+        SirajFeedbackAudioService.instance.playTap();
         setState(() {
           _bookmarkedAyahs.remove(ayah.ayahNumber);
         });
@@ -349,6 +356,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         surahNameArabic: _currentSurah?.nameArabic ?? '',
         ayahSnippet: ayah.textUthmani,
       );
+      SirajFeedbackAudioService.instance.playBookmark();
       setState(() {
         _bookmarkedAyahs.add(ayah.ayahNumber);
       });

@@ -9,6 +9,7 @@ import '../../../../modules/quran/recitation/services/quran_recitation_matcher.d
 import '../../../../modules/quran/recitation/services/quran_recitation_recognition_gateway.dart';
 import '../../../../modules/quran/recitation/services/quran_recitation_session_store.dart';
 import '../../../../modules/quran/services/quran_typography_service.dart';
+import '../../../../core/audio/siraj_feedback_audio_service.dart';
 import '../../theme/app_colors.dart';
 
 /// Interactive View for Mode B: Professional Recitation Recognition (§4, §5, §11, §12).
@@ -204,6 +205,7 @@ class _RecitationModeBViewState extends State<RecitationModeBView> {
     if (_currentWordIndex >= words.length) {
       if (_currentAyahIndex + 1 < widget.targetAyahs.length) {
         // Auto advance to next verse (§12)
+        SirajFeedbackAudioService.instance.playCompletion();
         setState(() {
           _currentAyahIndex++;
           _currentWordIndex = 0;
@@ -217,6 +219,7 @@ class _RecitationModeBViewState extends State<RecitationModeBView> {
 
   Future<void> _finalizeSession() async {
     await _stopRecitation();
+    SirajFeedbackAudioService.instance.playSuccess();
     setState(() => _isCompleted = true);
 
     final totalWords = widget.targetAyahs.fold<int>(

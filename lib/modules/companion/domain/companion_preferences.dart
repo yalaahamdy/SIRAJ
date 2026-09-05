@@ -55,6 +55,7 @@ class CompanionPreferences extends Equatable {
   final int quietHoursStartHour; // e.g. 23 (11 PM)
   final int quietHoursEndHour; // e.g. 5 (5 AM)
   final int maxDailyCards;
+  final bool enableSoundEffects;
 
   const CompanionPreferences({
     this.density = DashboardDensity.balanced,
@@ -65,6 +66,7 @@ class CompanionPreferences extends Equatable {
     this.quietHoursStartHour = 23,
     this.quietHoursEndHour = 5,
     this.maxDailyCards = 7,
+    this.enableSoundEffects = true,
   });
 
   CompanionPreferences copyWith({
@@ -76,6 +78,7 @@ class CompanionPreferences extends Equatable {
     int? quietHoursStartHour,
     int? quietHoursEndHour,
     int? maxDailyCards,
+    bool? enableSoundEffects,
   }) {
     return CompanionPreferences(
       density: density ?? this.density,
@@ -86,6 +89,7 @@ class CompanionPreferences extends Equatable {
       quietHoursStartHour: quietHoursStartHour ?? this.quietHoursStartHour,
       quietHoursEndHour: quietHoursEndHour ?? this.quietHoursEndHour,
       maxDailyCards: maxDailyCards ?? this.maxDailyCards,
+      enableSoundEffects: enableSoundEffects ?? this.enableSoundEffects,
     );
   }
 
@@ -111,6 +115,7 @@ class CompanionPreferences extends Equatable {
       quietHoursStartHour: json['quiet_hours_start_hour'] as int? ?? 23,
       quietHoursEndHour: json['quiet_hours_end_hour'] as int? ?? 5,
       maxDailyCards: json['max_daily_cards'] as int? ?? 7,
+      enableSoundEffects: json['enable_sound_effects'] as bool? ?? true,
     );
   }
 
@@ -124,6 +129,7 @@ class CompanionPreferences extends Equatable {
       'quiet_hours_start_hour': quietHoursStartHour,
       'quiet_hours_end_hour': quietHoursEndHour,
       'max_daily_cards': maxDailyCards,
+      'enable_sound_effects': enableSoundEffects,
     };
   }
 
@@ -137,5 +143,6 @@ class CompanionPreferences extends Equatable {
         quietHoursStartHour,
         quietHoursEndHour,
         maxDailyCards,
+        enableSoundEffects,
       ];
 }

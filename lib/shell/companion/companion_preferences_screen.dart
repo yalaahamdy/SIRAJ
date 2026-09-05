@@ -4,6 +4,7 @@ import '../../../modules/companion/domain/companion_preferences.dart';
 import '../theme/app_theme_controller.dart';
 import '../widgets/siraj_app_logo.dart';
 import '../widgets/siraj_about_dialog.dart';
+import '../../../core/audio/siraj_feedback_audio_service.dart';
 
 class CompanionPreferencesScreen extends StatefulWidget {
   final CompanionModule module;
@@ -136,6 +137,16 @@ class _CompanionPreferencesScreenState extends State<CompanionPreferencesScreen>
             value: _prefs.enableQuietHours,
             onChanged: (val) {
               _savePrefs(_prefs.copyWith(enableQuietHours: val));
+            },
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            title: const Text('المؤثرات الصوتية التفاعلية'),
+            subtitle: const Text('أصوات وقورة وهادئة لنقر السبحة، تقليب صفحات المصحف، وإتمام الأوراد والتسميع'),
+            value: _prefs.enableSoundEffects,
+            onChanged: (val) {
+              _savePrefs(_prefs.copyWith(enableSoundEffects: val));
+              SirajFeedbackAudioService.instance.setSoundEnabled(val);
             },
           ),
           const SizedBox(height: 20),

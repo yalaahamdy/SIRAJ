@@ -85,6 +85,7 @@ flutter:
     - assets/quran/audio/114/
     - assets/quran/tafsir/
     - assets/audio/
+    - assets/audio/effects/
 
   fonts:
     - family: Amiri

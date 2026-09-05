@@ -25,6 +25,7 @@ import 'quran/surah_list_screen.dart';
 import 'routing/app_router.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme_controller.dart';
+import '../core/audio/siraj_feedback_audio_service.dart';
 import 'v1_more_screen.dart';
 import 'widgets/state_views.dart';
 
@@ -68,6 +69,7 @@ class _V1AppShellState extends State<V1AppShell> {
     _currentIndex = widget.initialIndex;
     _storage = widget.storageRegistry ?? MemoryStorageRegistry();
     AppThemeController(storageRegistry: _storage);
+    SirajFeedbackAudioService(storageRegistry: _storage);
 
     // Initialize location & compass services
     _locationEngine = LocationEngine(storageRegistry: _storage);
@@ -216,7 +218,12 @@ class _V1AppShellState extends State<V1AppShell> {
         maxScaleFactor: 1.2,
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: (index) {
+            if (_currentIndex != index) {
+              SirajFeedbackAudioService.instance.playTap();
+              setState(() => _currentIndex = index);
+            }
+          },
           type: BottomNavigationBarType.fixed,
           backgroundColor: AppColors.surface(context),
           selectedItemColor: isDark ? AppColors.goldAccentLight : AppColors.primary,
