@@ -37,7 +37,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   crypto: ^3.0.7
-  intl: 0.20.2
+  intl: ^0.20.2
   equatable: ^2.1.0
   meta: ^1.17.0
   path: ^1.9.1
