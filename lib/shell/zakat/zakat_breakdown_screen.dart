@@ -20,11 +20,7 @@ class ZakatBreakdownScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'تفكيك وشرح حساب الزكاة',
-          style: TextStyle(fontSize: 16),
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: const Text('تفاصيل حساب الزكاة'),
         centerTitle: false,
       ),
       body: ListView(
@@ -59,13 +55,13 @@ class ZakatBreakdownScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _buildTableRow('إجمالي الأصول المقومة', result.grossAssets.format(), false),
+                _buildTableRow('إجمالي الأصول المقومة', result.grossAssets.formatLocal(), false),
                 const Divider(height: 1),
-                _buildTableRow('الديون والالتزامات المخصومة', '- ${result.deductibleLiabilities.format()}', false),
+                _buildTableRow('الديون والالتزامات المخصومة', '- ${result.deductibleLiabilities.formatLocal()}', false),
                 const Divider(height: 1),
-                _buildTableRow('الوعاء الزكوي الصافي', result.netZakatableBase.format(), true),
+                _buildTableRow('الوعاء الزكوي الصافي', result.netZakatableBase.formatLocal(), true),
                 const Divider(height: 1),
-                _buildTableRow('حد النصاب الشرعي المقوم', result.nisabThreshold.format(), false),
+                _buildTableRow('حد النصاب الشرعي المقوم', result.nisabThreshold.formatLocal(), false),
                 const Divider(height: 1),
                 _buildTableRow(
                   'حالة الحول الزمني',
@@ -79,7 +75,7 @@ class ZakatBreakdownScreen extends StatelessWidget {
                   false,
                 ),
                 const Divider(height: 1),
-                _buildTableRow('مبلغ الزكاة المحسوبة', result.zakatDue.format(), true, isHighlighted: true),
+                _buildTableRow('مبلغ الزكاة المحسوبة', result.zakatDue.formatLocal(), true, isHighlighted: true),
               ],
             ),
           ),
@@ -171,17 +167,23 @@ class ZakatBreakdownScreen extends StatelessWidget {
                 fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: 8),
           Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: isHighlighted ? 14 : 12,
-                color: isHighlighted ? AppColors.primary : null,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isHighlighted ? 14 : 12,
+                  color: isHighlighted ? AppColors.primary : null,
+                ),
               ),
             ),
           ),

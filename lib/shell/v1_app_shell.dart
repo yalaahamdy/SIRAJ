@@ -24,6 +24,7 @@ import 'prayer/prayer_screen.dart';
 import 'quran/surah_list_screen.dart';
 import 'routing/app_router.dart';
 import 'theme/app_colors.dart';
+import 'theme/app_theme_controller.dart';
 import 'v1_more_screen.dart';
 import 'widgets/state_views.dart';
 
@@ -66,10 +67,14 @@ class _V1AppShellState extends State<V1AppShell> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _storage = widget.storageRegistry ?? MemoryStorageRegistry();
+    AppThemeController(storageRegistry: _storage);
 
     // Initialize location & compass services
-    _locationEngine = LocationEngine();
+    _locationEngine = LocationEngine(storageRegistry: _storage);
     _compassService = DeviceSensorCompassService();
+
+    // Trigger automatic background location acquisition & persistence
+    _locationEngine.acquireLocation();
 
     // Initialize core modules
     _prayerModule = PrayerModule(storageRegistry: _storage);
@@ -130,8 +135,15 @@ class _V1AppShellState extends State<V1AppShell> {
       hajjModule: _hajjModule,
     );
 
-    // Register active modules globally for router deep linking
+    // Register active modules globally for router deep linking and seamless navigation
     AppRouter.defaultQuranModule = _quranModule;
+    AppRouter.defaultKnowledgeModule = _knowledgeModule;
+    AppRouter.defaultAdhkarModule = _adhkarModule;
+    AppRouter.defaultZakatModule = _zakatModule;
+    AppRouter.defaultFastingModule = _fastingModule;
+    AppRouter.defaultLearningModule = _learningModule;
+    AppRouter.defaultSeerahModule = _seerahModule;
+    AppRouter.defaultHajjModule = _hajjModule;
   }
 
   @override

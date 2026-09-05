@@ -63,8 +63,12 @@ class _QuizScreenState extends State<QuizScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.quiz.title),
-        centerTitle: true,
+        title: Text(
+          widget.quiz.title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+          maxLines: 2,
+        ),
+        centerTitle: false,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -206,9 +210,13 @@ class _QuizScreenState extends State<QuizScreen> {
                     color: Colors.white,
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    passed ? 'تم اجتياز الاختبار بنجاح' : 'لم يتم اجتياز الاختبار',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      passed ? 'تم اجتياز الاختبار بنجاح' : 'لم يتم اجتياز الاختبار',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      maxLines: 2,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(

@@ -61,12 +61,16 @@ class ZakatHeroSummaryCard extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: Colors.white70),
           ),
           const SizedBox(height: 4),
-          Text(
-            result.zakatDue.format(),
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              result.zakatDue.formatLocal(),
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -76,9 +80,9 @@ class ZakatHeroSummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildMetricColumn('الوعاء الصافي', result.netZakatableBase.format())),
+              Expanded(child: _buildMetricColumn('الوعاء الصافي', result.netZakatableBase.formatLocal())),
               const SizedBox(width: 6),
-              Expanded(child: _buildMetricColumn('حد النصاب', result.nisabThreshold.format())),
+              Expanded(child: _buildMetricColumn('حد النصاب', result.nisabThreshold.formatLocal())),
               const SizedBox(width: 6),
               Expanded(
                 child: _buildMetricColumn(
@@ -104,11 +108,15 @@ class ZakatHeroSummaryCard extends StatelessWidget {
           maxLines: 1,
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
         ),
       ],
     );

@@ -154,7 +154,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إعدادات خطة الحفظ والمراجعة'),
+        title: const Text('خطة الحفظ والمراجعة'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(

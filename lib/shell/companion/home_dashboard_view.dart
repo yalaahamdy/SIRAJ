@@ -9,6 +9,8 @@ import 'federated_search_screen.dart';
 import 'personal_goals_screen.dart';
 import 'widgets/daily_journey_timeline.dart';
 import 'widgets/home_hero_now_card.dart';
+import '../widgets/siraj_app_logo.dart';
+import '../widgets/siraj_about_dialog.dart';
 
 class HomeDashboardView extends StatefulWidget {
   final CompanionModule module;
@@ -53,9 +55,26 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'سِراج — الرفيق الحياتي الموحد',
-          overflow: TextOverflow.ellipsis,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SirajAppLogo(
+              size: 32,
+              showShadow: false,
+              onTap: () => showSirajAboutDialog(context),
+            ),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'سِراج — الرفيق الحياتي الموحد',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(

@@ -2,12 +2,12 @@ import '../../core/errors/app_failure.dart';
 import '../../core/errors/result.dart';
 import '../../core/storage/storage_contract.dart';
 import '../../core/time/clock.dart';
-import 'domain/currency_amount.dart';
 import 'domain/market_data_snapshot.dart';
 import 'domain/zakat_asset.dart';
 import 'domain/zakat_calculation_result.dart';
 import 'domain/zakat_calculation_snapshot.dart';
 import 'domain/zakat_policy.dart';
+import 'domain/zakat_profile.dart';
 import 'engine/hawl_engine.dart';
 import 'engine/nisab_engine.dart';
 import 'engine/zakat_calculation_engine.dart';
@@ -53,22 +53,38 @@ class ZakatModule {
     return const [
       ZakatPolicy.goldStandard,
       ZakatPolicy.silverStandard,
+      ZakatPolicy.manualStandard,
     ];
   }
 
+  Future<ZakatProfile> getProfile() async {
+    final res = await _userDataStore.getProfile();
+    return res.valueOrNull ?? const ZakatProfile();
+  }
+
+  Future<Result<void, Failure>> saveProfile(ZakatProfile profile) async {
+    return _userDataStore.saveProfile(profile);
+  }
+
   Future<ZakatPolicy> getActivePolicy() async {
+    final profile = await getProfile();
+    final match = getAvailablePolicies().where((p) => p.policyId == profile.calculationPolicyId).firstOrNull;
+    if (match != null) return match;
+
     final policyIdRes = await _userDataStore.getSelectedPolicyId();
     final policyId = policyIdRes.valueOrNull;
 
     if (policyId != null) {
-      final match = getAvailablePolicies().where((p) => p.policyId == policyId).firstOrNull;
-      if (match != null) return match;
+      final oldMatch = getAvailablePolicies().where((p) => p.policyId == policyId).firstOrNull;
+      if (oldMatch != null) return oldMatch;
     }
 
     return ZakatPolicy.goldStandard;
   }
 
   Future<Result<void, Failure>> setActivePolicy(String policyId) async {
+    final profile = await getProfile();
+    await _userDataStore.saveProfile(profile.copyWith(calculationPolicyId: policyId));
     return _userDataStore.setSelectedPolicyId(policyId);
   }
 
@@ -87,15 +103,20 @@ class ZakatModule {
   Future<MarketDataSnapshot> getMarketSnapshot() async {
     final snapRes = await _userDataStore.getMarketSnapshot();
     final stored = snapRes.valueOrNull;
-    if (stored != null) return stored;
+    final profile = await getProfile();
 
-    // Default reference snapshot (Gold ~ 350 SAR/g, Silver ~ 4 SAR/g)
+    if (stored != null && stored.currency == profile.currencyCode) {
+      return stored;
+    }
+
+    // Default reference snapshot in active profile currency (EGP default: Gold ~ 4,500 EGP/g, Silver ~ 55 EGP/g)
     return MarketDataSnapshot(
-      goldPricePerGram24k: const CurrencyAmount(units: 35000, currency: 'SAR'),
-      silverPricePerGram: const CurrencyAmount(units: 400, currency: 'SAR'),
-      sourceName: 'سعر استرشادي افتراضي',
+      goldPricePerGram24k: profile.goldPricePerGram,
+      silverPricePerGram: profile.silverPricePerGram,
+      currency: profile.currencyCode,
+      sourceName: 'سعر استرشادي محلي (قابل للتعديل)',
       timestamp: _clock.nowUtc(),
-      isManualEntry: false,
+      isManualEntry: true,
     );
   }
 
@@ -104,20 +125,24 @@ class ZakatModule {
   }
 
   Future<Result<ZakatCalculationResult, Failure>> calculateZakat({
-    bool isHijriCalendar = true,
+    bool? isHijriCalendar,
   }) async {
     final assetsRes = await getAssets();
     if (assetsRes.isFailure) return Result.err(assetsRes.failureOrNull!);
 
+    final profile = await getProfile();
     final policy = await getActivePolicy();
     final marketSnapshot = await getMarketSnapshot();
+    final useHijri = isHijriCalendar ?? profile.isHijriCalendar;
 
     final result = _calcEngine.calculate(
       assets: assetsRes.valueOrNull!,
       policy: policy,
       marketSnapshot: marketSnapshot,
-      isHijriCalendar: isHijriCalendar,
+      isHijriCalendar: useHijri,
       customNow: _clock.nowUtc(),
+      manualNisabAmount: profile.manualNisabValue,
+      customHawlStartDate: profile.hawlStartDate,
     );
 
     return Result.ok(result);
@@ -146,6 +171,10 @@ class ZakatModule {
 
   Future<Result<List<ZakatCalculationSnapshot>, Failure>> getSnapshots() async {
     return _userDataStore.getSnapshots();
+  }
+
+  Future<Result<void, Failure>> deleteSnapshot(String snapshotId) async {
+    return _userDataStore.deleteSnapshot(snapshotId);
   }
 
   Future<Result<void, Failure>> resetAllUserData() async {

@@ -253,16 +253,26 @@ class _QuranMushafFlowViewState extends State<QuranMushafFlowView> {
         for (final word in words) {
           if (word.isVisible) {
             final isRevealed = word.state == RecitationWordState.revealed;
+            final isMistake = word.state == RecitationWordState.mistake;
             spans.add(
               TextSpan(
                 text: '${word.canonicalText} ',
                 style: ayahStyle.copyWith(
-                  color: isRevealed
-                      ? AppColors.goldAccent
-                      : (isDark ? Colors.white : Colors.black),
-                  backgroundColor: isRevealed
-                      ? AppColors.goldAccent.withValues(alpha: 0.2)
-                      : const Color(0xFF2E7D32).withValues(alpha: 0.15),
+                  color: isMistake
+                      ? (isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626))
+                      : isRevealed
+                          ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309))
+                          : widget.config.resolveTextColor(),
+                  backgroundColor: isMistake
+                      ? const Color(0xFFEF4444).withValues(alpha: isDark ? 0.25 : 0.18)
+                      : isRevealed
+                          ? (isDark
+                              ? const Color(0xFFFBBF24).withValues(alpha: 0.22)
+                              : const Color(0xFFB45309).withValues(alpha: 0.15))
+                          : const Color(0xFF2E7D32).withValues(alpha: 0.15),
+                  decoration: isMistake ? TextDecoration.underline : null,
+                  decorationColor: const Color(0xFFEF4444),
+                  decorationStyle: TextDecorationStyle.wavy,
                 ),
                 recognizer: _tapRecognizers[ayah.ayahNumber],
               ),

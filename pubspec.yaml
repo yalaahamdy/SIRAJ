@@ -49,6 +49,7 @@ dependencies:
   speech_to_text: ^7.4.0
   archive: ^4.2.0
   file_picker: ^12.2.0
+  flutter_local_notifications: ^22.3.0
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +75,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - assets/images/
     - assets/quran/
     - assets/quran/translations/
     - assets/quran/tajweed/
@@ -82,6 +84,7 @@ flutter:
     - assets/quran/audio/002/
     - assets/quran/audio/114/
     - assets/quran/tafsir/
+    - assets/audio/
 
   fonts:
     - family: Amiri

@@ -65,8 +65,12 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.path.title),
-        centerTitle: true,
+        title: Text(
+          widget.path.title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          maxLines: 2,
+        ),
+        centerTitle: false,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -154,6 +158,8 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
         title: Text(
           course.title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

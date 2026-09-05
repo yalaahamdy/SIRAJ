@@ -11,6 +11,7 @@ import 'domain/prayer_schedule.dart';
 import 'domain/qibla_result.dart';
 import 'engine/astronomical_calculator.dart';
 import 'engine/prayer_calculation_engine.dart';
+import 'services/athan_audio_service.dart';
 import 'services/prayer_countdown_service.dart';
 import 'services/prayer_notification_service.dart';
 import 'services/prayer_schedule_service.dart';
@@ -28,12 +29,14 @@ class PrayerModule implements PrayerModuleContract {
   final PrayerTrackerService trackerService;
   final UserCalibrationService calibrationService;
   final PrayerNotificationService notificationService;
+  final AthanAudioService athanAudioService;
 
   PrayerModule({
     required StorageRegistry storageRegistry,
     PrayerCalculationEngine? engine,
     Clock? clock,
     EventBus? eventBus,
+    AthanAudioService? athanAudioService,
   })  : clock = clock ?? const SystemClock(),
         scheduleService = PrayerScheduleService(
           engine: engine ?? const AstronomicalPrayerCalculator(),
@@ -60,7 +63,8 @@ class PrayerModule implements PrayerModuleContract {
         notificationService = PrayerNotificationService(
           clock: clock,
           eventBus: eventBus,
-        );
+        ),
+        athanAudioService = athanAudioService ?? AthanAudioService();
 
   @override
   Future<Result<Map<String, DateTime>, Failure>> getPrayerTimes({

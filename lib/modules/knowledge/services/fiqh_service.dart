@@ -31,4 +31,11 @@ class FiqhService {
     final filtered = allRes.valueOrNull!.where((t) => t.positions.any((p) => p.school == school)).toList();
     return Result.ok(filtered);
   }
+
+  Result<List<String>, Failure> getCategories() {
+    final allRes = _store.getAllFiqhTopics();
+    if (allRes.isFailure) return Result.err(allRes.failureOrNull!);
+    final categories = allRes.valueOrNull!.map((t) => t.category).toSet().toList()..sort();
+    return Result.ok(categories);
+  }
 }

@@ -212,7 +212,7 @@ class _FastingDashboardScreenState extends State<FastingDashboardScreen> {
                         backgroundColor: Colors.blue.shade50,
                         child: Icon(Icons.menu_book_rounded, color: AppColors.primaryAction(context), size: 20),
                       ),
-                      title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
                       subtitle: Text(t.summary, maxLines: 2, overflow: TextOverflow.ellipsis),
                       trailing: const Icon(Icons.chevron_left, size: 20),
                       onTap: () {

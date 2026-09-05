@@ -113,6 +113,37 @@ class ReadOnlyKnowledgeStore {
     return Result.ok(_hadithsById.values.toList());
   }
 
+  /// Deterministic daily Hadith selection based on Gregorian calendar date.
+  Result<HadithEntity, Failure> getDailyHadith(DateTime date) {
+    if (!isMounted) return Result.err(const ContentNotFoundFailure(message: 'Store not mounted'));
+    final all = _hadithsById.values.toList();
+    if (all.isEmpty) return Result.err(const ContentNotFoundFailure(message: 'No hadiths available'));
+    final seed = (date.year * 372 + date.month * 31 + date.day).abs();
+    final index = seed % all.length;
+    return Result.ok(all[index]);
+  }
+
+  /// Groups hadiths of a collection by classical book numbers and computes counts dynamically.
+  Result<List<Map<String, dynamic>>, Failure> getBooksByCollection(String collectionId) {
+    if (!isMounted) return Result.err(const ContentNotFoundFailure(message: 'Store not mounted'));
+    final hadiths = _hadithsByCollection[collectionId] ?? const [];
+    final Map<int, Map<String, dynamic>> booksMap = {};
+    for (final h in hadiths) {
+      final entry = booksMap.putIfAbsent(h.bookNumber, () => {
+        'bookNumber': h.bookNumber,
+        'bookName': h.bookName,
+        'hadithCount': 0,
+        'chapters': <String>{},
+      });
+      entry['hadithCount'] = (entry['hadithCount'] as int) + 1;
+      if (h.chapterName != null && h.chapterName!.isNotEmpty) {
+        (entry['chapters'] as Set<String>).add(h.chapterName!);
+      }
+    }
+    final sorted = booksMap.values.toList()..sort((a, b) => (a['bookNumber'] as int).compareTo(b['bookNumber'] as int));
+    return Result.ok(sorted);
+  }
+
   Result<FiqhTopic, Failure> getFiqhTopic(String topicId) {
     if (!isMounted) return Result.err(const ContentNotFoundFailure(message: 'Store not mounted'));
     final item = _fiqhTopicsById[topicId];
@@ -140,6 +171,11 @@ class ReadOnlyKnowledgeStore {
   Result<List<KnowledgeRelation>, Failure> getRelationsFor(String sourceKey) {
     if (!isMounted) return Result.err(const ContentNotFoundFailure(message: 'Store not mounted'));
     return Result.ok(_relationsBySource[sourceKey] ?? const []);
+  }
+
+  Result<List<KnowledgeRelation>, Failure> getAllRelations() {
+    if (!isMounted) return Result.err(const ContentNotFoundFailure(message: 'Store not mounted'));
+    return Result.ok(_relationsBySource.values.expand((list) => list).toList());
   }
 
   Result<LearningPath, Failure> getLearningPath(String pathId) {

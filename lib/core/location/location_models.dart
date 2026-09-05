@@ -87,6 +87,37 @@ class GeoCoordinates extends Equatable {
         isMocked,
       ];
 
+  Map<String, dynamic> toJson() => {
+        'latitude': latitude,
+        'longitude': longitude,
+        'altitude': altitude,
+        'accuracy': accuracy,
+        'source': source.name,
+        'timestamp': timestamp?.toIso8601String(),
+        'cityName': cityName,
+        'countryName': countryName,
+        'isMocked': isMocked,
+      };
+
+  factory GeoCoordinates.fromJson(Map<String, dynamic> json) {
+    return GeoCoordinates(
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      altitude: (json['altitude'] as num?)?.toDouble(),
+      accuracy: (json['accuracy'] as num?)?.toDouble(),
+      source: LocationSource.values.firstWhere(
+        (s) => s.name == json['source'],
+        orElse: () => LocationSource.manual,
+      ),
+      timestamp: json['timestamp'] != null
+          ? DateTime.tryParse(json['timestamp'] as String)
+          : null,
+      cityName: json['cityName'] as String?,
+      countryName: json['countryName'] as String?,
+      isMocked: json['isMocked'] as bool? ?? false,
+    );
+  }
+
   @override
   String toString() =>
       'GeoCoordinates($latitude, $longitude, source: $source, accuracy: $accuracy, city: $cityName)';

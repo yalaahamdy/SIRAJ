@@ -152,12 +152,17 @@ class SurahHeaderCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Text(
-                      '${surah.revelationType.nameArabic} • آياتها ${surah.ayahCount}$juzInfo$pageInfo',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: metadataColor,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${surah.revelationType.nameArabic} • آياتها ${surah.ayahCount}$juzInfo$pageInfo',
+                        textAlign: TextAlign.end,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: metadataColor,
+                        ),
                       ),
                     ),
                   ],

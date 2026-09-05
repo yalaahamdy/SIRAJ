@@ -69,8 +69,8 @@ class _RitualStepDetailScreenState extends State<RitualStepDetailScreen> {
       appBar: AppBar(
         title: Text(
           widget.step.title,
-          style: const TextStyle(fontSize: 16),
-          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          maxLines: 2,
         ),
         centerTitle: false,
       ),
@@ -113,7 +113,9 @@ class _RitualStepDetailScreenState extends State<RitualStepDetailScreen> {
                   const SizedBox(height: 8),
                   Text(
                     widget.step.title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
                   Text(

@@ -139,5 +139,100 @@ void main() {
       expect(result.isHesitation, isFalse);
       expect(result.confidenceLevel, equals(RecitationWordConfidence.uncertain));
     });
+
+    test('Lookahead matches word + 1 and reports current word in skippedIndices', () {
+      final ayah = Ayah.create(
+        surahNumber: 1,
+        ayahNumber: 1,
+        textUthmani: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
+        textSimple: 'بسم الله الرحمن الرحيم',
+        pageNumber: 1,
+        juzNumber: 1,
+        hizbNumber: 1,
+        rubNumber: 1,
+        manzilNumber: 1,
+      );
+
+      final words = QuranRecitationMatcher.initializeWordsForAyah(ayah);
+
+      // User skips 'بسم' (index 0) and recites 'الله' (index 1)
+      final result = QuranRecitationMatcher.matchToken(
+        words: words,
+        currentIndex: 0,
+        speechToken: 'الله',
+      );
+
+      expect(result.isMatch, isTrue);
+      expect(result.matchedIndex, equals(1));
+      expect(result.skippedIndices, equals([0]));
+    });
+
+    test('Lookahead matches word + 2 and reports words 0 and 1 in skippedIndices', () {
+      final ayah = Ayah.create(
+        surahNumber: 1,
+        ayahNumber: 1,
+        textUthmani: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
+        textSimple: 'بسم الله الرحمن الرحيم',
+        pageNumber: 1,
+        juzNumber: 1,
+        hizbNumber: 1,
+        rubNumber: 1,
+        manzilNumber: 1,
+      );
+
+      final words = QuranRecitationMatcher.initializeWordsForAyah(ayah);
+
+      // User skips 'بسم' (0) and 'الله' (1) and recites 'الرحمن' (2)
+      final result = QuranRecitationMatcher.matchToken(
+        words: words,
+        currentIndex: 0,
+        speechToken: 'الرحمن',
+      );
+
+      expect(result.isMatch, isTrue);
+      expect(result.matchedIndex, equals(2));
+      expect(result.skippedIndices, equals([0, 1]));
+    });
+
+    test('evaluateLookaheadMatch identifies match across candidate list and flags skipped words', () {
+      final ayah = Ayah.create(
+        surahNumber: 1,
+        ayahNumber: 1,
+        textUthmani: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
+        textSimple: 'بسم الله الرحمن الرحيم',
+        pageNumber: 1,
+        juzNumber: 1,
+        hizbNumber: 1,
+        rubNumber: 1,
+        manzilNumber: 1,
+      );
+
+      final words = QuranRecitationMatcher.initializeWordsForAyah(ayah);
+      final wordsMap = {1: words};
+
+      final candidates = QuranRecitationMatcher.getLookaheadCandidates(
+        wordsMap: wordsMap,
+        currentAyahNumber: 1,
+        currentWordIndex: 0,
+        endAyah: 1,
+        windowSize: 3,
+      );
+
+      expect(candidates.length, equals(3));
+      expect(candidates[0].word.normalizedText, equals('بسم'));
+      expect(candidates[1].word.normalizedText, equals('الله'));
+      expect(candidates[2].word.normalizedText, equals('الرحمن'));
+
+      // Speech token matches candidate 1 ('الله')
+      final matchRes = QuranRecitationMatcher.evaluateLookaheadMatch(
+        candidates: candidates,
+        speechToken: 'الله',
+      );
+
+      expect(matchRes.isMatch, isTrue);
+      expect(matchRes.matchedPointer?.wordIndex, equals(1));
+      expect(matchRes.skippedPointers.length, equals(1));
+      expect(matchRes.skippedPointers.first.wordIndex, equals(0));
+    });
   });
 }

@@ -21,9 +21,9 @@ class AppColors {
   // Dark Mode Neutrals
   static const Color backgroundDark = Color(0xFF121416);
   static const Color surfaceDark = Color(0xFF1E2227);
-  static const Color textPrimaryDark = Color(0xFFF8F9FA);
-  static const Color textSecondaryDark = Color(0xFFADB5BD);
-  static const Color borderDark = Color(0xFF2C3238);
+  static const Color textPrimaryDark = Color(0xFFF8FAFC);
+  static const Color textSecondaryDark = Color(0xFFCBD5E1); // Slate-300: WCAG AAA High Contrast
+  static const Color borderDark = Color(0xFF334155); // Slate-700: Sharp boundary
 
   // Semantic Status
   static const Color error = Color(0xFFDC3545);
@@ -44,13 +44,13 @@ class AppColors {
       Theme.of(context).brightness == Brightness.dark ? textSecondaryDark : textSecondaryLight;
 
   static Color mutedText(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF8E959D) : const Color(0xFF8A929A);
+      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF6C757D);
 
   static Color surface(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark ? surfaceDark : surfaceLight;
 
   static Color elevatedSurface(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF282D33) : const Color(0xFFF1F3F5);
+      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF262C34) : const Color(0xFFF1F3F5);
 
   static Color border(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark ? borderDark : borderLight;
@@ -62,7 +62,7 @@ class AppColors {
       Theme.of(context).brightness == Brightness.dark ? goldAccentLight : primary;
 
   static Color disabledAction(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF495057) : const Color(0xFFCED4DA);
+      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF64748B) : const Color(0xFFCED4DA);
 
   static Color divider(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark ? borderDark : borderLight;

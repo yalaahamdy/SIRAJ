@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 import '../errors/app_failure.dart';
 import '../errors/result.dart';
+import '../storage/storage_contract.dart';
 import 'city_presets.dart';
 import 'location_models.dart';
 
@@ -26,24 +28,60 @@ class LocationAcquisitionReport {
 
 /// Robust, sensor-aware, transparent Location Engine (§10, §11, §39, §40).
 class LocationEngine {
+  static const String _storageKey = 'saved_location';
+
+  final KeyValueStore? _store;
   GeoCoordinates? _manualLocation;
   GeoCoordinates? _lastResolvedLocation;
   LocationAcquisitionReport? _lastReport;
+  final StreamController<GeoCoordinates> _locationController =
+      StreamController<GeoCoordinates>.broadcast();
 
-  LocationEngine({GeoCoordinates? defaultLocation}) {
+  LocationEngine({
+    GeoCoordinates? defaultLocation,
+    StorageRegistry? storageRegistry,
+  }) : _store = storageRegistry?.getStoreForModule('mod_location') {
     _manualLocation = defaultLocation ?? CanonicalCityPreset.canonicalPresets.first.coordinates;
     _lastResolvedLocation = _manualLocation;
+    initFromStorage();
   }
+
+  Stream<GeoCoordinates> get locationStream => _locationController.stream;
 
   GeoCoordinates get currentEffectiveLocation =>
       _lastResolvedLocation ?? _manualLocation ?? CanonicalCityPreset.canonicalPresets.first.coordinates;
 
   LocationAcquisitionReport? get lastReport => _lastReport;
 
+  /// Loads saved location from local persistent storage on startup.
+  Future<void> initFromStorage() async {
+    if (_store == null) return;
+    try {
+      final res = await _store.getString(_storageKey);
+      if (res.isSuccess && res.valueOrNull != null) {
+        final json = jsonDecode(res.valueOrNull!) as Map<String, dynamic>;
+        final saved = GeoCoordinates.fromJson(json);
+        _lastResolvedLocation = saved;
+        _manualLocation = saved;
+        _locationController.add(saved);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistLocation(GeoCoordinates coords) async {
+    if (_store == null) return;
+    try {
+      final jsonStr = jsonEncode(coords.toJson());
+      await _store.setString(_storageKey, jsonStr);
+    } catch (_) {}
+  }
+
   /// Sets manual location fallback.
   void setManualLocation(GeoCoordinates location) {
     _manualLocation = location.copyWith(source: LocationSource.manual, timestamp: DateTime.now());
     _lastResolvedLocation = _manualLocation;
+    _persistLocation(_manualLocation!);
+    _locationController.add(_manualLocation!);
     _lastReport = LocationAcquisitionReport(
       coordinates: _manualLocation!,
       permissionStatus: LocationPermissionStatus.unknown,
@@ -126,11 +164,15 @@ class LocationEngine {
 
       final accuracy = position.accuracy;
       final isLowAccuracy = accuracy > 5000.0; // > 5km is considered low accuracy
+      final matched = _matchNearestCity(position.latitude, position.longitude);
+
       final coords = GeoCoordinates(
         latitude: position.latitude,
         longitude: position.longitude,
         altitude: position.altitude,
         accuracy: accuracy,
+        cityName: matched?.key,
+        countryName: matched?.value,
         source: LocationSource.gps,
         timestamp: position.timestamp,
         isMocked: position.isMocked,
@@ -149,17 +191,22 @@ class LocationEngine {
 
       _lastReport = report;
       _lastResolvedLocation = coords;
+      _persistLocation(coords);
+      _locationController.add(coords);
       return Result.ok(report);
     } on TimeoutException {
       // 4. Timeout fallback: attempt last known position
       try {
         final lastKnown = await Geolocator.getLastKnownPosition();
         if (lastKnown != null) {
+          final matched = _matchNearestCity(lastKnown.latitude, lastKnown.longitude);
           final coords = GeoCoordinates(
             latitude: lastKnown.latitude,
             longitude: lastKnown.longitude,
             altitude: lastKnown.altitude,
             accuracy: lastKnown.accuracy,
+            cityName: matched?.key,
+            countryName: matched?.value,
             source: LocationSource.gps,
             timestamp: lastKnown.timestamp,
             isMocked: lastKnown.isMocked,
@@ -174,6 +221,8 @@ class LocationEngine {
           );
           _lastReport = report;
           _lastResolvedLocation = coords;
+          _persistLocation(coords);
+          _locationController.add(coords);
           return Result.ok(report);
         }
       } catch (_) {}
@@ -207,6 +256,10 @@ class LocationEngine {
     }
   }
 
+  void dispose() {
+    _locationController.close();
+  }
+
   static LocationPermissionStatus _mapPermission(LocationPermission permission) {
     switch (permission) {
       case LocationPermission.always:
@@ -219,5 +272,26 @@ class LocationEngine {
       case LocationPermission.unableToDetermine:
         return LocationPermissionStatus.unknown;
     }
+  }
+
+  static MapEntry<String, String>? _matchNearestCity(double lat, double lng) {
+    double minDistance = double.infinity;
+    CanonicalCityPreset? closest;
+    for (final p in CanonicalCityPreset.canonicalPresets) {
+      final d = Geolocator.distanceBetween(
+        lat,
+        lng,
+        p.coordinates.latitude,
+        p.coordinates.longitude,
+      );
+      if (d < minDistance) {
+        minDistance = d;
+        closest = p;
+      }
+    }
+    if (closest != null && minDistance < 100000) {
+      return MapEntry(closest.cityNameArabic, closest.countryNameArabic);
+    }
+    return null;
   }
 }

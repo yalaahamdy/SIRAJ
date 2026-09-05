@@ -65,6 +65,7 @@ class ZakatCalculationResult extends Equatable {
   });
 
   bool get isDue => status == ZakatResultStatus.due;
+  bool get reachesNisab => netZakatableBase.units >= nisabThreshold.units && nisabThreshold.units > 0;
 
   factory ZakatCalculationResult.fromMap(Map<String, dynamic> map) {
     final rawItemized = map['itemized_asset_values'] as Map<String, dynamic>? ?? {};

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../modules/companion/companion_module.dart';
 import '../../../modules/companion/domain/companion_preferences.dart';
+import '../theme/app_theme_controller.dart';
+import '../widgets/siraj_app_logo.dart';
+import '../widgets/siraj_about_dialog.dart';
 
 class CompanionPreferencesScreen extends StatefulWidget {
   final CompanionModule module;
@@ -46,11 +49,51 @@ class _CompanionPreferencesScreenState extends State<CompanionPreferencesScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('تخصيص الواجهة والساعات الهادئة'),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('تخصيص الواجهة والساعات الهادئة'),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // 0. Theme Mode Setting
+          const Text(
+            'مظهر وسمة التطبيق (الوضع الداكن / الفاتح):',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          ListenableBuilder(
+            listenable: AppThemeController.instance,
+            builder: (context, _) {
+              final currentMode = AppThemeController.instance.themeMode;
+              return SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.light,
+                    label: Text('فاتح'),
+                    icon: Icon(Icons.wb_sunny_rounded),
+                  ),
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.dark,
+                    label: Text('داكن'),
+                    icon: Icon(Icons.dark_mode_rounded),
+                  ),
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.system,
+                    label: Text('تلقائي'),
+                    icon: Icon(Icons.settings_brightness_rounded),
+                  ),
+                ],
+                selected: {currentMode},
+                onSelectionChanged: (newSelection) {
+                  AppThemeController.instance.setThemeMode(newSelection.first);
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+
           const Text(
             'نمط الواجهة والتركيز:',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -109,6 +152,51 @@ class _CompanionPreferencesScreenState extends State<CompanionPreferencesScreen>
                 );
               }
             },
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 12),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => showSirajAboutDialog(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFDAA520).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const SirajAppLogo(size: 42, showShadow: false),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'سِراج — رفيقك الإسلامي الموثق',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'خصوصية تامة • بدون إنترنت • اضغط للتفاصيل',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFDAA520)),
+                ],
+              ),
+            ),
           ),
         ],
       ),

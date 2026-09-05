@@ -58,7 +58,10 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المنصة التعليمية والمناهج'),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('المنصة التعليمية والمناهج'),
+        ),
         centerTitle: true,
         actions: [
           IconButton(

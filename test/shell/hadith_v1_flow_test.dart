@@ -55,6 +55,7 @@ void main() {
       expect(find.text('الإمام البخاري'), findsOneWidget);
 
       // 3. Commentaries
+      await tester.scrollUntilVisible(find.text('الشروح والفوائد العلمية المنسوبة'), 100);
       expect(find.text('الشروح والفوائد العلمية المنسوبة'), findsOneWidget);
       expect(find.textContaining('الحافظ ابن حجر العسقلاني'), findsOneWidget);
     });

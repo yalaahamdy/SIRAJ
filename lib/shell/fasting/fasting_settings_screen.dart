@@ -63,7 +63,10 @@ class _FastingSettingsScreenState extends State<FastingSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إعدادات وسياسات الصيام'),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('إعدادات وسياسات الصيام'),
+        ),
         centerTitle: true,
       ),
       body: _isLoading

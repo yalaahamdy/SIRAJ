@@ -14,6 +14,7 @@ import 'services/knowledge_search_service.dart';
 import 'services/source_registry_service.dart';
 import 'store/knowledge_user_data_store.dart';
 import 'store/read_only_knowledge_store.dart';
+export 'services/knowledge_search_service.dart' show KnowledgeSearchFilter, KnowledgeSearchResult;
 
 /// Unified Facade for the Islamic Knowledge & Hadith subsystem (Layer 2).
 class KnowledgeModule {
@@ -48,8 +49,8 @@ class KnowledgeModule {
     return store.mountPackage(package);
   }
 
-  Result<List<KnowledgeSearchResult>, Failure> search(String query) {
-    return searchService.search(query);
+  Result<List<KnowledgeSearchResult>, Failure> search(String query, [KnowledgeSearchFilter? filter]) {
+    return searchService.search(query, filter);
   }
 
   Result<HadithEntity, Failure> getHadith(String hadithId) {

@@ -45,7 +45,7 @@ class AssetTile extends StatelessWidget {
           asset.title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           overflow: TextOverflow.ellipsis,
-          maxLines: 1,
+          maxLines: 2,
         ),
         subtitle: Text(
           _getSubtitle(),
@@ -54,14 +54,14 @@ class AssetTile extends StatelessWidget {
             color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
           ),
           overflow: TextOverflow.ellipsis,
-          maxLines: 1,
+          maxLines: 2,
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(
               child: Text(
-                '${isLiability ? '-' : ''}${asset.amount.format()}',
+                '${isLiability ? '-' : ''}${asset.amount.formatLocal()}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,

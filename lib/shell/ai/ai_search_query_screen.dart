@@ -44,7 +44,10 @@ class _AISearchQueryScreenState extends State<AISearchQueryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('الاسترجاع المعرفي الموثق بالأدلة'),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('البحث والاسترجاع المعرفي'),
+        ),
       ),
       body: Column(
         children: [

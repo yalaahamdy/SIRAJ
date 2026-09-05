@@ -3,6 +3,7 @@ import 'package:siraj/core/storage/memory_storage.dart';
 import 'package:siraj/modules/zakat/domain/currency_amount.dart';
 import 'package:siraj/modules/zakat/domain/market_data_snapshot.dart';
 import 'package:siraj/modules/zakat/domain/zakat_policy.dart';
+import 'package:siraj/modules/zakat/domain/zakat_profile.dart';
 import 'package:siraj/modules/zakat/zakat_module.dart';
 import '../../fixtures/zakat/synthetic_zakat_fixtures.dart';
 
@@ -18,6 +19,8 @@ void main() {
 
     test('Historical Reproducibility: Price and Policy changes NEVER mutate historical snapshots', () async {
       // 1. Initial State: Gold @ 350 SAR, 100k cash -> Zakat due = 2,500 SAR
+      await module.setMarketSnapshot(SyntheticZakatFixtures.createMarketSnapshot());
+      await module.saveProfile(const ZakatProfile(currencyCode: 'SAR'));
       final asset = SyntheticZakatFixtures.createCashAsset(
         amount: 100000,
         acquisitionDate: DateTime.utc(2025, 1, 1),

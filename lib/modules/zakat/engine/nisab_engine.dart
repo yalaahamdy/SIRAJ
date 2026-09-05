@@ -10,21 +10,37 @@ class NisabEngine {
   bool hasValidPrice({
     required ZakatPolicy policy,
     required MarketDataSnapshot marketSnapshot,
+    CurrencyAmount? manualNisabAmount,
   }) {
     switch (policy.nisabStandard) {
       case NisabStandard.gold85g:
-      case NisabStandard.custom:
         return marketSnapshot.goldPricePerGram24k.units > 0;
       case NisabStandard.silver595g:
         return marketSnapshot.silverPricePerGram.units > 0;
+      case NisabStandard.custom:
+        if (manualNisabAmount != null && manualNisabAmount.units > 0) {
+          return true;
+        }
+        return marketSnapshot.goldPricePerGram24k.units > 0;
     }
   }
 
   CurrencyAmount calculateNisabThreshold({
     required ZakatPolicy policy,
     required MarketDataSnapshot marketSnapshot,
+    CurrencyAmount? manualNisabAmount,
   }) {
-    if (!hasValidPrice(policy: policy, marketSnapshot: marketSnapshot)) {
+    if (policy.nisabStandard == NisabStandard.custom &&
+        manualNisabAmount != null &&
+        manualNisabAmount.units > 0) {
+      return manualNisabAmount;
+    }
+
+    if (!hasValidPrice(
+      policy: policy,
+      marketSnapshot: marketSnapshot,
+      manualNisabAmount: manualNisabAmount,
+    )) {
       return CurrencyAmount(
         units: 0,
         currency: marketSnapshot.currency,

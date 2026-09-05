@@ -53,9 +53,13 @@ class QadaBalanceCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${plan.remainingDays} يوم متبقي',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '${plan.remainingDays} يوم متبقي',
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
                       ),
                       Text(
                         'من إجمالي ${plan.totalDays} يوماً (أتممت ${plan.completedDays})',

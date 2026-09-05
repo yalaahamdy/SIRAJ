@@ -133,6 +133,50 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 ),
                 const SizedBox(height: 16),
 
+                // 1b. Page Turn Mode Selection (Vertical vs Horizontal)
+                const Text(
+                  'طريقة تصفح المصحف',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: QuranPageTurnMode.values.map((turnMode) {
+                    final isSelected = _currentConfig.pageTurnMode == turnMode;
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: isSelected
+                                ? AppColors.goldAccent.withValues(alpha: 0.2)
+                                : null,
+                            side: BorderSide(
+                              color: isSelected
+                                  ? AppColors.goldAccent
+                                  : Colors.grey.withValues(alpha: 0.3),
+                              width: isSelected ? 1.5 : 1.0,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          icon: Icon(turnMode.icon, size: 16, color: isSelected ? AppColors.goldAccent : null),
+                          label: Text(
+                            turnMode.labelArabic,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? AppColors.goldAccent : null,
+                            ),
+                          ),
+                          onPressed: () {
+                            _update(_currentConfig.copyWith(pageTurnMode: turnMode));
+                          },
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+
                 // 2. Reading Theme Selection
                 const Text(
                   'السمة البصرية',

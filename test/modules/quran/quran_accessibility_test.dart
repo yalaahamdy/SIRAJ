@@ -42,7 +42,7 @@ void main() {
 
       // Ensure no exceptions or overflows occurred
       expect(tester.takeException(), isNull);
-      expect(find.text(sampleAyah.textUthmani), findsOneWidget);
+      expect(find.textContaining(sampleAyah.textUthmani, findRichText: true), findsOneWidget);
     });
 
     testWidgets('AyahView renders correctly under Dark Theme', (tester) async {

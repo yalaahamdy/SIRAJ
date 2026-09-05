@@ -41,11 +41,7 @@ class _MiqatGuideScreenState extends State<MiqatGuideScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'دليل المواقيت المكانية الخمسة',
-          style: TextStyle(fontSize: 16),
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: const Text('المواقيت المكانية للإحرام'),
         centerTitle: false,
       ),
       body: ListView(

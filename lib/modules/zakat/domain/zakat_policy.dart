@@ -30,9 +30,13 @@ class ZakatPolicy extends Equatable {
     required this.description,
   });
 
+  static const String goldStandardId = 'policy_gold_standard_85g';
+  static const String silverStandardId = 'policy_silver_standard_595g';
+  static const String manualStandardId = 'policy_manual_standard';
+
   /// Standard contemporary policy using the 85g Gold standard (Islamic Fiqh Academy).
   static const ZakatPolicy goldStandard = ZakatPolicy(
-    policyId: 'policy_gold_standard_85g',
+    policyId: goldStandardId,
     nameArabic: 'سياسة معيار الذهب (85 جرام - مجمع الفقه الإسلامي الدولي)',
     sourceInstitution: 'مجمع الفقه الإسلامي الدولي / هيئة كبار العلماء',
     reference: 'قرار رقم 3 (3/1) بشأن زكاة الأوراق النقدية المعاصرة',
@@ -47,7 +51,7 @@ class ZakatPolicy extends Equatable {
 
   /// Standard classical policy using the 595g Silver standard (Hanafi school / Pro-poor).
   static const ZakatPolicy silverStandard = ZakatPolicy(
-    policyId: 'policy_silver_standard_595g',
+    policyId: silverStandardId,
     nameArabic: 'سياسة معيار الفضة (595 جرام - المذهب الحنفي)',
     sourceInstitution: 'المذهب الحنفي ودار الإفتاء المصرية',
     reference: 'الفتاوى الهندية وكتاب المبسوط للسرخسي',
@@ -58,6 +62,21 @@ class ZakatPolicy extends Equatable {
     goldNisabGrams: 85.0,
     silverNisabGrams: 595.0,
     description: 'اعتماد نصاب الفضة (595 جرام) كمعيار للأوراق النقدية تحقيقاً لمصلحة الفقراء مع خصم الديون الحالة.',
+  );
+
+  /// Custom manual policy allowing direct monetary input.
+  static const ZakatPolicy manualStandard = ZakatPolicy(
+    policyId: manualStandardId,
+    nameArabic: 'سياسة النصاب المخصص يدوياً',
+    sourceInstitution: 'تحديد يدوي مباشر من المزكي',
+    reference: 'تحديد مباشر لقيمة النصاب النقدية',
+    nisabStandard: NisabStandard.custom,
+    debtTreatment: DebtTreatment.deductCurrentDebts,
+    annualRateHijri: 0.025,
+    annualRateGregorian: 0.02577,
+    goldNisabGrams: 85.0,
+    silverNisabGrams: 595.0,
+    description: 'إدخال قيمة النصاب النقدية مباشرة وفقاً لتقدير المزكي أو فتاوى دار الإفتاء المحلية.',
   );
 
   factory ZakatPolicy.fromMap(Map<String, dynamic> map) {

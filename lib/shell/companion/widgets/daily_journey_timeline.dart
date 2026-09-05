@@ -35,9 +35,10 @@ class DailyJourneyTimeline extends StatelessWidget {
                   routine.nameArabic,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 14.5,
                     color: AppColors.primaryText(context),
                   ),
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -94,7 +95,7 @@ class DailyJourneyTimeline extends StatelessWidget {
                             ),
                             Text(
                               slot.description,
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 11, color: AppColors.secondaryText(context)),
                             ),

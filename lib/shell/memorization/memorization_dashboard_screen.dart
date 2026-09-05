@@ -59,7 +59,10 @@ class _MemorizationDashboardScreenState extends State<MemorizationDashboardScree
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حفظ ومراجعة القرآن الكريم'),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('حفظ ومراجعة القرآن الكريم'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.tune_rounded),

@@ -48,7 +48,10 @@ void main() {
       testWidgets('Zero overflow on viewport ${size.width.toInt()}x${size.height.toInt()}', (tester) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1.0;
-        addTearDown(() => tester.view.resetPhysicalSize());
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
 
         await tester.pumpWidget(
           MaterialApp(
@@ -69,7 +72,10 @@ void main() {
     testWidgets('Recitation recording bar has zero overflow on 320px compact phone', (tester) async {
       tester.view.physicalSize = const Size(320, 568);
       tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
       final mockRecorder = QuranRecitationRecorder(adapter: _MockAudioRecorderAdapter());
 

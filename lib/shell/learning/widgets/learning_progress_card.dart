@@ -32,12 +32,16 @@ class LearningProgressCard extends StatelessWidget {
                         style: TextStyle(fontSize: 13, color: Colors.white70),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${snapshot.overallMasteryScore.toStringAsFixed(1)}%',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '${snapshot.overallMasteryScore.toStringAsFixed(1)}%',
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],

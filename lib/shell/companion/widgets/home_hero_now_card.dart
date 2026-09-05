@@ -69,9 +69,10 @@ class HomeHeroNowCard extends StatelessWidget {
                   card.titleArabic,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 2,
                 ),
                 const SizedBox(height: 6),
                 Text(

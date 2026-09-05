@@ -51,20 +51,26 @@ class _StudyCardViewState extends State<StudyCardView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: (isDark ? AppColors.surfaceDark : AppColors.primary).withValues(alpha: 0.15),
-                    borderRadius: AppRadius.radiusSmall,
-                  ),
-                  child: Text(
-                    'سورة ${widget.surahNameArabic} — الآية ${widget.ayah.ayahNumber}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.goldAccent : AppColors.primary,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: (isDark ? AppColors.surfaceDark : AppColors.primary).withValues(alpha: 0.15),
+                      borderRadius: AppRadius.radiusSmall,
+                    ),
+                    child: Text(
+                      'سورة ${widget.surahNameArabic} — الآية ${widget.ayah.ayahNumber}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? AppColors.goldAccent : AppColors.primary,
+                        fontSize: 12.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Row(
                   children: [
                     Text(

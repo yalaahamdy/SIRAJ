@@ -103,8 +103,12 @@ class _LessonScreenState extends State<LessonScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.lesson.title),
-        centerTitle: true,
+        title: Text(
+          widget.lesson.title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+          maxLines: 2,
+        ),
+        centerTitle: false,
         actions: [
           IconButton(
             icon: Icon(_isBookmarked ? Icons.bookmark : Icons.bookmark_border),

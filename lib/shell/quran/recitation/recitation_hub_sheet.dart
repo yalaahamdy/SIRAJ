@@ -32,6 +32,8 @@ class _RecitationHubSheetState extends State<RecitationHubSheet> {
   int _rangeType = 0; // 0: current ayah, 1: custom range, 2: full surah
   late int _startAyah;
   late int _endAyah;
+  late final TextEditingController _startController;
+  late final TextEditingController _endController;
   RecitationMode _selectedMode = RecitationMode.recordAndReplay;
   QuranRecitationSession? _lastSession;
   bool _isLoadingLastSession = true;
@@ -41,7 +43,48 @@ class _RecitationHubSheetState extends State<RecitationHubSheet> {
     super.initState();
     _startAyah = widget.currentAyahNumber;
     _endAyah = (widget.currentAyahNumber + 4).clamp(1, widget.totalAyahs);
+    _startController = TextEditingController(text: '$_startAyah');
+    _endController = TextEditingController(text: '$_endAyah');
     _loadLastSession();
+  }
+
+  @override
+  void dispose() {
+    _startController.dispose();
+    _endController.dispose();
+    super.dispose();
+  }
+
+  void _updateStartAyah(int val) {
+    final clamped = val.clamp(1, widget.totalAyahs);
+    setState(() {
+      _startAyah = clamped;
+      _startController.text = '$clamped';
+      if (_endAyah < clamped) {
+        _endAyah = clamped;
+        _endController.text = '$clamped';
+      }
+    });
+  }
+
+  void _updateEndAyah(int val) {
+    final clamped = val.clamp(_startAyah, widget.totalAyahs);
+    setState(() {
+      _endAyah = clamped;
+      _endController.text = '$clamped';
+    });
+  }
+
+  void _setPreset(int count) {
+    final start = widget.currentAyahNumber;
+    final end = (start + count - 1).clamp(1, widget.totalAyahs);
+    setState(() {
+      _rangeType = 1;
+      _startAyah = start;
+      _endAyah = end;
+      _startController.text = '$start';
+      _endController.text = '$end';
+    });
   }
 
   Future<void> _loadLastSession() async {
@@ -172,60 +215,154 @@ class _RecitationHubSheetState extends State<RecitationHubSheet> {
                 ),
                 const SizedBox(height: 12),
 
-                // Range picker if custom range
+                // Direct Numeric Range input if custom range
                 if (_rangeType == 1) ...[
                   Row(
                     children: [
+                      // Start Ayah TextField + Steppers
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('من الآية:', style: TextStyle(fontSize: 12)),
-                            DropdownButton<int>(
-                              value: _startAyah,
-                              isExpanded: true,
-                              items: List.generate(
-                                widget.totalAyahs,
-                                (i) => DropdownMenuItem(value: i + 1, child: Text('الآية ${i + 1}')),
-                              ),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() {
-                                    _startAyah = val;
-                                    if (_endAyah < val) _endAyah = val;
-                                  });
-                                }
-                              },
+                            Text(
+                              'من الآية (1 - ${widget.totalAyahs}):',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  icon: const Icon(Icons.remove_circle_outline_rounded, size: 22),
+                                  onPressed: _startAyah > 1
+                                      ? () => _updateStartAyah(_startAyah - 1)
+                                      : null,
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _startController,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      isDense: true,
+                                    ),
+                                    onChanged: (val) {
+                                      final parsed = int.tryParse(val.trim());
+                                      if (parsed != null) {
+                                        _updateStartAyah(parsed);
+                                      }
+                                    },
+                                  ),
+                                ),
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  icon: const Icon(Icons.add_circle_outline_rounded, size: 22),
+                                  onPressed: _startAyah < widget.totalAyahs
+                                      ? () => _updateStartAyah(_startAyah + 1)
+                                      : null,
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
+                      // End Ayah TextField + Steppers
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('إلى الآية:', style: TextStyle(fontSize: 12)),
-                            DropdownButton<int>(
-                              value: _endAyah,
-                              isExpanded: true,
-                              items: List.generate(
-                                widget.totalAyahs - _startAyah + 1,
-                                (i) {
-                                  final num = _startAyah + i;
-                                  return DropdownMenuItem(value: num, child: Text('الآية $num'));
-                                },
-                              ),
-                              onChanged: (val) {
-                                if (val != null) setState(() => _endAyah = val);
-                              },
+                            Text(
+                              'إلى الآية (حتى ${widget.totalAyahs}):',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  icon: const Icon(Icons.remove_circle_outline_rounded, size: 22),
+                                  onPressed: _endAyah > _startAyah
+                                      ? () => _updateEndAyah(_endAyah - 1)
+                                      : null,
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _endController,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      isDense: true,
+                                    ),
+                                    onChanged: (val) {
+                                      final parsed = int.tryParse(val.trim());
+                                      if (parsed != null) {
+                                        _updateEndAyah(parsed);
+                                      }
+                                    },
+                                  ),
+                                ),
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  icon: const Icon(Icons.add_circle_outline_rounded, size: 22),
+                                  onPressed: _endAyah < widget.totalAyahs
+                                      ? () => _updateEndAyah(_endAyah + 1)
+                                      : null,
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  // Quick Presets
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ActionChip(
+                          visualDensity: VisualDensity.compact,
+                          label: const Text('٥ آيات', style: TextStyle(fontSize: 11)),
+                          onPressed: () => _setPreset(5),
+                        ),
+                        const SizedBox(width: 6),
+                        ActionChip(
+                          visualDensity: VisualDensity.compact,
+                          label: const Text('١٠ آيات', style: TextStyle(fontSize: 11)),
+                          onPressed: () => _setPreset(10),
+                        ),
+                        const SizedBox(width: 6),
+                        ActionChip(
+                          visualDensity: VisualDensity.compact,
+                          label: const Text('٢٠ آية', style: TextStyle(fontSize: 11)),
+                          onPressed: () => _setPreset(20),
+                        ),
+                        const SizedBox(width: 6),
+                        ActionChip(
+                          visualDensity: VisualDensity.compact,
+                          label: const Text('كامل السورة', style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            setState(() {
+                              _rangeType = 2;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                 ],
 
                 // Section 2: Mode Selection

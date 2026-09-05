@@ -84,7 +84,8 @@ class _FederatedSearchScreenState extends State<FederatedSearchScreen> {
                         child: ListTile(
                           title: Text(
                             item.titleArabic,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                            maxLines: 2,
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

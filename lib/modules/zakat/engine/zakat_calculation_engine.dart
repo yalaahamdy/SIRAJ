@@ -30,6 +30,8 @@ class ZakatCalculationEngine {
     required MarketDataSnapshot marketSnapshot,
     bool isHijriCalendar = true,
     DateTime? customNow,
+    CurrencyAmount? manualNisabAmount,
+    DateTime? customHawlStartDate,
   }) {
     final now = customNow ?? _clock.nowUtc();
     final currency = marketSnapshot.currency;
@@ -66,17 +68,19 @@ class ZakatCalculationEngine {
     final hasValidNisabPrice = _nisabEngine.hasValidPrice(
       policy: policy,
       marketSnapshot: marketSnapshot,
+      manualNisabAmount: manualNisabAmount,
     );
 
     final nisabThreshold = _nisabEngine.calculateNisabThreshold(
       policy: policy,
       marketSnapshot: marketSnapshot,
+      manualNisabAmount: manualNisabAmount,
     );
 
     final reachesNisab = hasValidNisabPrice && netZakatableBase.units >= nisabThreshold.units;
 
     // 3. Hawl evaluation
-    final hawlStart = oldestDate ?? now;
+    final hawlStart = customHawlStartDate ?? oldestDate ?? now;
     final isHawlComplete = _hawlEngine.isHawlCompleted(
       startDate: hawlStart,
       currentTime: now,

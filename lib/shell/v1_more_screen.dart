@@ -5,6 +5,9 @@ import 'companion/federated_search_screen.dart';
 import 'routing/app_router.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_spacing.dart';
+import 'theme/app_theme_controller.dart';
+import 'widgets/siraj_app_logo.dart';
+import 'widgets/siraj_about_dialog.dart';
 
 /// Screen representing Tab 5 (Knowledge & More / المعرفة والمزيد) in V1 App Shell (§6, §13, §14).
 class V1MoreHomeScreen extends StatelessWidget {
@@ -51,6 +54,82 @@ class V1MoreHomeScreen extends StatelessWidget {
       body: ListView(
         padding: AppSpacing.paddingScreen,
         children: [
+          // 0. App Identity Hero Card
+          Card(
+            elevation: 0,
+            color: const Color(0xFF0F172A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: const Color(0xFFDAA520).withValues(alpha: 0.4), width: 1.2),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => showSirajAboutDialog(context),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    const SirajAppLogo(
+                      size: 54,
+                      showShadow: false,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'سِراج — SIRAJ',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDAA520).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFDAA520).withValues(alpha: 0.5)),
+                                ),
+                                child: const Text(
+                                  'v1.0.0',
+                                  style: TextStyle(
+                                    color: Color(0xFFDAA520),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'المنظومة الإسلامية الشاملة والموثقة',
+                            style: TextStyle(
+                              color: Colors.grey.shade300,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      color: Color(0xFFDAA520),
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.m),
+
           // 1. Search Entry Banner
           Card(
             elevation: 0,
@@ -182,7 +261,55 @@ class V1MoreHomeScreen extends StatelessWidget {
               );
             },
           ),
+          _buildTile(
+            context,
+            icon: Icons.palette_outlined,
+            title: 'مظهر التطبيق (فاتح / داكن)',
+            subtitle: 'الوضع الحالي: ${AppThemeController.getLabelArabic(AppThemeController.instance.themeMode)}',
+            color: const Color(0xFF1E3A8A),
+            onTap: () => _showThemeDialog(context),
+          ),
+          _buildTile(
+            context,
+            icon: Icons.info_outline_rounded,
+            title: 'حول سِراج وميثاق المنظومة',
+            subtitle: 'رسالة المنظومة، التوثيق الشرعي، والعمل بدون إنترنت 100%',
+            color: const Color(0xFF856404),
+            onTap: () => showSirajAboutDialog(context),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showThemeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('اختيار مظهر التطبيق'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ThemeMode.values.map((mode) {
+            final isSelected = AppThemeController.instance.themeMode == mode;
+            return ListTile(
+              leading: Icon(
+                AppThemeController.getIcon(mode),
+                color: isSelected ? AppColors.primary : null,
+              ),
+              title: Text(
+                AppThemeController.getLabelArabic(mode),
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              trailing: isSelected ? const Icon(Icons.check, color: AppColors.primary) : null,
+              onTap: () {
+                AppThemeController.instance.setThemeMode(mode);
+                Navigator.pop(ctx);
+              },
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -196,21 +323,34 @@ class V1MoreHomeScreen extends StatelessWidget {
     String? route,
     VoidCallback? onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       elevation: 0.5,
+      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: isDark ? AppColors.borderDark : Colors.grey.shade200),
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.12),
-          child: Icon(icon, color: color, size: 22),
+          backgroundColor: color.withValues(alpha: isDark ? 0.22 : 0.12),
+          child: Icon(icon, color: isDark ? AppColors.goldAccentLight : color, size: 22),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? const Color(0xFFCBD5E1) : Colors.grey.shade600,
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios_rounded,
+          size: 14,
+          color: isDark ? Colors.grey.shade400 : Colors.grey,
+        ),
         onTap: onTap ?? (route != null ? () => Navigator.pushNamed(context, route) : null),
       ),
     );

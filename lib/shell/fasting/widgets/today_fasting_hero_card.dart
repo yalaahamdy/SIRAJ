@@ -45,14 +45,19 @@ class TodayFastingHeroCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
-                    schedule.hijriDate.formatArabic(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      schedule.hijriDate.formatArabic(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (schedule.isRamadan && schedule.ramadanDayNumber != null)
@@ -95,12 +100,16 @@ class TodayFastingHeroCard extends StatelessWidget {
                           style: const TextStyle(color: Colors.white70, fontSize: 13),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '${_formatTime(schedule.nextBoundaryTime)} (متبقي ${_formatDuration(schedule.remainingToNextBoundary)})',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            '${_formatTime(schedule.nextBoundaryTime)} (متبقي ${_formatDuration(schedule.remainingToNextBoundary)})',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../../core/notifications/siraj_notification_manager.dart';
+import '../../../modules/prayer/domain/athan_sound_option.dart';
 import '../../../modules/prayer/domain/calculation_parameters.dart';
 import '../../../modules/prayer/domain/prayer_adjustments.dart';
+import '../../../modules/prayer/domain/prayer_type.dart';
 import '../../../modules/prayer/prayer_module.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'screens/athan_settings_screen.dart';
+import 'widgets/siraj_athan_dialog.dart';
 
 /// Screen for managing all Prayer calculation, calibration, and notification settings (§17..§22).
 class PrayerSettingsScreen extends StatefulWidget {
@@ -269,6 +274,57 @@ class _PrayerSettingsScreenState extends State<PrayerSettingsScreen> {
                         onChanged: (v) {
                           setState(() => _prePrayerReminder = v);
                         },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.music_note_rounded, color: AppColors.primary),
+                        title: const Text('إعدادات صوت الأذان والتخصيص'),
+                        subtitle: const Text('أذان الشيخ عبد الباسط عبد الصمد، ومستوى الصوت، والاهتزاز، وتخصيص كل صلاة'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AthanSettingsScreen(
+                                prayerModule: widget.prayerModule,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.notifications_active_rounded, color: AppColors.primary),
+                        title: const Text('اختبار التنبيه والأذان الآن'),
+                        subtitle: const Text('تشغيل نموذج إشعار فوري وتكبيرات الأذان للتحقق من عملهما'),
+                        trailing: ElevatedButton.icon(
+                          onPressed: () async {
+                            await SirajNotificationManager.instance.requestPermissions();
+                            await SirajNotificationManager.instance.showPrayerNotification(
+                              id: 999,
+                              title: 'تجربة أذان سِراج (صلاة العصر)',
+                              body: 'الله أكبر الله أكبر — مواقيت الصلاة والأذان تعمل بنجاح',
+                            );
+                            if (context.mounted) {
+                              widget.prayerModule.athanAudioService.playAthan(
+                                soundOption: AthanSoundOption.abdulbasit,
+                              );
+                              showSirajAthanDialog(
+                                context: context,
+                                prayerType: PrayerType.asr,
+                                prayerTime: DateTime.now(),
+                                locationName: 'موقعك الحالي',
+                                audioService: widget.prayerModule.athanAudioService,
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                          label: const Text('تجربة الآن'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
                       ),
                     ],
                   ),

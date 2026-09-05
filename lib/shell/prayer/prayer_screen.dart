@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/i18n/app_strings.dart';
 import '../../core/location/location_models.dart';
+import '../../modules/prayer/domain/athan_sound_option.dart';
 import '../../modules/prayer/domain/calculation_parameters.dart';
 import '../../modules/prayer/domain/calculation_status.dart';
 import '../../modules/prayer/domain/prayer_adjustments.dart';
@@ -18,6 +20,8 @@ import '../widgets/state_views.dart';
 import 'prayer_settings_screen.dart';
 import 'widgets/location_selection_dialog.dart';
 import 'widgets/qibla_compass_view.dart';
+import 'widgets/siraj_athan_dialog.dart';
+import '../../core/notifications/siraj_notification_manager.dart';
 
 /// Production-Quality, Responsive Prayer & Qibla Screen (§4..§19, §25..§35).
 class PrayerScreen extends StatefulWidget {
@@ -57,12 +61,132 @@ class _PrayerScreenState extends State<PrayerScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  Timer? _countdownTicker;
+  StreamSubscription<GeoCoordinates>? _locationSubscription;
+  bool _isAcquiringLocation = false;
+  DateTime? _lastComputedNextPrayerTime;
+  bool _showCompass = false;
+  final Set<String> _firedPrayersToday = {};
+
   @override
   void initState() {
     super.initState();
-    _location = widget.initialLocation;
+    _location = widget.locationEngine?.currentEffectiveLocation ?? widget.initialLocation;
     _selectedParameters = widget.initialParameters;
     _loadAllData();
+    _startCountdownTicker();
+    _initLocationSubscription();
+    SirajNotificationManager.instance.init();
+    SirajNotificationManager.instance.requestPermissions();
+  }
+
+  void _initLocationSubscription() {
+    if (widget.locationEngine != null) {
+      _locationSubscription = widget.locationEngine!.locationStream.listen((newLoc) {
+        if (mounted && newLoc != _location) {
+          _onLocationChanged(newLoc);
+        }
+      });
+      // Always acquire fresh GPS coordinates in the background automatically
+      _refreshGpsLocation(silent: true);
+    }
+  }
+
+  void _startCountdownTicker() {
+    _countdownTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+      _checkPrayerTransition();
+    });
+  }
+
+  void _checkPrayerTransition() {
+    if (_todaySchedule == null) return;
+    final now = widget.prayerModule.clock.nowLocal();
+
+    // Check obligatory prayers to trigger automatic Athan and notification
+    for (final entry in _todaySchedule!.obligatoryPrayers) {
+      final diff = now.difference(entry.time).inSeconds;
+      final key = '${entry.type.name}_${_todaySchedule!.date.year}_${_todaySchedule!.date.month}_${_todaySchedule!.date.day}';
+
+      // Trigger if at or within 4 seconds of prayer entry and not yet fired today
+      if (diff >= 0 && diff <= 4 && !_firedPrayersToday.contains(key)) {
+        _firedPrayersToday.add(key);
+        _triggerAthanAndNotification(entry.type, entry.time);
+      }
+    }
+
+    final countdown = widget.prayerModule.countdownService.getCountdownState(
+      todaySchedule: _todaySchedule!,
+      tomorrowSchedule: _tomorrowSchedule,
+    );
+    final nextTime = countdown.nextPrayer?.time;
+    if (nextTime != null && _lastComputedNextPrayerTime != null) {
+      if (now.isAfter(_lastComputedNextPrayerTime!)) {
+        _lastComputedNextPrayerTime = nextTime;
+        _loadAllData();
+      }
+    } else {
+      _lastComputedNextPrayerTime = nextTime;
+    }
+  }
+
+  void _triggerAthanAndNotification(PrayerType prayerType, DateTime prayerTime) {
+    // 1. Play authentic Athan audio
+    widget.prayerModule.athanAudioService.playAthan(
+      soundOption: AthanSoundOption.abdulbasit,
+    );
+
+    // 2. Send native system notification
+    SirajNotificationManager.instance.showPrayerNotification(
+      id: prayerType.index,
+      title: 'حان الآن موعد أذان ${prayerType.nameArabic}',
+      body: 'حي على الصلاة، حي على الفلاح — ${_location.cityName ?? "موقعك الحالي"}',
+    );
+
+    // 3. Show in-app interactive Athan modal
+    if (mounted) {
+      showSirajAthanDialog(
+        context: context,
+        prayerType: prayerType,
+        prayerTime: prayerTime,
+        locationName: _location.cityName ?? 'موقعك الحالي',
+        audioService: widget.prayerModule.athanAudioService,
+        onMarkPrayed: () => _updateTracking(prayerType, PrayerTrackingStatus.prayed),
+      );
+    }
+  }
+
+  Future<void> _refreshGpsLocation({bool silent = false}) async {
+    if (widget.locationEngine == null || _isAcquiringLocation) return;
+    if (!silent) {
+      setState(() => _isAcquiringLocation = true);
+    }
+    final res = await widget.locationEngine!.acquireLocation();
+    if (mounted) {
+      if (!silent) {
+        setState(() => _isAcquiringLocation = false);
+        if (res.isSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res.valueOrNull!.statusMessageArabic),
+              duration: const Duration(seconds: 3),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      }
+      if (res.isSuccess) {
+        _onLocationChanged(res.valueOrNull!.coordinates);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _countdownTicker?.cancel();
+    _locationSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAllData() async {
@@ -249,12 +373,8 @@ class _PrayerScreenState extends State<PrayerScreen> {
                             _buildDailyScheduleCard(context, isDark),
                             const SizedBox(height: AppSpacing.m),
 
-                            // Qibla Compass Card
-                            QiblaCompassView(
-                              qibla: _qiblaResult,
-                              isDark: isDark,
-                              compassService: widget.compassService,
-                            ),
+                            // Qibla Compass Card - Hidden by default behind dedicated button
+                            _buildQiblaCompassSection(context, isDark),
                             const SizedBox(height: AppSpacing.m),
 
                             // Calculation Method & Transparent Assumptions Disclosure
@@ -281,24 +401,46 @@ class _PrayerScreenState extends State<PrayerScreen> {
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: _openLocationPicker,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-              const Icon(Icons.my_location_rounded, size: 18, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  locTitle,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Row(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: _openLocationPicker,
+              child: const Padding(
+                padding: EdgeInsets.all(4.0),
+                child: Icon(Icons.location_on, size: 20, color: AppColors.primary),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: _openLocationPicker,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    locTitle,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
-              const Icon(Icons.arrow_drop_down, color: Colors.grey),
-            ],
-          ),
+            ),
+            if (widget.locationEngine != null)
+              IconButton(
+                icon: _isAcquiringLocation
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                      )
+                    : const Icon(Icons.gps_fixed, size: 18, color: AppColors.primary),
+                tooltip: 'تحديث الموقع عبر GPS',
+                onPressed: _isAcquiringLocation ? null : () => _refreshGpsLocation(),
+              ),
+            const Icon(Icons.arrow_drop_down, color: Colors.grey),
+          ],
         ),
       ),
     );
@@ -491,7 +633,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
                                   style: TextStyle(
                                     fontWeight: (isCurrent || isNext) ? FontWeight.bold : FontWeight.w600,
                                     fontSize: 15,
-                                    color: isPassed && !isCurrent ? Colors.grey.shade600 : null,
+                                    color: isPassed && !isCurrent ? (isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600) : null,
                                   ),
                                 ),
                                 if (isCurrent)
@@ -530,7 +672,9 @@ class _PrayerScreenState extends State<PrayerScreen> {
                               _formatTime(entry.time),
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isPassed && !isCurrent ? Colors.grey.shade600 : Theme.of(context).textTheme.bodySmall?.color,
+                                color: isPassed && !isCurrent
+                                    ? (isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600)
+                                    : (isDark ? const Color(0xFFCBD5E1) : Theme.of(context).textTheme.bodySmall?.color),
                               ),
                             ),
                           ],
@@ -564,6 +708,84 @@ class _PrayerScreenState extends State<PrayerScreen> {
                 );
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQiblaCompassSection(BuildContext context, bool isDark) {
+    final degrees = _qiblaResult?.directionDegrees.toStringAsFixed(1) ?? '--';
+
+    return Card(
+      elevation: 0.5,
+      color: isDark ? AppColors.surfaceDark : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: isDark ? AppColors.borderDark : Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.explore_rounded, color: AppColors.primary, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'اتجاه القبلة: $degrees°',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'الكعبة المشرفة بمكة المكرمة',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? const Color(0xFFCBD5E1) : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => setState(() => _showCompass = !_showCompass),
+                  icon: Icon(
+                    _showCompass ? Icons.visibility_off_rounded : Icons.explore_rounded,
+                    size: 16,
+                  ),
+                  label: Text(_showCompass ? 'إخفاء البوصلة' : 'إظهار البوصلة'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? AppColors.goldAccentLight : AppColors.primary,
+                    side: BorderSide(
+                      color: (isDark ? AppColors.goldAccentLight : AppColors.primary).withValues(alpha: 0.5),
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ],
+            ),
+            if (_showCompass) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              QiblaCompassView(
+                qibla: _qiblaResult,
+                isDark: isDark,
+                compassService: widget.compassService,
+              ),
+            ],
           ],
         ),
       ),

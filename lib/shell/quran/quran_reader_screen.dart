@@ -21,6 +21,7 @@ import 'widgets/ayah_action_toolbar.dart';
 import 'widgets/ayah_view.dart';
 import 'widgets/quran_mini_player.dart';
 import 'widgets/quran_mushaf_flow_view.dart';
+import 'widgets/quran_mushaf_page_view.dart';
 import 'widgets/range_selection_dialog.dart';
 import 'widgets/reader_settings_sheet.dart';
 import 'widgets/surah_header_card.dart';
@@ -77,6 +78,8 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
 
   final AyahSelectionController _selectionController = AyahSelectionController();
   final ScrollController _scrollController = ScrollController();
+  final PageController _pageController = PageController();
+  int? _lastScrolledAudioAyah;
 
   AudioPlaybackReport _audioReport = const AudioPlaybackReport(
     status: AudioPlaybackStatus.idle,
@@ -157,8 +160,12 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         if (_settingsController.state.autoScroll &&
             report.status == AudioPlaybackStatus.playing &&
             report.surahNumber == _currentSurahNumber &&
-            report.ayahNumber != null) {
+            report.ayahNumber != null &&
+            report.ayahNumber != _lastScrolledAudioAyah) {
+          _lastScrolledAudioAyah = report.ayahNumber;
           _scrollToAyah(report.ayahNumber!);
+        } else if (report.status != AudioPlaybackStatus.playing) {
+          _lastScrolledAudioAyah = null;
         }
       }
     });
@@ -218,6 +225,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     _audioSub?.cancel();
     _selectionController.dispose();
     _scrollController.dispose();
+    _pageController.dispose();
     _settingsController.dispose();
     _recitationRecorder.dispose();
     _recitationGateway.dispose();
@@ -261,9 +269,10 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     });
 
     if (ayahs.isNotEmpty) {
-      final targetAyah = _targetAyahNumber != null && _targetAyahNumber! <= ayahs.length
-          ? ayahs[_targetAyahNumber! - 1]
-          : ayahs.first;
+      final targetIndex = _targetAyahNumber != null
+          ? (_targetAyahNumber! - 1).clamp(0, ayahs.length - 1)
+          : 0;
+      final targetAyah = ayahs[targetIndex];
 
       widget.quranModule.updateReadingPosition(
         surahNumber: surah.number,
@@ -273,16 +282,37 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       );
 
       if (_targetAyahNumber != null) {
+        final ayahToScroll = targetIndex + 1;
+        _targetAyahNumber = null; // Clear to prevent unexpected jumping on rebuilds
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToAyah(_targetAyahNumber!);
+          _scrollToAyah(ayahToScroll);
         });
       }
     }
   }
 
   void _scrollToAyah(int ayahNumber) {
-    if (!_scrollController.hasClients || _ayahs.isEmpty) return;
+    if (_ayahs.isEmpty) return;
     final index = ayahNumber.clamp(1, _ayahs.length);
+
+    // If in horizontal Mushaf page view mode, flip to the page containing this Ayah
+    if (_settingsController.state.pageTurnMode == QuranPageTurnMode.horizontal) {
+      if (_pageController.hasClients) {
+        final targetAyah = _ayahs[index - 1];
+        final pages = _ayahs.map((a) => a.pageNumber).toSet().toList()..sort();
+        final pageIdx = pages.indexOf(targetAyah.pageNumber);
+        if (pageIdx != -1) {
+          _pageController.animateToPage(
+            pageIdx,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      }
+      return;
+    }
+
+    if (!_scrollController.hasClients) return;
     final estimatedOffset = ((index - 1) * 75.0)
         .clamp(0.0, _scrollController.position.maxScrollExtent);
     _scrollController.animateTo(
@@ -839,29 +869,84 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
   void _matchSingleWordToken(QuranRecitationToken token) {
     if (!mounted || _recitationWordsMap == null || _activeRecitationTarget == null) return;
 
-    final currentWords = _recitationWordsMap![_recitationCurrentAyahNumber];
-    if (currentWords == null || _recitationCurrentWordIndex >= currentWords.length) return;
-
-    final targetWord = currentWords[_recitationCurrentWordIndex];
-    final matchResult = QuranRecitationMatcher.evaluateWordMatch(
-      targetWord.normalizedText,
-      token.normalizedText,
+    // Build 3-word parallel lookahead candidates
+    final candidates = QuranRecitationMatcher.getLookaheadCandidates(
+      wordsMap: _recitationWordsMap!,
+      currentAyahNumber: _recitationCurrentAyahNumber,
+      currentWordIndex: _recitationCurrentWordIndex,
+      endAyah: _activeRecitationTarget!.endAyah,
+      windowSize: 3,
     );
 
-    if (matchResult.isMatch) {
+    if (candidates.isEmpty) return;
+
+    // Check previous word for hesitation / stutter absorption
+    RecitationWordPointer? prevPointer;
+    if (_recitationCurrentWordIndex > 0) {
+      final curList = _recitationWordsMap![_recitationCurrentAyahNumber];
+      if (curList != null && curList.isNotEmpty) {
+        prevPointer = RecitationWordPointer(
+          ayahNumber: _recitationCurrentAyahNumber,
+          wordIndex: _recitationCurrentWordIndex - 1,
+          word: curList[_recitationCurrentWordIndex - 1],
+        );
+      }
+    }
+
+    final lookaheadResult = QuranRecitationMatcher.evaluateLookaheadMatch(
+      candidates: candidates,
+      speechToken: token.normalizedText,
+      previousWord: prevPointer,
+    );
+
+    if (lookaheadResult.isHesitation) {
+      // Absorbed hesitation: user repeated the previous word, do not fail or advance
+      return;
+    }
+
+    if (lookaheadResult.isMatch && lookaheadResult.matchedPointer != null) {
+      final matched = lookaheadResult.matchedPointer!;
+      final skipped = lookaheadResult.skippedPointers;
+
       setState(() {
         _recitationMistakeNotice = null;
-        currentWords[_recitationCurrentWordIndex] = targetWord.copyWith(
-          state: RecitationWordState.recognized,
-          confidence: matchResult.similarity,
-          confidenceLevel: matchResult.similarity >= 0.85
-              ? RecitationWordConfidence.confirmed
-              : RecitationWordConfidence.probable,
-        );
-        _recitationCurrentWordIndex++;
-        if (_recitationCurrentWordIndex >= currentWords.length) {
-          if (_recitationCurrentAyahNumber < _activeRecitationTarget!.endAyah) {
-            _recitationCurrentAyahNumber++;
+
+        // 1. Mark any skipped words preceding this match as MISTAKES (colored in RED in UI)
+        for (final sp in skipped) {
+          final ayahWords = _recitationWordsMap![sp.ayahNumber];
+          if (ayahWords != null && sp.wordIndex < ayahWords.length) {
+            ayahWords[sp.wordIndex] = sp.word.copyWith(
+              state: RecitationWordState.mistake,
+              confidence: 0.0,
+              confidenceLevel: RecitationWordConfidence.uncertain,
+            );
+          }
+        }
+        if (skipped.isNotEmpty) {
+          _recitationMistakesCount += skipped.length;
+        }
+
+        // 2. Mark the matched candidate as RECOGNIZED (CONFIRMED)
+        final targetAyahWords = _recitationWordsMap![matched.ayahNumber];
+        if (targetAyahWords != null && matched.wordIndex < targetAyahWords.length) {
+          targetAyahWords[matched.wordIndex] = matched.word.copyWith(
+            state: RecitationWordState.recognized,
+            confidence: lookaheadResult.confidence,
+            confidenceLevel: lookaheadResult.confidenceLevel,
+            recognizedAt: DateTime.now(),
+            recognizerToken: token.rawText,
+          );
+        }
+
+        // 3. Advance pointer to the word immediately following the matched word
+        final targetAyahLen = targetAyahWords?.length ?? 0;
+        if (matched.wordIndex + 1 < targetAyahLen) {
+          _recitationCurrentAyahNumber = matched.ayahNumber;
+          _recitationCurrentWordIndex = matched.wordIndex + 1;
+        } else {
+          // Ayah completed, advance to the next Ayah if within target
+          if (matched.ayahNumber < _activeRecitationTarget!.endAyah) {
+            _recitationCurrentAyahNumber = matched.ayahNumber + 1;
             _recitationCurrentWordIndex = 0;
             _scrollToAyah(_recitationCurrentAyahNumber);
           } else {
@@ -872,8 +957,14 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       return;
     }
 
-    if (matchResult.isMistake) {
-      // Detected a pronunciation mistake / completely different word
+    // If completely unmatched against all candidates in window, notice minor mistake if different word
+    final curWord = candidates.first.word;
+    final singleMatch = QuranRecitationMatcher.evaluateWordMatch(
+      curWord.normalizedText,
+      token.normalizedText,
+    );
+
+    if (singleMatch.isMistake) {
       setState(() {
         _recitationMistakesCount++;
         _recitationMistakeNotice = 'غير مطابقة: "${token.rawText}"';
@@ -960,11 +1051,11 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     });
   }
 
-  void _goToPreviousSurah() {
+  void _goToPreviousSurah({bool openLastPage = false}) {
     if (_currentSurahNumber > 1) {
       setState(() {
         _currentSurahNumber -= 1;
-        _targetAyahNumber = null;
+        _targetAyahNumber = openLastPage ? 999999 : null;
       });
       _selectionController.clearSelection();
       _loadSurahData();
@@ -992,6 +1083,36 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         : null;
 
     if (isMushafFlow) {
+      if (config.pageTurnMode == QuranPageTurnMode.horizontal) {
+        final prevSurahName = _currentSurahNumber > 1
+            ? widget.quranModule.getSurah(_currentSurahNumber - 1).valueOrNull?.nameArabic
+            : null;
+        final nextSurahName = _currentSurahNumber < 114
+            ? widget.quranModule.getSurah(_currentSurahNumber + 1).valueOrNull?.nameArabic
+            : null;
+
+        return QuranMushafPageView(
+          surah: _currentSurah!,
+          ayahs: _ayahs,
+          config: config,
+          selectedAyahNumber: _selectionController.selectedAyah,
+          playingAyahNumber: playingAyah,
+          bookmarkedAyahs: _bookmarkedAyahs,
+          activeRecitationTarget: _activeRecitationTarget,
+          isRecitationActive: _isRecitationActive,
+          isRecitationTextHidden: _isRecitationRecording,
+          recitationWordsMap: _recitationWordsMap,
+          pageController: _pageController,
+          onAyahTap: _onAyahSingleTap,
+          onAyahDoubleTap: _onAyahDoubleTap,
+          onAyahLongPress: _onAyahLongPress,
+          onPreviousSurah: () => _goToPreviousSurah(openLastPage: true),
+          onNextSurah: _goToNextSurah,
+          previousSurahName: prevSurahName,
+          nextSurahName: nextSurahName,
+        );
+      }
+
       return SingleChildScrollView(
         controller: _scrollController,
         padding: const EdgeInsets.only(bottom: 90),
@@ -1070,22 +1191,51 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       appBar: isFocus
           ? null
           : AppBar(
-              title: Text(
-                _currentSurah != null ? 'سورة ${_currentSurah!.nameArabic}' : 'القرآن الكريم',
+              title: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  _currentSurah != null ? 'سورة ${_currentSurah!.nameArabic}' : 'القرآن الكريم',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                ),
               ),
-              centerTitle: true,
+              centerTitle: false,
               actions: [
                 IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  icon: Icon(
+                    config.pageTurnMode == QuranPageTurnMode.horizontal
+                        ? Icons.view_headline_rounded
+                        : Icons.auto_stories_rounded,
+                  ),
+                  tooltip: config.pageTurnMode == QuranPageTurnMode.horizontal
+                      ? 'التبديل إلى التمرير الرأسي'
+                      : 'التبديل إلى التصفح الأفقي بالصفحات',
+                  onPressed: () {
+                    _settingsController.togglePageTurnMode();
+                  },
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   icon: const Icon(Icons.mic_none_rounded),
                   tooltip: 'التسميع والحفظ',
                   onPressed: _openRecitationHub,
                 ),
                 IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   icon: const Icon(Icons.tune_rounded),
                   tooltip: 'خيارات القراءة والمصحف',
                   onPressed: _openReaderSettings,
                 ),
                 PopupMenuButton<String>(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   icon: const Icon(Icons.more_vert_rounded),
                   tooltip: 'المزيد من الخيارات',
                   onSelected: (val) {
@@ -1536,14 +1686,37 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         ],
         Row(
           children: [
-            const Icon(Icons.mic_rounded, color: AppColors.primary, size: 18),
-            const SizedBox(width: 4),
-            Text(
-              '$minutes:$seconds',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: isDark ? Colors.white : Colors.black87,
+            InkWell(
+              onTap: () async {
+                await _recitationGateway.startListening();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('الميكروفون نشط ويعمل'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.mic_rounded, color: AppColors.primary, size: 18),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$minutes:$seconds',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             if (_recitationMistakesCount > 0) ...[

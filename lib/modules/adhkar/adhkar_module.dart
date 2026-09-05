@@ -208,6 +208,24 @@ class AdhkarModule {
         return 'أذكار وآداب الطعام والشراب';
       case DhikrOccasion.difficulty:
         return 'أدعية الكرب وتفريج الهموم والشدائد';
+      case DhikrOccasion.taharah:
+        return 'أذكار الطهارة والوضوء وآداب دخول الخلاء والخروج منه';
+      case DhikrOccasion.mosque:
+        return 'أذكار المسجد والأذان والمشي إليها';
+      case DhikrOccasion.prayer:
+        return 'أذكار الصلاة التوقيفية من الاستفتاح والركوع والسجود والتشهد';
+      case DhikrOccasion.clothing:
+        return 'أذكار وآداب لبس الثوب الجديد وخلعه';
+      case DhikrOccasion.illness:
+        return 'أدعية عيادة المريض والرقية الشرعية وسؤال الشفاء';
+      case DhikrOccasion.weather:
+        return 'أذكار الرياح والرعد ونزول المطر والاستسقاء';
+      case DhikrOccasion.funerals:
+        return 'أدعية المصيبة وتلقين المحتضر والدفن وزيارة القبور';
+      case DhikrOccasion.fasting:
+        return 'أدعية الصائم عند الإفطار ورؤية الهلال وآداب الصيام';
+      case DhikrOccasion.gatherings:
+        return 'كفارة المجلس وإفشاء السلام والدعاء لمن صنع معروفاً';
       case DhikrOccasion.general:
         return 'الأذكار والتسبيحات المطلقة في كل وقت وحين';
     }

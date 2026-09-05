@@ -62,7 +62,7 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('أهدافي التعليمية ووتيرة الدراسة'),
+        title: const Text('الأهداف التعليمية'),
         centerTitle: true,
       ),
       body: _isLoading

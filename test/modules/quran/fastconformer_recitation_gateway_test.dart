@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:siraj/modules/quran/domain/ayah.dart';
+import 'package:siraj/modules/quran/domain/quran_reader_modes.dart';
 import 'package:siraj/modules/quran/recitation/domain/quran_recitation_word.dart';
 import 'package:siraj/modules/quran/recitation/services/fastconformer_recitation_gateway.dart';
 import 'package:siraj/modules/quran/recitation/services/quran_recitation_matcher.dart';
+import 'package:siraj/modules/quran/services/quran_typography_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -170,6 +172,95 @@ void main() {
       );
       expect(err3.isMatch, isFalse);
       expect(err3.isMistake, isTrue);
+    });
+
+    test('Gateway restartListening can be invoked safely and cleanly re-arms', () async {
+      final gateway = FastConformerQuranRecognitionGateway(simulateLocal: true);
+      await gateway.startListening();
+      expect(gateway.isListening, isTrue);
+
+      await gateway.restartListening();
+      expect(gateway.isListening, isTrue);
+
+      await gateway.stopListening();
+      expect(gateway.isListening, isFalse);
+      gateway.dispose();
+    });
+
+    test('QuranTypographyConfig resolves theme-consistent colors for all themes with high contrast', () {
+      const lightConfig = QuranTypographyConfig(themeMode: QuranReaderThemeMode.light);
+      const darkConfig = QuranTypographyConfig(themeMode: QuranReaderThemeMode.dark);
+      const sepiaConfig = QuranTypographyConfig(themeMode: QuranReaderThemeMode.sepia);
+
+      // Surface colors
+      expect(lightConfig.resolvePageSurfaceColor().value, 0xFFFFFFFF);
+      expect(darkConfig.resolvePageSurfaceColor().value, 0xFF181C22);
+      expect(sepiaConfig.resolvePageSurfaceColor().value, 0xFFFAF5E8);
+
+      // Accent high contrast colors
+      expect(lightConfig.resolvePageAccentColor().value, 0xFF78350F);
+      expect(darkConfig.resolvePageAccentColor().value, 0xFFFBBF24);
+      expect(sepiaConfig.resolvePageAccentColor().value, 0xFF5C3813);
+
+      // Surah banner and quick bar surfaces
+      expect(lightConfig.resolveSurahBannerColor().value, 0xFFFDF9F0);
+      expect(darkConfig.resolveSurahBannerColor().value, 0xFF222832);
+      expect(sepiaConfig.resolveSurahBannerColor().value, 0xFFEFE4CC);
+
+      expect(lightConfig.resolveQuickBarSurfaceColor().value, 0xFFF0EBE1);
+      expect(darkConfig.resolveQuickBarSurfaceColor().value, 0xFF21262F);
+      expect(sepiaConfig.resolveQuickBarSurfaceColor().value, 0xFFE5D7B5);
+    });
+
+    test('evaluateLookaheadMatch immediately recognizes connected words and prefixes for ultra-low latency', () {
+      final testWord1 = QuranRecitationWord(
+        surahNumber: 1,
+        ayahNumber: 2,
+        wordIndex: 0,
+        canonicalText: 'ٱلْحَمْدُ',
+        normalizedText: 'الحمد',
+        state: RecitationWordState.hidden,
+      );
+      final testWord2 = QuranRecitationWord(
+        surahNumber: 1,
+        ayahNumber: 2,
+        wordIndex: 1,
+        canonicalText: 'لِلَّهِ',
+        normalizedText: 'لله',
+        state: RecitationWordState.hidden,
+      );
+      final testWord3 = QuranRecitationWord(
+        surahNumber: 1,
+        ayahNumber: 3,
+        wordIndex: 0,
+        canonicalText: 'ٱلرَّحْمَـٰنِ',
+        normalizedText: 'الرحمن',
+        state: RecitationWordState.hidden,
+      );
+
+      final candidates = [
+        RecitationWordPointer(ayahNumber: 1, wordIndex: 0, word: testWord1),
+        RecitationWordPointer(ayahNumber: 1, wordIndex: 1, word: testWord2),
+      ];
+
+      // 1. Connected speech: "الحمدلله" matches candidate 0 ("الحمد") instantly
+      final res1 = QuranRecitationMatcher.evaluateLookaheadMatch(
+        candidates: candidates,
+        speechToken: 'الحمدلله',
+      );
+      expect(res1.isMatch, isTrue);
+      expect(res1.matchedPointer?.word.canonicalText, 'ٱلْحَمْدُ');
+
+      // 2. Fast partial prefix: "الرحم" matches "الرحمن" instantly before word finishes
+      final candidates2 = [
+        RecitationWordPointer(ayahNumber: 1, wordIndex: 0, word: testWord3),
+      ];
+      final res2 = QuranRecitationMatcher.evaluateLookaheadMatch(
+        candidates: candidates2,
+        speechToken: 'الرحم',
+      );
+      expect(res2.isMatch, isTrue);
+      expect(res2.matchedPointer?.word.canonicalText, 'ٱلرَّحْمَـٰنِ');
     });
   });
 }

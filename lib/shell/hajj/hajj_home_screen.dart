@@ -85,10 +85,13 @@ class _HajjHomeScreenState extends State<HajjHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'الحج والعمرة — دليل ومناسك النسك',
-          style: TextStyle(fontSize: 16),
-          overflow: TextOverflow.ellipsis,
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Text(
+            'الحج والعمرة — دليل ومناسك النسك',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         centerTitle: false,
         actions: [
@@ -116,14 +119,20 @@ class _HajjHomeScreenState extends State<HajjHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                Text(
-                  'رحلة الحج والعمرة الميسرة',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'رحلة الحج والعمرة الميسرة',
+                    style: TextStyle(color: Colors.white, fontSize: 16.5, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 SizedBox(height: 6),
                 Text(
                   'إرشاد خطوة بخطوة بالترتيب الشرعي الموثق والمواقيت والمشاعر دون فتاوى أو أحكام قطعية.',
                   style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -244,8 +253,8 @@ class _HajjHomeScreenState extends State<HajjHomeScreen> {
 
           ListTile(
             leading: const CircleAvatar(backgroundColor: Colors.amber, child: Icon(Icons.checklist, color: Colors.white)),
-            title: const Text('حقيبة واستعداد الحاج والمعتمر'),
-            subtitle: const Text('قائمة التجهيز والمستلزمات الشخصية والوثائق'),
+            title: const Text('حقيبة واستعداد الحاج والمعتمر', maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: const Text('قائمة التجهيز والمستلزمات الشخصية والوثائق', maxLines: 2, overflow: TextOverflow.ellipsis),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               Navigator.push(
@@ -257,8 +266,8 @@ class _HajjHomeScreenState extends State<HajjHomeScreen> {
 
           ListTile(
             leading: const CircleAvatar(backgroundColor: Colors.blue, child: Icon(Icons.map, color: Colors.white)),
-            title: const Text('دليل المواقيت المكانية الخمسة'),
-            subtitle: const Text('ذو الحليفة، الجحفة، قرن المنازل، يلملم، ذات عرق'),
+            title: const Text('دليل المواقيت المكانية الخمسة', maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: const Text('ذو الحليفة، الجحفة، قرن المنازل، يلملم، ذات عرق', maxLines: 2, overflow: TextOverflow.ellipsis),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               Navigator.push(
@@ -270,8 +279,8 @@ class _HajjHomeScreenState extends State<HajjHomeScreen> {
 
           ListTile(
             leading: const CircleAvatar(backgroundColor: Colors.purple, child: Icon(Icons.location_city, color: Colors.white)),
-            title: const Text('المشاعر والمواقع المقدسة'),
-            subtitle: const Text('الحرم، منى، عرفات، مزدلفة، الجمرات'),
+            title: const Text('المشاعر والمواقع المقدسة', maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: const Text('الحرم، منى، عرفات، مزدلفة، الجمرات', maxLines: 2, overflow: TextOverflow.ellipsis),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               Navigator.push(
@@ -303,8 +312,8 @@ class _HajjHomeScreenState extends State<HajjHomeScreen> {
           foregroundColor: Colors.white,
           child: Icon(icon),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () async {
           await Navigator.push(

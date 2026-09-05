@@ -1,22 +1,23 @@
 import 'package:equatable/equatable.dart';
+import 'zakat_currency.dart';
 
 /// High-precision monetary amount representation to eliminate floating-point errors (§7).
 class CurrencyAmount extends Equatable implements Comparable<CurrencyAmount> {
-  final int units; // Value in minor units (e.g., halalas/cents)
+  final int units; // Value in minor units (e.g., piasters/halalas/cents)
   final int decimals; // Number of fractional decimal digits (default: 2)
-  final String currency; // Standard currency code (e.g., 'SAR', 'USD')
+  final String currency; // Standard currency code (e.g., 'EGP', 'SAR', 'USD')
 
   const CurrencyAmount({
     required this.units,
     this.decimals = 2,
-    this.currency = 'SAR',
+    this.currency = 'EGP',
   }) : assert(decimals >= 0 && decimals <= 6, 'Decimals must be between 0 and 6');
 
   static const CurrencyAmount zero = CurrencyAmount(units: 0);
 
   factory CurrencyAmount.fromDouble(
     double value, {
-    String currency = 'SAR',
+    String currency = 'EGP',
     int decimals = 2,
   }) {
     final factor = _multiplier(decimals);
@@ -30,7 +31,7 @@ class CurrencyAmount extends Equatable implements Comparable<CurrencyAmount> {
 
   factory CurrencyAmount.fromUnits(
     int units, {
-    String currency = 'SAR',
+    String currency = 'EGP',
     int decimals = 2,
   }) {
     return CurrencyAmount(
@@ -104,11 +105,37 @@ class CurrencyAmount extends Equatable implements Comparable<CurrencyAmount> {
     return includeSymbol ? '$sign$numberStr $currency' : '$sign$numberStr';
   }
 
+  /// Formats with thousands commas and local Arabic currency symbols (e.g. `10,000 ج.م`).
+  String formatLocal({bool includeSymbol = true}) {
+    final factor = _multiplier(decimals);
+    final absUnits = units.abs();
+    final wholePart = absUnits ~/ factor;
+    final fracPart = (absUnits % factor).toString().padLeft(decimals, '0');
+    final sign = units < 0 ? '-' : '';
+
+    final wholeStr = wholePart.toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < wholeStr.length; i++) {
+      if (i > 0 && (wholeStr.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(wholeStr[i]);
+    }
+
+    final numberStr = (decimals > 0 && absUnits % factor != 0)
+        ? '$buffer.$fracPart'
+        : buffer.toString();
+
+    if (!includeSymbol) return '$sign$numberStr';
+    final zc = ZakatCurrency.findByCode(currency);
+    return '$sign$numberStr ${zc.symbolArabic}';
+  }
+
   factory CurrencyAmount.fromMap(Map<String, dynamic> map) {
     return CurrencyAmount(
       units: map['units'] as int,
       decimals: map['decimals'] as int? ?? 2,
-      currency: map['currency'] as String? ?? 'SAR',
+      currency: map['currency'] as String? ?? 'EGP',
     );
   }
 

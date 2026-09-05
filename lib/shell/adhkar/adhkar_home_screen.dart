@@ -226,7 +226,11 @@ class _AdhkarHomeScreenState extends State<AdhkarHomeScreen> with SingleTickerPr
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => DhikrDetailScreen(item: item, module: widget.module),
+                builder: (_) => DhikrDetailScreen(
+                  items: _searchResults,
+                  initialIndex: index,
+                  module: widget.module,
+                ),
               ),
             );
           },
@@ -278,14 +282,22 @@ class _AdhkarHomeScreenState extends State<AdhkarHomeScreen> with SingleTickerPr
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  currentOccasion.labelArabic,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    currentOccasion.labelArabic,
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   explanation,
                   style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -365,7 +377,11 @@ class _AdhkarHomeScreenState extends State<AdhkarHomeScreen> with SingleTickerPr
             onTap: () async {
               await Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => DhikrDetailScreen(item: item, module: widget.module),
+                  builder: (_) => DhikrDetailScreen(
+                    items: _favoriteItems,
+                    initialIndex: index,
+                    module: widget.module,
+                  ),
                 ),
               );
               _loadFavorites();
@@ -395,11 +411,17 @@ class _AdhkarHomeScreenState extends State<AdhkarHomeScreen> with SingleTickerPr
             children: [
               Icon(_getIconForOccasion(occasion), color: isDark ? AppColors.goldAccent : AppColors.primary, size: 24),
               const SizedBox(height: 8),
-              Text(
-                occasion.labelArabic,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    occasion.labelArabic,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
             ],
           ),
@@ -415,7 +437,7 @@ class _AdhkarHomeScreenState extends State<AdhkarHomeScreen> with SingleTickerPr
       case DhikrOccasion.evening:
         return Icons.nights_stay_outlined;
       case DhikrOccasion.afterPrayer:
-        return Icons.mosque_outlined;
+        return Icons.check_circle_outline;
       case DhikrOccasion.sleep:
         return Icons.bedtime_outlined;
       case DhikrOccasion.waking:
@@ -429,6 +451,24 @@ class _AdhkarHomeScreenState extends State<AdhkarHomeScreen> with SingleTickerPr
         return Icons.restaurant_outlined;
       case DhikrOccasion.difficulty:
         return Icons.healing_outlined;
+      case DhikrOccasion.taharah:
+        return Icons.water_drop_outlined;
+      case DhikrOccasion.mosque:
+        return Icons.mosque_outlined;
+      case DhikrOccasion.prayer:
+        return Icons.accessibility_new_outlined;
+      case DhikrOccasion.clothing:
+        return Icons.checkroom_outlined;
+      case DhikrOccasion.illness:
+        return Icons.medical_services_outlined;
+      case DhikrOccasion.weather:
+        return Icons.cloud_outlined;
+      case DhikrOccasion.funerals:
+        return Icons.account_balance_outlined;
+      case DhikrOccasion.fasting:
+        return Icons.nightlight_round_outlined;
+      case DhikrOccasion.gatherings:
+        return Icons.groups_outlined;
       case DhikrOccasion.general:
         return Icons.format_quote_outlined;
     }

@@ -166,7 +166,9 @@ class _JourneyDashboardScreenState extends State<JourneyDashboardScreen> {
                       Expanded(
                         child: Text(
                           'اكتملت خطوات الرحلة المسجلة',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Colors.white, fontSize: 16.5, fontWeight: FontWeight.bold),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -235,10 +237,15 @@ class _JourneyDashboardScreenState extends State<JourneyDashboardScreen> {
                     'الخطوة الحالية الموصى بها:',
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    currentStep.title,
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      currentStep.title,
+                      style: const TextStyle(color: Colors.white, fontSize: 16.5, fontWeight: FontWeight.bold),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -252,6 +259,8 @@ class _JourneyDashboardScreenState extends State<JourneyDashboardScreen> {
                     Text(
                       'ما يأتي بعد ذلك: ${nextStep.title}',
                       style: const TextStyle(color: Colors.white70, fontSize: 12, fontStyle: FontStyle.italic),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 12),
                   ],

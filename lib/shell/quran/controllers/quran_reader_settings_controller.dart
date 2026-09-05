@@ -136,6 +136,19 @@ class QuranReaderSettingsController extends ChangeNotifier {
     _persist();
   }
 
+  void setPageTurnMode(QuranPageTurnMode pageTurnMode) {
+    _state = _state.copyWith(pageTurnMode: pageTurnMode);
+    notifyListeners();
+    _persist();
+  }
+
+  void togglePageTurnMode() {
+    final next = _state.pageTurnMode == QuranPageTurnMode.vertical
+        ? QuranPageTurnMode.horizontal
+        : QuranPageTurnMode.vertical;
+    setPageTurnMode(next);
+  }
+
   void setTranslationLanguage(String translationLanguage) {
     _state = _state.copyWith(translationLanguage: translationLanguage);
     notifyListeners();

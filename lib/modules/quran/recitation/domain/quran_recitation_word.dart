@@ -66,10 +66,14 @@ class QuranRecitationWord extends Equatable {
     this.recognizerToken,
   });
 
-  /// Whether the word is visible in the UI (either recognized or revealed).
+  /// Whether the word is visible in the UI (recognized, revealed, or mistake).
   bool get isVisible =>
       state == RecitationWordState.recognized ||
-      state == RecitationWordState.revealed;
+      state == RecitationWordState.revealed ||
+      state == RecitationWordState.mistake;
+
+  /// Whether this word was flagged as an omission or pronunciation mistake.
+  bool get isMistake => state == RecitationWordState.mistake;
 
   QuranRecitationWord copyWith({
     RecitationWordState? state,

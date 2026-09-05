@@ -5,6 +5,7 @@ import '../../../core/storage/storage_contract.dart';
 import '../domain/market_data_snapshot.dart';
 import '../domain/zakat_asset.dart';
 import '../domain/zakat_calculation_snapshot.dart';
+import '../domain/zakat_profile.dart';
 
 /// Isolated local-first storage for user Zakat financial assets, snapshots, and preferences in `mod_zakat` (§5, §6).
 class ZakatUserDataStore {
@@ -14,6 +15,7 @@ class ZakatUserDataStore {
   static const String _keySnapshots = 'zakat_snapshots';
   static const String _keySelectedPolicy = 'zakat_selected_policy';
   static const String _keyMarketSnapshot = 'zakat_market_snapshot';
+  static const String _keyProfile = 'zakat_profile';
 
   const ZakatUserDataStore({required StorageRegistry storageRegistry})
       : _storageRegistry = storageRegistry;
@@ -158,6 +160,63 @@ class ZakatUserDataStore {
       return Result.ok(null);
     } catch (e) {
       return Result.err(StorageFailure(message: 'Failed to set market snapshot: $e'));
+    }
+  }
+
+  Future<Result<void, Failure>> deleteSnapshot(String snapshotId) async {
+    try {
+      final store = _storageRegistry.getStoreForModule(_moduleNamespace);
+      final snapsRes = await getSnapshots();
+      if (snapsRes.isFailure) return Result.err(snapsRes.failureOrNull!);
+
+      final snapshots = List<ZakatCalculationSnapshot>.from(snapsRes.valueOrNull!);
+      snapshots.removeWhere((s) => s.snapshotId == snapshotId);
+
+      final saveRes = await store.setString(_keySnapshots, jsonEncode(snapshots.map((s) => s.toMap()).toList()));
+      if (saveRes.isFailure) return Result.err(saveRes.failureOrNull!);
+      return Result.ok(null);
+    } catch (e) {
+      return Result.err(StorageFailure(message: 'Failed to delete Zakat snapshot: $e'));
+    }
+  }
+
+  Future<Result<void, Failure>> clearSnapshots() async {
+    try {
+      final store = _storageRegistry.getStoreForModule(_moduleNamespace);
+      final saveRes = await store.setString(_keySnapshots, jsonEncode([]));
+      if (saveRes.isFailure) return Result.err(saveRes.failureOrNull!);
+      return Result.ok(null);
+    } catch (e) {
+      return Result.err(StorageFailure(message: 'Failed to clear Zakat snapshots: $e'));
+    }
+  }
+
+  Future<Result<ZakatProfile, Failure>> getProfile() async {
+    try {
+      final store = _storageRegistry.getStoreForModule(_moduleNamespace);
+      final res = await store.getString(_keyProfile);
+      if (res.isFailure) return Result.err(res.failureOrNull!);
+
+      final jsonStr = res.valueOrNull;
+      if (jsonStr == null) {
+        return Result.ok(const ZakatProfile());
+      }
+
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return Result.ok(ZakatProfile.fromMap(map));
+    } catch (e) {
+      return Result.err(StorageFailure(message: 'Failed to get Zakat profile: $e'));
+    }
+  }
+
+  Future<Result<void, Failure>> saveProfile(ZakatProfile profile) async {
+    try {
+      final store = _storageRegistry.getStoreForModule(_moduleNamespace);
+      final saveRes = await store.setString(_keyProfile, jsonEncode(profile.toMap()));
+      if (saveRes.isFailure) return Result.err(saveRes.failureOrNull!);
+      return Result.ok(null);
+    } catch (e) {
+      return Result.err(StorageFailure(message: 'Failed to save Zakat profile: $e'));
     }
   }
 

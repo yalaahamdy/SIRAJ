@@ -17,8 +17,8 @@ class FastingTopicDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           topic.title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          maxLines: 2,
         ),
       ),
       body: SingleChildScrollView(
@@ -60,10 +60,12 @@ class FastingTopicDetailScreen extends StatelessWidget {
                       Text(
                         topic.title,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryText(context),
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 8),
                       Text(

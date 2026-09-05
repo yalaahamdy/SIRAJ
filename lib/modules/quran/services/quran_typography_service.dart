@@ -14,6 +14,16 @@ enum QuranFontFamily {
   const QuranFontFamily(this.fontFamily, this.displayNameArabic);
 }
 
+/// Modes of turning pages / scrolling in Mushaf reading.
+enum QuranPageTurnMode {
+  vertical('تمرير رأسي متصل', Icons.swap_vert_rounded),
+  horizontal('تصفح أفقي بالصفحات', Icons.swap_horiz_rounded);
+
+  final String labelArabic;
+  final IconData icon;
+  const QuranPageTurnMode(this.labelArabic, this.icon);
+}
+
 /// Dynamic typography and visual styling engine for Quranic reading.
 class QuranTypographyConfig {
   final QuranFontFamily fontFamily;
@@ -21,6 +31,7 @@ class QuranTypographyConfig {
   final double lineHeight;
   final QuranReaderMode readerMode;
   final QuranReaderThemeMode themeMode;
+  final QuranPageTurnMode pageTurnMode;
   final bool showTajweed;
   final bool showTranslation;
   final bool showWordByWord;
@@ -43,6 +54,7 @@ class QuranTypographyConfig {
     this.lineHeight = 2.2,
     this.readerMode = QuranReaderMode.mushaf,
     this.themeMode = QuranReaderThemeMode.light,
+    this.pageTurnMode = QuranPageTurnMode.vertical,
     this.showTajweed = false,
     this.showTranslation = false,
     this.showWordByWord = false,
@@ -66,6 +78,7 @@ class QuranTypographyConfig {
     double? lineHeight,
     QuranReaderMode? readerMode,
     QuranReaderThemeMode? themeMode,
+    QuranPageTurnMode? pageTurnMode,
     bool? showTajweed,
     bool? showTranslation,
     bool? showWordByWord,
@@ -88,6 +101,7 @@ class QuranTypographyConfig {
       lineHeight: lineHeight ?? this.lineHeight,
       readerMode: readerMode ?? this.readerMode,
       themeMode: themeMode ?? this.themeMode,
+      pageTurnMode: pageTurnMode ?? this.pageTurnMode,
       showTajweed: showTajweed ?? this.showTajweed,
       showTranslation: showTranslation ?? this.showTranslation,
       showWordByWord: showWordByWord ?? this.showWordByWord,
@@ -116,6 +130,7 @@ class QuranTypographyConfig {
         'lineHeight': lineHeight,
         'readerMode': readerMode.name,
         'themeMode': themeMode.name,
+        'pageTurnMode': pageTurnMode.name,
         'showTajweed': showTajweed,
         'showTranslation': showTranslation,
         'showWordByWord': showWordByWord,
@@ -148,6 +163,10 @@ class QuranTypographyConfig {
       themeMode: QuranReaderThemeMode.values.firstWhere(
         (t) => t.name == json['themeMode'],
         orElse: () => QuranReaderThemeMode.light,
+      ),
+      pageTurnMode: QuranPageTurnMode.values.firstWhere(
+        (p) => p.name == json['pageTurnMode'],
+        orElse: () => QuranPageTurnMode.vertical,
       ),
       showTajweed: json['showTajweed'] as bool? ?? false,
       showTranslation: json['showTranslation'] as bool? ?? false,
@@ -262,5 +281,65 @@ class QuranTypographyConfig {
           ? const Color(0xFFE5C158)
           : const Color(0xFF9E7D23),
     );
+  }
+
+  /// Resolves page surface background color for Mushaf page card.
+  Color resolvePageSurfaceColor() {
+    switch (themeMode) {
+      case QuranReaderThemeMode.light:
+        return const Color(0xFFFFFFFF); // Crisp white page on warm ivory canvas
+      case QuranReaderThemeMode.dark:
+        return const Color(0xFF181C22); // Deep non-fatiguing charcoal
+      case QuranReaderThemeMode.sepia:
+        return const Color(0xFFFAF5E8); // Authentic warm Madinah page surface
+    }
+  }
+
+  /// Resolves page border color according to the theme.
+  Color resolvePageBorderColor() {
+    switch (themeMode) {
+      case QuranReaderThemeMode.light:
+        return const Color(0xFFC8A951).withValues(alpha: 0.50);
+      case QuranReaderThemeMode.dark:
+        return const Color(0xFFE5C158).withValues(alpha: 0.35);
+      case QuranReaderThemeMode.sepia:
+        return const Color(0xFFB8860B).withValues(alpha: 0.45);
+    }
+  }
+
+  /// Resolves high-contrast ornamental and header accent color for the Mushaf page.
+  Color resolvePageAccentColor() {
+    switch (themeMode) {
+      case QuranReaderThemeMode.light:
+        return const Color(0xFF78350F); // Warm bronze/chestnut (contrast > 8:1)
+      case QuranReaderThemeMode.dark:
+        return const Color(0xFFFBBF24); // Radiant amber gold (contrast > 10:1)
+      case QuranReaderThemeMode.sepia:
+        return const Color(0xFF5C3813); // Deep parchment sepia (contrast > 7.5:1)
+    }
+  }
+
+  /// Resolves surah header banner background color.
+  Color resolveSurahBannerColor() {
+    switch (themeMode) {
+      case QuranReaderThemeMode.light:
+        return const Color(0xFFFDF9F0);
+      case QuranReaderThemeMode.dark:
+        return const Color(0xFF222832);
+      case QuranReaderThemeMode.sepia:
+        return const Color(0xFFEFE4CC);
+    }
+  }
+
+  /// Resolves quick-bar chip background color.
+  Color resolveQuickBarSurfaceColor() {
+    switch (themeMode) {
+      case QuranReaderThemeMode.light:
+        return const Color(0xFFF0EBE1);
+      case QuranReaderThemeMode.dark:
+        return const Color(0xFF21262F);
+      case QuranReaderThemeMode.sepia:
+        return const Color(0xFFE5D7B5);
+    }
   }
 }

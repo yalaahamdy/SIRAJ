@@ -40,21 +40,26 @@ class DhikrCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      item.occasion.labelArabic,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? AppColors.goldAccent : AppColors.primary,
-                        fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        item.occasion.labelArabic,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppColors.goldAccent : AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
                     children: [
                       Container(
@@ -105,14 +110,18 @@ class DhikrCard extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Text(
-                    item.sourceTitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  Expanded(
+                    child: Text(
+                      item.sourceTitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 12,

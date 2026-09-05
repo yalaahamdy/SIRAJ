@@ -40,9 +40,12 @@ import '../hajj/preparation_checklist_screen.dart';
 import '../hajj/ritual_step_detail_screen.dart';
 import '../hajj/sacred_locations_screen.dart';
 import '../knowledge/fiqh_topic_screen.dart';
+import '../knowledge/hadith_book_browser_screen.dart';
 import '../knowledge/hadith_detail_screen.dart';
+import '../knowledge/knowledge_favorites_screen.dart';
 import '../knowledge/knowledge_home_screen.dart';
 import '../knowledge/knowledge_search_screen.dart';
+import '../seed/default_canonical_seed_provider.dart';
 import '../learning/learning_goals_screen.dart';
 import '../learning/learning_home_screen.dart';
 import '../learning/learning_path_screen.dart';
@@ -69,8 +72,11 @@ import '../widgets/state_views.dart';
 import '../../modules/zakat/domain/zakat_calculation_result.dart';
 import '../zakat/asset_entry_screen.dart';
 import '../zakat/zakat_breakdown_screen.dart';
+import '../zakat/zakat_calculator_workflow_screen.dart';
 import '../zakat/zakat_dashboard_screen.dart';
+import '../zakat/zakat_history_screen.dart';
 import '../zakat/zakat_policy_screen.dart';
+import '../zakat/zakat_settings_screen.dart';
 
 /// Minimal, modular routing foundation for App Shell.
 class AppRouter {
@@ -88,6 +94,9 @@ class AppRouter {
   static const String zakatAssets = '/zakat/assets';
   static const String zakatBreakdown = '/zakat/breakdown';
   static const String zakatPolicy = '/zakat/policy';
+  static const String zakatSettings = '/zakat/settings';
+  static const String zakatCalculator = '/zakat/calculator';
+  static const String zakatHistory = '/zakat/history';
   static const String fasting = '/fasting';
   static const String fastingCalendar = '/fasting/calendar';
   static const String fastingQada = '/fasting/qada';
@@ -96,6 +105,8 @@ class AppRouter {
   static const String knowledgeHadith = '/knowledge/hadith';
   static const String knowledgeFiqh = '/knowledge/fiqh';
   static const String knowledgeSearch = '/knowledge/search';
+  static const String knowledgeBooks = '/knowledge/books';
+  static const String knowledgeFavorites = '/knowledge/favorites';
   static const String learning = '/learning';
   static const String learningPath = '/learning/path';
   static const String learningLesson = '/learning/lesson';
@@ -123,6 +134,18 @@ class AppRouter {
   static SeerahModule? defaultSeerahModule;
   static HajjModule? defaultHajjModule;
   static ZakatModule? defaultZakatModule;
+
+  /// Ensures a seeded, non-empty KnowledgeModule is always returned (§20, M05.1).
+  static KnowledgeModule getOrSeedKnowledgeModule([KnowledgeModule? explicitModule]) {
+    if (explicitModule != null) return explicitModule;
+    if (defaultKnowledgeModule != null) return defaultKnowledgeModule!;
+    final registry = MemoryStorageRegistry();
+    final mod = KnowledgeModule(storageRegistry: registry);
+    final pkg = DefaultCanonicalSeedProvider.getKnowledgeSeedPackage();
+    mod.mountPackage(pkg);
+    defaultKnowledgeModule = mod;
+    return mod;
+  }
 
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
     final name = routeSettings.name ?? '';
@@ -387,8 +410,10 @@ class AppRouter {
     if (name.startsWith('/knowledge/') &&
         name != knowledgeHadith &&
         name != knowledgeFiqh &&
-        name != knowledgeSearch) {
-      final knowMod = defaultKnowledgeModule ?? KnowledgeModule(storageRegistry: MemoryStorageRegistry());
+        name != knowledgeSearch &&
+        name != knowledgeBooks &&
+        name != knowledgeFavorites) {
+      final knowMod = getOrSeedKnowledgeModule();
       final sub = name.substring('/knowledge/'.length);
 
       if (sub.startsWith('hadith/')) {
@@ -415,6 +440,15 @@ class AppRouter {
             settings: routeSettings,
           );
         }
+      } else if (sub.startsWith('books/')) {
+        final colId = sub.substring('books/'.length).trim();
+        return MaterialPageRoute(
+          builder: (_) => HadithBookBrowserScreen(
+            module: knowMod,
+            initialCollectionId: colId.isEmpty ? null : colId,
+          ),
+          settings: routeSettings,
+        );
       }
 
       return MaterialPageRoute(
@@ -721,6 +755,27 @@ class AppRouter {
         );
       }
 
+      if (name == zakatSettings) {
+        return MaterialPageRoute(
+          builder: (_) => ZakatSettingsScreen(module: zakatMod),
+          settings: routeSettings,
+        );
+      }
+
+      if (name == zakatCalculator) {
+        return MaterialPageRoute(
+          builder: (_) => ZakatCalculatorWorkflowScreen(module: zakatMod),
+          settings: routeSettings,
+        );
+      }
+
+      if (name == zakatHistory) {
+        return MaterialPageRoute(
+          builder: (_) => ZakatHistoryScreen(module: zakatMod),
+          settings: routeSettings,
+        );
+      }
+
       // Safe error fallback for invalid Zakat deep link (§71)
       return MaterialPageRoute(
         builder: (ctx) => Scaffold(
@@ -909,6 +964,27 @@ class AppRouter {
           ),
           settings: routeSettings,
         );
+      case zakatSettings:
+        final registry = MemoryStorageRegistry();
+        final zakatMod = defaultZakatModule ?? ZakatModule(storageRegistry: registry);
+        return MaterialPageRoute(
+          builder: (_) => ZakatSettingsScreen(module: zakatMod),
+          settings: routeSettings,
+        );
+      case zakatCalculator:
+        final registry = MemoryStorageRegistry();
+        final zakatMod = defaultZakatModule ?? ZakatModule(storageRegistry: registry);
+        return MaterialPageRoute(
+          builder: (_) => ZakatCalculatorWorkflowScreen(module: zakatMod),
+          settings: routeSettings,
+        );
+      case zakatHistory:
+        final registry = MemoryStorageRegistry();
+        final zakatMod = defaultZakatModule ?? ZakatModule(storageRegistry: registry);
+        return MaterialPageRoute(
+          builder: (_) => ZakatHistoryScreen(module: zakatMod),
+          settings: routeSettings,
+        );
       case fasting:
         final registry = MemoryStorageRegistry();
         final prayerMod = PrayerModule(storageRegistry: registry);
@@ -958,16 +1034,14 @@ class AppRouter {
           settings: routeSettings,
         );
       case knowledge:
-        final registry = MemoryStorageRegistry();
-        final knowledgeMod = defaultKnowledgeModule ?? KnowledgeModule(storageRegistry: registry);
+        final knowledgeMod = getOrSeedKnowledgeModule();
         return MaterialPageRoute(
           builder: (_) => KnowledgeHomeScreen(module: knowledgeMod),
           settings: routeSettings,
         );
       case knowledgeHadith:
         final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
-        final registry = MemoryStorageRegistry();
-        final knowledgeMod = args['module'] as KnowledgeModule? ?? defaultKnowledgeModule ?? KnowledgeModule(storageRegistry: registry);
+        final knowledgeMod = getOrSeedKnowledgeModule(args['module'] as KnowledgeModule?);
         final hadith = args['hadith'] as HadithEntity?;
         if (hadith == null) {
           return MaterialPageRoute(
@@ -981,8 +1055,7 @@ class AppRouter {
         );
       case knowledgeFiqh:
         final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
-        final registry = MemoryStorageRegistry();
-        final knowledgeMod = args['module'] as KnowledgeModule? ?? defaultKnowledgeModule ?? KnowledgeModule(storageRegistry: registry);
+        final knowledgeMod = getOrSeedKnowledgeModule(args['module'] as KnowledgeModule?);
         final topic = args['topic'] as FiqhTopic?;
         if (topic == null) {
           return MaterialPageRoute(
@@ -996,11 +1069,25 @@ class AppRouter {
         );
       case knowledgeSearch:
         final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
-        final registry = MemoryStorageRegistry();
-        final knowledgeMod = args['module'] as KnowledgeModule? ?? defaultKnowledgeModule ?? KnowledgeModule(storageRegistry: registry);
+        final knowledgeMod = getOrSeedKnowledgeModule(args['module'] as KnowledgeModule?);
         final initialQuery = args['query'] as String?;
         return MaterialPageRoute(
           builder: (_) => KnowledgeSearchScreen(module: knowledgeMod, initialQuery: initialQuery),
+          settings: routeSettings,
+        );
+      case knowledgeBooks:
+        final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
+        final knowledgeMod = getOrSeedKnowledgeModule(args['module'] as KnowledgeModule?);
+        final colId = args['collectionId'] as String?;
+        return MaterialPageRoute(
+          builder: (_) => HadithBookBrowserScreen(module: knowledgeMod, initialCollectionId: colId),
+          settings: routeSettings,
+        );
+      case knowledgeFavorites:
+        final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
+        final knowledgeMod = getOrSeedKnowledgeModule(args['module'] as KnowledgeModule?);
+        return MaterialPageRoute(
+          builder: (_) => KnowledgeFavoritesScreen(module: knowledgeMod),
           settings: routeSettings,
         );
       case learning:

@@ -172,7 +172,7 @@ class QuranRecitationMatcher {
   /// - Exact match
   /// - High phonetic similarity (>= 0.82)
   /// - Absorbing stutter / hesitation (repeated token matching current or last word)
-  /// - Lookahead window of 1 word to handle minor omissions
+  /// - Lookahead window of up to 3 words to handle omissions/mistakes
   static RecitationMatchResult matchToken({
     required List<QuranRecitationWord> words,
     required int currentIndex,
@@ -199,13 +199,14 @@ class QuranRecitationMatcher {
       }
     }
 
-    // 2. Check exact or high similarity with current expected word
+    // 2. Check current expected word (lookahead = 0)
     final currentWord = words[currentIndex];
     final currentSim = calculateSimilarity(currentWord.normalizedText, normalizedSpeech);
 
     if (currentSim >= 0.85) {
       return RecitationMatchResult.matched(
         matchedIndex: currentIndex,
+        skippedIndices: const [],
         confidence: currentSim,
         confidenceLevel: RecitationWordConfidence.confirmed,
         recognizerToken: speechToken,
@@ -213,20 +214,37 @@ class QuranRecitationMatcher {
     } else if (currentSim >= 0.70) {
       return RecitationMatchResult.matched(
         matchedIndex: currentIndex,
+        skippedIndices: const [],
         confidence: currentSim,
         confidenceLevel: RecitationWordConfidence.probable,
         recognizerToken: speechToken,
       );
     }
 
-    // 3. Lookahead window of 1 word (user may have slightly blurred a particle)
+    // 3. Lookahead window: Check word + 1 (user missed current word)
     if (currentIndex + 1 < words.length) {
       final nextWord = words[currentIndex + 1];
       final nextSim = calculateSimilarity(nextWord.normalizedText, normalizedSpeech);
-      if (nextSim >= 0.85) {
+      if (nextSim >= 0.80) {
         return RecitationMatchResult.matched(
           matchedIndex: currentIndex + 1,
+          skippedIndices: [currentIndex],
           confidence: nextSim,
+          confidenceLevel: RecitationWordConfidence.confirmed,
+          recognizerToken: speechToken,
+        );
+      }
+    }
+
+    // 4. Lookahead window: Check word + 2 (user missed current and next word)
+    if (currentIndex + 2 < words.length) {
+      final nextNextWord = words[currentIndex + 2];
+      final nextNextSim = calculateSimilarity(nextNextWord.normalizedText, normalizedSpeech);
+      if (nextNextSim >= 0.80) {
+        return RecitationMatchResult.matched(
+          matchedIndex: currentIndex + 2,
+          skippedIndices: [currentIndex, currentIndex + 1],
+          confidence: nextNextSim,
           confidenceLevel: RecitationWordConfidence.confirmed,
           recognizerToken: speechToken,
         );
@@ -240,6 +258,129 @@ class QuranRecitationMatcher {
       recognizerToken: speechToken,
     );
   }
+
+  /// Retrieves up to [windowSize] candidate words starting from [currentAyahNumber] and [currentWordIndex].
+  /// Traverses across subsequent Ayahs within [wordsMap] seamlessly.
+  static List<RecitationWordPointer> getLookaheadCandidates({
+    required Map<int, List<QuranRecitationWord>> wordsMap,
+    required int currentAyahNumber,
+    required int currentWordIndex,
+    required int endAyah,
+    int windowSize = 3,
+  }) {
+    final candidates = <RecitationWordPointer>[];
+    var aNum = currentAyahNumber;
+    var wIdx = currentWordIndex;
+
+    while (candidates.length < windowSize && aNum <= endAyah) {
+      final ayahWords = wordsMap[aNum];
+      if (ayahWords == null || ayahWords.isEmpty) {
+        aNum++;
+        wIdx = 0;
+        continue;
+      }
+
+      if (wIdx < ayahWords.length) {
+        candidates.add(RecitationWordPointer(
+          ayahNumber: aNum,
+          wordIndex: wIdx,
+          word: ayahWords[wIdx],
+        ));
+        wIdx++;
+      } else {
+        aNum++;
+        wIdx = 0;
+      }
+    }
+
+    return candidates;
+  }
+
+  /// Evaluates speech token against a 3-word parallel lookahead candidate window.
+  static MultiWordMatchResult evaluateLookaheadMatch({
+    required List<RecitationWordPointer> candidates,
+    required String speechToken,
+    RecitationWordPointer? previousWord,
+  }) {
+    if (candidates.isEmpty) {
+      return const MultiWordMatchResult(isMatch: false);
+    }
+
+    final normalizedSpeech = normalizeForRecognition(speechToken);
+    if (normalizedSpeech.isEmpty) {
+      return const MultiWordMatchResult(isMatch: false);
+    }
+
+    // 1. Hesitation check with previous word
+    if (previousWord != null) {
+      final prevSim = calculateSimilarity(previousWord.word.normalizedText, normalizedSpeech);
+      if (prevSim >= 0.85) {
+        return const MultiWordMatchResult(isMatch: false, isHesitation: true);
+      }
+    }
+
+    // 2. Parallel lookahead across all candidates in window
+    for (int i = 0; i < candidates.length; i++) {
+      final candidate = candidates[i];
+      final candNorm = candidate.word.normalizedText;
+      final matchRes = evaluateWordMatch(candNorm, normalizedSpeech);
+      final sim = calculateSimilarity(candNorm, normalizedSpeech);
+
+      // Connected speech or rapid prefix matching (e.g. "الحمدلله" with "الحمد", or partial "الرحم" with "الرحمن")
+      final isPrefixMatch = (candNorm.length >= 3 && normalizedSpeech.startsWith(candNorm)) ||
+          (normalizedSpeech.length >= 4 && candNorm.startsWith(normalizedSpeech) && candNorm.length - normalizedSpeech.length <= 2);
+
+      // Threshold: 0.78 for lookahead (+1, +2), 0.68 for immediate current word
+      final threshold = i == 0 ? 0.68 : 0.78;
+      if (matchRes.isMatch || sim >= threshold || isPrefixMatch) {
+        final effectiveSim = isPrefixMatch ? max(sim, 0.88) : (matchRes.isMatch ? max(sim, matchRes.confidence) : sim);
+        final skipped = candidates.sublist(0, i);
+        return MultiWordMatchResult(
+          isMatch: true,
+          matchedPointer: candidate,
+          skippedPointers: skipped,
+          confidence: effectiveSim,
+          confidenceLevel: effectiveSim >= 0.82
+              ? RecitationWordConfidence.confirmed
+              : RecitationWordConfidence.probable,
+        );
+      }
+    }
+
+    return const MultiWordMatchResult(isMatch: false);
+  }
+}
+
+/// Pointer identifying a specific word location across verses during recitation.
+class RecitationWordPointer {
+  final int ayahNumber;
+  final int wordIndex;
+  final QuranRecitationWord word;
+
+  const RecitationWordPointer({
+    required this.ayahNumber,
+    required this.wordIndex,
+    required this.word,
+  });
+}
+
+/// Result of evaluating speech against a 3-word parallel lookahead window.
+class MultiWordMatchResult {
+  final bool isMatch;
+  final RecitationWordPointer? matchedPointer;
+  final List<RecitationWordPointer> skippedPointers;
+  final double confidence;
+  final RecitationWordConfidence confidenceLevel;
+  final bool isHesitation;
+
+  const MultiWordMatchResult({
+    required this.isMatch,
+    this.matchedPointer,
+    this.skippedPointers = const [],
+    this.confidence = 0.0,
+    this.confidenceLevel = RecitationWordConfidence.notRecognized,
+    this.isHesitation = false,
+  });
 }
 
 /// Result of matching a speech token against the recitation word sequence.
@@ -248,6 +389,7 @@ class RecitationMatchResult {
   final bool isMistake;
   final bool isHesitation;
   final int? matchedIndex;
+  final List<int> skippedIndices;
   final double confidence;
   final RecitationWordConfidence confidenceLevel;
   final String? recognizerToken;
@@ -257,6 +399,7 @@ class RecitationMatchResult {
     this.isMistake = false,
     this.isHesitation = false,
     this.matchedIndex,
+    this.skippedIndices = const [],
     this.confidence = 0.0,
     this.confidenceLevel = RecitationWordConfidence.notRecognized,
     this.recognizerToken,
@@ -266,6 +409,7 @@ class RecitationMatchResult {
 
   factory RecitationMatchResult.matched({
     required int matchedIndex,
+    List<int> skippedIndices = const [],
     required double confidence,
     required RecitationWordConfidence confidenceLevel,
     required String recognizerToken,
@@ -273,6 +417,7 @@ class RecitationMatchResult {
       RecitationMatchResult(
         isMatch: true,
         matchedIndex: matchedIndex,
+        skippedIndices: skippedIndices,
         confidence: confidence,
         confidenceLevel: confidenceLevel,
         recognizerToken: recognizerToken,

@@ -12,13 +12,30 @@ class MoralLessonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? const Color(0xFF4ADE80) : const Color(0xFF0F5132);
+    final titleColor = isDark ? const Color(0xFF86EFAC) : const Color(0xFF0F5132);
+    final bodyColor = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B);
+    final subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final bgColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF6FAF7);
+
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F9F5),
-        border: Border.all(color: const Color(0xFF0F5132).withAlpha(40)),
-        borderRadius: BorderRadius.circular(8),
+        color: bgColor,
+        border: Border.all(
+          color: accent.withAlpha(isDark ? 90 : 60),
+          width: 1.2,
+        ),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 35 : 10),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,39 +44,80 @@ class MoralLessonCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  'العبرة والمقصد: ${lesson.themeArabic}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F5132),
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.wb_incandescent_outlined,
+                      size: 16,
+                      color: accent,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'العبرة والمقصد: ${lesson.themeArabic}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: titleColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F5132).withAlpha(15),
-                  borderRadius: BorderRadius.circular(4),
+                  color: accent.withAlpha(isDark ? 40 : 25),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: accent.withAlpha(isDark ? 120 : 90),
+                  ),
                 ),
-                child: const Text(
+                child: Text(
                   'استنباط تربوي',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF0F5132), fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: accent,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             lesson.lessonText,
-            style: const TextStyle(fontSize: 13, height: 1.5, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 13.5,
+              height: 1.6,
+              color: bodyColor,
+              fontWeight: FontWeight.w400,
+            ),
           ),
           if (lesson.sourceOrScholar != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'المستنبط: ${lesson.sourceOrScholar!}',
-              style: TextStyle(fontSize: 10.5, color: Colors.grey.shade700, fontStyle: FontStyle.italic),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  Icons.school_outlined,
+                  size: 13,
+                  color: subColor,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'المستنبط: ${lesson.sourceOrScholar!}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: subColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ],
         ],

@@ -1,0 +1,382 @@
+import '../../../../modules/seerah/domain/date_precision.dart';
+import '../../../../modules/seerah/domain/historical_date.dart';
+import '../../../../modules/seerah/domain/historical_person.dart';
+
+/// Comprehensive canonical dataset for Seerah & Islamic History Persons (§8, §28, §29).
+class SeerahPersonsData {
+  static List<HistoricalPerson> getPersons() {
+    return [
+      HistoricalPerson.create(
+        personId: 'person_prophet_muhammad',
+        canonicalName: 'محمد بن عبد الله بن عبد المطلب ﷺ',
+        kunyah: 'أبو القاسم',
+        titleOrLakab: 'خاتم الأنبياء والمرسلين والصادق الأمين',
+        historicalRole: 'رسول الله ﷺ إلى الناس كافة وقائد الأمة المعصوم',
+        birthDate: const HistoricalDate(
+          hijriYear: 53,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'عام الفيل (12 ربيع الأول نحو 571 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 11,
+          isBeforeHijrah: false,
+          hijriMonth: 3,
+          hijriDay: 12,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '12 ربيع الأول 11 هـ (632 م)',
+        ),
+        biographicalSummary:
+            'نبي الإسلام وخاتم النبيين، بعثه الله رحمة للعالمين، نشأ يتيماً في قريش بمكة المكرمة، عُرف قبل البعثة بالصدق والأمانة، هبط عليه الوحي في الأربعين من عمره، بلّغ الرسالة وأدى الأمانة ونصح الأمة وجاهد في الله حق جهاده، حتى أقام دولة العدل والتوحيد وتوفي بالمدينة المنورة.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+        aliases: const ['أحمد', 'المصطفى', 'نبي الرحمة', 'الماحي'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_abu_bakr',
+        canonicalName: 'أبو بكر الصديق عبد الله بن أبي قحافة',
+        kunyah: 'أبو بكر',
+        titleOrLakab: 'الصديق وعتيق من النار',
+        historicalRole: 'أول الخلفاء الراشدين ورفيق النبي ﷺ في الغار',
+        birthDate: const HistoricalDate(
+          hijriYear: 51,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 51 ق.هـ (573 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 13,
+          isBeforeHijrah: false,
+          hijriMonth: 6,
+          hijriDay: 22,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '22 جمادى الآخرة 13 هـ (634 م)',
+        ),
+        biographicalSummary:
+            'أول من آمن من الرجال الأحرار، وأحب الناس إلى قلب رسول الله ﷺ، صاحب الهجرة في الغار، بذل ماله كله في سبيل الله وعتق المستضعفين، ثبت الأمة يوم وفاة النبي ﷺ، وقاد حروب الردة وجمع القرآن الكريم في مصحف واحد.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+        aliases: const ['عبد الله بن عثمان', 'عتيق'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_umar',
+        canonicalName: 'عمر بن الخطاب بن نفيل القرشي',
+        kunyah: 'أبو حفص',
+        titleOrLakab: 'الفاروق وأمير المؤمنين',
+        historicalRole: 'ثاني الخلفاء الراشدين ومؤسس ديوان الدولة',
+        birthDate: const HistoricalDate(
+          hijriYear: 40,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 40 ق.هـ (584 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 23,
+          isBeforeHijrah: false,
+          hijriMonth: 12,
+          hijriDay: 26,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '26 ذو الحجة 23 هـ (644 م)',
+        ),
+        biographicalSummary:
+            'أعز الله به الإسلام بعد دعوة النبي ﷺ، فرق الله به بين الحق والباطل، تميز بالعدل الصارم والهيبة والحكمة، فُتحت في عهده الشام والعراق ومصر وبلاد فارس وبيت المقدس، وأنشأ التقويم الهجري ودواوين الدولة، استشهد في محراب الصلاة بالمدينة.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_uthman',
+        canonicalName: 'عثمان بن عفان بن أبي العاص الأموي',
+        kunyah: 'أبو عبد الله وأبو عمرو',
+        titleOrLakab: 'ذو النورين',
+        historicalRole: 'ثالث الخلفاء الراشدين وجامع المصحف الإمام',
+        birthDate: const HistoricalDate(
+          hijriYear: 47,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 47 ق.هـ (576 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 35,
+          isBeforeHijrah: false,
+          hijriMonth: 12,
+          hijriDay: 18,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '18 ذو الحجة 35 هـ (656 م)',
+        ),
+        biographicalSummary:
+            'من السابقين إلى الإسلام، صاحب الهجرتين (الحبشة والمدينة)، تزوّج ابنتي رسول الله ﷺ رقية ثم أم كلثوم فلُقب بذي النورين، جهز جيش العسرة واشترى بئر رومة وجعلها وقفاً، جمع الأمة على مصحف واحد بقراءة قريش ووحد الكلمة.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_ali',
+        canonicalName: 'علي بن أبي طالب بن عبد المطلب الهاشمي',
+        kunyah: 'أبو الحسن وأبو تراب',
+        titleOrLakab: 'أمير المؤمنين وباب مدينة العلم وأسد الله الغالب',
+        historicalRole: 'رابع الخلفاء الراشدين وابن عم النبي ﷺ وزوج فاطمة',
+        birthDate: const HistoricalDate(
+          hijriYear: 23,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 23 ق.هـ (600 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 40,
+          isBeforeHijrah: false,
+          hijriMonth: 9,
+          hijriDay: 21,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '21 رمضان 40 هـ (661 م)',
+        ),
+        biographicalSummary:
+            'أول من أسلم من الصبيان، فدائي الهجرة الشريفة حيث بات في فراش النبي ﷺ، بطل الغزوات الكبرى وفاتح خيبر، زوج سيدة نساء العالمين فاطمة الزهراء ووالد الحسن والحسين، تميز بالفصاحة النادرة والقضاء العادل والشجاعة المطلقة.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_khadijah',
+        canonicalName: 'خديجة بنت خويلد الأسدية القرشية',
+        kunyah: 'أم القاسم',
+        titleOrLakab: 'أم المؤمنين والطاهرة وسيدة نساء العالمين',
+        historicalRole: 'أولى أزواج النبي ﷺ وأول من آمن به مطلقاً',
+        birthDate: const HistoricalDate(
+          hijriYear: 68,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 68 ق.هـ (556 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 3,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'عام الحزن قبل الهجرة بثلاث سنين (619 م)',
+        ),
+        biographicalSummary:
+            'سيدة نساء قريش مالاً وشرفاً، خطبت النبي ﷺ لأمانته وصدقه، ثبّتته عند نزول الوحي الأول في غار حراء وواسته بنفسها ومالها في الشعب، بشّرها جبريل ببيت في الجنة من قصب لا صخب فيه ولا نصب، ولم يتزوج عليها النبي ﷺ في حياتها قط.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_aisha',
+        canonicalName: 'عائشة بنت أبي بكر الصديق',
+        kunyah: 'أم عبد الله',
+        titleOrLakab: 'أم المؤمنين والصديقة بنت الصديق والمبرأة',
+        historicalRole: 'حبيبة المصطفى وفقيهة الأمة ومكثرة رواية الحديث',
+        birthDate: const HistoricalDate(
+          hijriYear: 9,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 9 ق.هـ (614 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 58,
+          isBeforeHijrah: false,
+          hijriMonth: 9,
+          hijriDay: 17,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '17 رمضان 58 هـ (678 م)',
+        ),
+        biographicalSummary:
+            'أحب الناس إلى رسول الله ﷺ بعد خديجة، نزل القرآن ببراءتها في حادثة الإفك في سورة النور، أفقه نساء العالمين، روت أكثر من 2210 أحاديث عن النبي ﷺ، وتوفي رسول الله ﷺ في حجرتها وبين سحرها ونحرها ودُفن في بيتها.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_fatimah',
+        canonicalName: 'فاطمة الزهراء بنت محمد ﷺ',
+        kunyah: 'أم أبيها وأم الحسن',
+        titleOrLakab: 'الزهراء والبتول وسيدة نساء أهل الجنة',
+        historicalRole: 'أحب بنات النبي ﷺ إليه وزوج علي وأم السبطين',
+        birthDate: const HistoricalDate(
+          hijriYear: 18,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 18 ق.هـ (605 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 11,
+          isBeforeHijrah: false,
+          hijriMonth: 6,
+          hijriDay: 3,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: '3 جمادى الآخرة 11 هـ (بعد النبي ﷺ بستة أشهر)',
+        ),
+        biographicalSummary:
+            'بضعة رسول الله ﷺ التي يسره ما يسرها ويريبه ما يرابها، عاشت أحداث البعثة والحصار والشعب، زوج علي بن أبي طالب وأم الحسن والحسين سيدي شباب أهل الجنة، وأول أهله لحوقاً به بعد وفاته.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_hamzah',
+        canonicalName: 'حمزة بن عبد المطلب الهاشمي القرشي',
+        kunyah: 'أبو عمارة وأبو يعلى',
+        titleOrLakab: 'أسد الله وأسد رسوله وسيد الشهداء',
+        historicalRole: 'عم النبي ﷺ وأخوه من الرضاعة وبطل الغزوات الكبرى',
+        birthDate: const HistoricalDate(
+          hijriYear: 55,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 55 ق.هـ (568 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 3,
+          isBeforeHijrah: false,
+          hijriMonth: 10,
+          precision: DatePrecision.exactDate,
+          dateDisplay: 'شوال 3 هـ (غزوة أحد)',
+        ),
+        biographicalSummary:
+            'أعز الله بإسلامه المسلمين في مكة، كان فارساً مقداماً لا يُرد بأسه، قاتل في بدر بسيفين، واستشهد في معركة أحد على يد وحشي بن حرب، ونعاه النبي ﷺ بلقب سيد الشهداء.',
+        sourceIds: const ['src_bukhari_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_jafar',
+        canonicalName: 'جعفر بن أبي طالب بن عبد المطلب',
+        kunyah: 'أبو عبد الله',
+        titleOrLakab: 'ذو الجناحين والطيار وأبو المساكين',
+        historicalRole: 'ابن عم النبي ﷺ وقائد مهاجري الحبشة وشهيد مؤتة',
+        birthDate: const HistoricalDate(
+          hijriYear: 34,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 34 ق.هـ (590 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 8,
+          isBeforeHijrah: false,
+          hijriMonth: 5,
+          precision: DatePrecision.exactDate,
+          dateDisplay: 'جمادى الأولى 8 هـ (غزوة مؤتة)',
+        ),
+        biographicalSummary:
+            'أشبه الناس خَلْقاً وخُلُقاً بالنبي ﷺ، خطيب المهاجرين في بلاط النجاشي ملك الحبشة حيث قرأ سورة مريم وبهر الحاضرين، هاجر إلى المدينة يوم فتح خيبر ففرح النبي ﷺ بقدومه، استشهد في معركة مؤتة بعد أن قُطعت يداه وهو يمسك باللواء، فأبدله الله بهما جناحين في الجنة.',
+        sourceIds: const ['src_bukhari_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_musab',
+        canonicalName: 'مصعب بن عمير بن هاشم العبدري',
+        kunyah: 'أبو عبد الله',
+        titleOrLakab: 'أول سفير في الإسلام ومقرئ المدينة',
+        historicalRole: 'الصحابي الجليل ناشر الإسلام بيثرب وحامل لواء المهاجرين',
+        birthDate: const HistoricalDate(
+          hijriYear: 37,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 37 ق.هـ (587 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 3,
+          isBeforeHijrah: false,
+          hijriMonth: 10,
+          precision: DatePrecision.exactDate,
+          dateDisplay: 'شوال 3 هـ (غزوة أحد)',
+        ),
+        biographicalSummary:
+            'كان أنعم فتيان مكة وأجملهم لباساً وعطراً، ترك ترف الدنيا لما أسلم، اختاره النبي ﷺ ليكون أول سفير ومقرئ في المدينة بعد بيعة العقبة فأسلم على يديه كبار الأوس والخزرج، حمل لواء المسلمين في بدر وأحد حتى استشهد ولم يجدوا ما يكفنونه به إلا بردة قصيرة.',
+        sourceIds: const ['src_bukhari_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_bilal',
+        canonicalName: 'بلال بن رباح الحبشي',
+        kunyah: 'أبو عبد الله',
+        titleOrLakab: 'مؤذن رسول الله ﷺ وسيد الأحرار',
+        historicalRole: 'رمز الثبات على التوحيد وأول من صدح بالأذان فوق الكعبة',
+        birthDate: const HistoricalDate(
+          hijriYear: 42,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 42 ق.هـ (580 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 20,
+          isBeforeHijrah: false,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 20 هـ (دمشق الشام)',
+        ),
+        biographicalSummary:
+            'عُذب في رمضاء مكة وصخرها الشديد ليرجع عن دينه فما زاد على قوله الخالد: "أحدٌ أحد"، اشتراه أبو بكر الصديق وأعتقه لوجه الله، اختاره النبي ﷺ ليكون مؤذنه الخاص في مسجده وصعد فوق ظهر الكعبة يوم الفتح ليرفع الأذان مدوياً بالتوحيد.',
+        sourceIds: const ['src_bukhari_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_salman',
+        canonicalName: 'سلمان الفارسي',
+        kunyah: 'أبو عبد الله',
+        titleOrLakab: 'الباحث عن الحقيقة وسلمان المحمدي',
+        historicalRole: 'صاحب مشورة حفر الخندق في غزوة الأحزاب',
+        birthDate: const HistoricalDate(
+          hijriYear: 50,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'بلاد فارس (أصفهان نحو 574 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 36,
+          isBeforeHijrah: false,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 36 هـ (المدائن بالعراق)',
+        ),
+        biographicalSummary:
+            'قطع الآفاق من بلاد فارس إلى الشام والحجاز باحثاً عن الدين الحق ونبي آخر الزمان حتى بيع عبداً في يثرب، كاتب سيده وأعانه النبي ﷺ والصحابة حتى عتق، أشار على النبي ﷺ بحفر الخندق حول المدينة تكتيكاً دفاعياً لم تعرفه العرب فكان سبباً في صد الأحزاب، وقال فيه النبي ﷺ: «سلمان منا أهل البيت».',
+        sourceIds: const ['src_bukhari_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_abu_ubaidah',
+        canonicalName: 'أبو عبيدة عامر بن عبد الله بن الجراح',
+        kunyah: 'أبو عبيدة',
+        titleOrLakab: 'أمين هذه الأمة وأحد العشرة المبشرين بالجنة',
+        historicalRole: 'قائد جيوش الفتح في الشام وفاتح دمشق والقدس',
+        birthDate: const HistoricalDate(
+          hijriYear: 40,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 40 ق.هـ (583 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 18,
+          isBeforeHijrah: false,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '18 هـ (طاعون عمواس بالشام)',
+        ),
+        biographicalSummary:
+            'من السابقين الأولين إلى الإسلام، شهد بدراً وأحداً ونزع الحلقتين اللتين دخلتا في وجنة النبي ﷺ يوم أحد بأسنانه فانقلعت ثنيتاه، شهد له النبي ﷺ بقوله: «لكل أمة أمين، وأمين هذه الأمة أبو عبيدة بن الجراح»، ولاه عمر قيادة الجيوش الإسلامية في بلاد الشام.',
+        sourceIds: const ['src_bukhari_canonical', 'src_muslim_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_saad',
+        canonicalName: 'سعد بن أبي وقاص مالك الزهري القرشي',
+        kunyah: 'أبو إسحاق',
+        titleOrLakab: 'فارس الإسلام ورامي بدر ومستجاب الدعوة',
+        historicalRole: 'أول من رمى بسهم في سبيل الله وقائد معركة القادسية',
+        birthDate: const HistoricalDate(
+          hijriYear: 23,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 23 ق.هـ (600 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 55,
+          isBeforeHijrah: false,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '55 هـ (العقيق بالمدينة)',
+        ),
+        biographicalSummary:
+            'أسلم وهو ابن سبع عشرة سنة، خال النبي ﷺ وقال فيه: «هذا خالي فليرني امرؤ خاله»، جمع له النبي ﷺ أبويه يوم أحد فقال: «ارم سعد فداك أبي وأمي»، قائد معركة القادسية التاريخية التي فتحت بلاد فارس ومؤسس مدينة الكوفة.',
+        sourceIds: const ['src_bukhari_canonical'],
+      ),
+      HistoricalPerson.create(
+        personId: 'person_khalid',
+        canonicalName: 'خالد بن الوليد بن المغيرة المخزومي',
+        kunyah: 'أبو سليمان',
+        titleOrLakab: 'سيف الله المسلول',
+        historicalRole: 'القائد العسكري العبقري في مؤتة والفتح واليرموك',
+        birthDate: const HistoricalDate(
+          hijriYear: 30,
+          isBeforeHijrah: true,
+          precision: DatePrecision.approximateDate,
+          dateDisplay: 'نحو 30 ق.هـ (592 م)',
+        ),
+        deathDate: const HistoricalDate(
+          hijriYear: 21,
+          isBeforeHijrah: false,
+          precision: DatePrecision.exactDate,
+          dateDisplay: '21 هـ (حمص بالشام)',
+        ),
+        biographicalSummary:
+            'فارس قريش وداهيتها، أسلم في هدنة الحديبية قبل الفتح، أنقذ جيش المسلمين في مؤتة بحنكته التكتيكية فسماه النبي ﷺ «سيف الله المسلول»، قاد ميمنة الفتح في مكة، وبطل معارك الردة ومعركة اليرموك الفاصلة، خاض أكثر من مائة معركة لم يُهزم في واحدة منها.',
+        sourceIds: const ['src_bukhari_canonical'],
+      ),
+    ];
+  }
+}

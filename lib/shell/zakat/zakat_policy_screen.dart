@@ -49,10 +49,9 @@ class _ZakatPolicyScreenState extends State<ZakatPolicyScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'السياسات الفقهية لحساب الزكاة',
-          style: TextStyle(fontSize: 16),
-          overflow: TextOverflow.ellipsis,
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('السياسات الفقهية لحساب الزكاة'),
         ),
         centerTitle: false,
       ),

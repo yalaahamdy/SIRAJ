@@ -116,12 +116,15 @@ class InteractiveCounterView extends StatelessWidget {
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
                           ),
                         ] else ...[
-                          Text(
-                            '$currentCount',
-                            style: TextStyle(
-                              fontSize: 34,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? AppColors.goldAccent : AppColors.primary,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '$currentCount',
+                              style: TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? AppColors.goldAccent : AppColors.primary,
+                              ),
                             ),
                           ),
                           Text(

@@ -80,11 +80,7 @@ class _PreparationChecklistScreenState extends State<PreparationChecklistScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'حقيبة واستعداد الحاج والمعتمر',
-          style: TextStyle(fontSize: 16),
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: const Text('استعدادات ولوازم النسك'),
         centerTitle: false,
         actions: [
           IconButton(

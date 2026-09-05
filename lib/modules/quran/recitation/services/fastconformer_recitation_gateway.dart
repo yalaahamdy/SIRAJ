@@ -31,8 +31,9 @@ class FastConformerQuranRecognitionGateway implements QuranRecitationRecognition
   StreamSubscription<QuranRecitationToken>? _localTokenSub;
   bool _isListening = false;
   bool _speechInitialized = false;
-  int _lastEmittedWordCount = 0;
+  final List<String> _lastEmittedWords = [];
   Timer? _rearmTimer;
+  Timer? _watchdogTimer;
   bool _isArming = false;
 
   static const String defaultHfModelUrl =
@@ -91,11 +92,10 @@ class FastConformerQuranRecognitionGateway implements QuranRecitationRecognition
     }
   }
 
-
   @override
   Future<void> startListening({String languageCode = 'ar-SA'}) async {
     _isListening = true;
-    _lastEmittedWordCount = 0;
+    _lastEmittedWords.clear();
     if (!_listeningController.isClosed) {
       _listeningController.add(true);
     }
@@ -107,26 +107,12 @@ class FastConformerQuranRecognitionGateway implements QuranRecitationRecognition
         _speechInitialized = await _speechRecognizer.initialize(
           onError: (val) {
             // Re-arm cleanly on speech timeout or recoverable speech errors
-            if (_isListening) {
-              _rearmTimer?.cancel();
-              _rearmTimer = Timer(const Duration(milliseconds: 300), () {
-                if (_isListening && !_speechRecognizer.isListening && !_isArming) {
-                  _lastEmittedWordCount = 0;
-                  _startLiveListening(languageCode);
-                }
-              });
-            }
+            _scheduleRearm(languageCode);
           },
           onStatus: (status) {
-            // Re-arm ONLY when session finishes cleanly ('done') after speech pause
-            if (_isListening && status == 'done') {
-              _rearmTimer?.cancel();
-              _rearmTimer = Timer(const Duration(milliseconds: 300), () {
-                if (_isListening && !_speechRecognizer.isListening && !_isArming) {
-                  _lastEmittedWordCount = 0;
-                  _startLiveListening(languageCode);
-                }
-              });
+            // Re-arm both when session pauses ('notListening') or cleanly completes ('done')
+            if (status == 'done' || status == 'notListening') {
+              _scheduleRearm(languageCode);
             }
           },
         );
@@ -134,10 +120,33 @@ class FastConformerQuranRecognitionGateway implements QuranRecitationRecognition
 
       if (_speechInitialized) {
         await _startLiveListening(languageCode);
+        _startWatchdog(languageCode);
       }
     } catch (_) {
       // Fail-soft on headless tests or devices without speech service
     }
+  }
+
+  void _scheduleRearm(String languageCode) {
+    if (!_isListening) return;
+    _rearmTimer?.cancel();
+    _rearmTimer = Timer(const Duration(milliseconds: 350), () {
+      if (_isListening && !_speechRecognizer.isListening && !_isArming) {
+        _lastEmittedWords.clear();
+        _startLiveListening(languageCode);
+      }
+    });
+  }
+
+  void _startWatchdog(String languageCode) {
+    _watchdogTimer?.cancel();
+    // Continuous watchdog pulse ensuring microphone is re-engaged if OS silently closes it
+    _watchdogTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      if (_isListening && !_speechRecognizer.isListening && !_isArming) {
+        _lastEmittedWords.clear();
+        _startLiveListening(languageCode);
+      }
+    });
   }
 
   Future<void> _startLiveListening(String languageCode) async {
@@ -153,18 +162,39 @@ class FastConformerQuranRecognitionGateway implements QuranRecitationRecognition
               .where((w) => w.isNotEmpty)
               .toList();
 
-          for (int i = _lastEmittedWordCount; i < words.length; i++) {
-            emitToken(words[i]);
+          if (words.isEmpty) return;
+
+          // If recognizer reset or started a new utterance shorter than previous
+          if (words.length < _lastEmittedWords.length) {
+            _lastEmittedWords.clear();
           }
-          _lastEmittedWordCount = words.length;
+
+          for (int i = 0; i < words.length; i++) {
+            if (i < _lastEmittedWords.length) {
+              // Word already emitted once; check if speech engine refined it!
+              // (e.g. from partial "الر" to refined "الرحمن")
+              if (words[i] != _lastEmittedWords[i]) {
+                _lastEmittedWords[i] = words[i];
+                emitToken(words[i]);
+              }
+            } else {
+              // Newly recognized word uttered!
+              _lastEmittedWords.add(words[i]);
+              emitToken(words[i]);
+            }
+          }
+
+          if (result.finalResult) {
+            _lastEmittedWords.clear();
+          }
         },
         listenOptions: stt.SpeechListenOptions(
           localeId: languageCode,
-          listenMode: stt.ListenMode.dictation,
+          listenMode: stt.ListenMode.confirmation,
           partialResults: true,
           cancelOnError: false,
-          pauseFor: const Duration(seconds: 8),
-          listenFor: const Duration(minutes: 30),
+          pauseFor: const Duration(seconds: 15),
+          listenFor: const Duration(hours: 1),
         ),
       );
     } catch (_) {
@@ -173,13 +203,30 @@ class FastConformerQuranRecognitionGateway implements QuranRecitationRecognition
     }
   }
 
+  /// Manually force-restarts listening if user desires immediate reconnection.
+  Future<void> restartListening({String languageCode = 'ar-SA'}) async {
+    if (!_isListening) {
+      await startListening(languageCode: languageCode);
+      return;
+    }
+    _lastEmittedWords.clear();
+    try {
+      if (_speechRecognizer.isListening) {
+        await _speechRecognizer.stop();
+      }
+    } catch (_) {}
+    await _startLiveListening(languageCode);
+  }
+
   @override
   Future<void> stopListening() async {
     _isListening = false;
     _isArming = false;
-    _lastEmittedWordCount = 0;
+    _lastEmittedWords.clear();
     _rearmTimer?.cancel();
     _rearmTimer = null;
+    _watchdogTimer?.cancel();
+    _watchdogTimer = null;
     if (!_listeningController.isClosed) {
       _listeningController.add(false);
     }
@@ -282,6 +329,8 @@ class FastConformerQuranRecognitionGateway implements QuranRecitationRecognition
     _isArming = false;
     _rearmTimer?.cancel();
     _rearmTimer = null;
+    _watchdogTimer?.cancel();
+    _watchdogTimer = null;
     try {
       _speechRecognizer.cancel();
     } catch (_) {}

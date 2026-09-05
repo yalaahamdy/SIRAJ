@@ -17,8 +17,8 @@ class ZakatGuideDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           topic.title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          maxLines: 2,
         ),
       ),
       body: SingleChildScrollView(

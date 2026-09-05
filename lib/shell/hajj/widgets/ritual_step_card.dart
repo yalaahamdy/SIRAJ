@@ -44,6 +44,8 @@ class RitualStepCard extends StatelessWidget {
             fontWeight: FontWeight.bold,
             decoration: isCompleted ? TextDecoration.lineThrough : null,
           ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
           '${step.phase.labelArabic} • ${step.isRequired ? "ركن/واجب" : "سنة ومستحب"}',
