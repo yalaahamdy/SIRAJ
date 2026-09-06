@@ -160,7 +160,7 @@ class SharawyOfflineAudioService {
   Future<SharawyImportResult> importFromZip({
     String? explicitZipPath,
     SharawyStore? store,
-    void Function(double progress)? onProgress,
+    void Function(int current, int total, String fileName)? onProgress,
   }) async {
     await init();
     if (_baseStoragePath == null) {
@@ -211,12 +211,8 @@ class SharawyOfflineAudioService {
       var totalExtractedBytes = 0;
 
       final totalFiles = archive.length;
-      var processed = 0;
 
       for (final file in archive) {
-        processed++;
-        onProgress?.call(processed / totalFiles);
-
         if (!file.isFile) continue;
         final nameLower = file.name.toLowerCase();
         if (!nameLower.endsWith('.mp3') &&
@@ -233,6 +229,8 @@ class SharawyOfflineAudioService {
         final data = file.content as List<int>;
         await targetFile.writeAsBytes(data);
         totalExtractedBytes += data.length;
+        importedCount++;
+        onProgress?.call(importedCount, totalFiles, rawFilename);
 
         // Check if track matches existing catalog item by url or id
         SharawyItem? matchedItem;
@@ -273,7 +271,7 @@ class SharawyOfflineAudioService {
         }
       }
 
-      onProgress?.call(1.0);
+      onProgress?.call(totalFiles, totalFiles, 'اكتمل الاستيراد');
       return SharawyImportResult(
         isSuccess: true,
         importedTracksCount: importedCount,

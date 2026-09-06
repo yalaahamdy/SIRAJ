@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../modules/quran/domain/quran_bookmark.dart';
 import '../../../../modules/quran/domain/quran_reader_modes.dart';
@@ -10,6 +11,7 @@ import '../../../../modules/quran/services/quran_typography_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../controllers/quran_reader_settings_controller.dart';
+import 'zip_import_progress_dialog.dart';
 
 /// Comprehensive Quran Settings & Customization Tab (§10..§16, §20..§25).
 /// Enables users to customize:
@@ -42,7 +44,6 @@ class _QuranSettingsTabState extends State<QuranSettingsTab> {
   List<QuranBookmark> _bookmarks = [];
   List<Surah> _surahs = [];
   bool _isLoadingBookmarks = true;
-  bool _isImportingZip = false;
   int _downloadedFilesCount = 0;
 
   @override
@@ -100,69 +101,35 @@ class _QuranSettingsTabState extends State<QuranSettingsTab> {
   }
 
   Future<void> _handlePickAndImportZip(QuranReciter reciter) async {
-    setState(() => _isImportingZip = true);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('جارٍ اختيار وقراءة ملف الـ ZIP واستخراج التلاوات...'),
-        duration: Duration(seconds: 3),
-      ),
+    final files = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip'],
+      dialogTitle: 'اختر ملف ZIP يحتوي على تلاوات الشيخ ${reciter.nameArabic}',
     );
 
-    try {
-      final result = await widget.quranModule.offlineAudioService.pickAndImportZip(reciterId: reciter.id);
-      if (!mounted) return;
+    if (files.isEmpty || files.first.path == null) return;
+    final zipFilePath = files.first.path!;
+    if (!mounted) return;
 
-      setState(() => _isImportingZip = false);
+    await ZipImportProgressDialog.show(
+      context: context,
+      title: 'استيراد تلاوات الشيخ ${reciter.nameArabic}',
+      subtitle: 'جارٍ فك ضغط ملف الـ ZIP واستخراج الآيات...',
+      task: (onProgress) async {
+        final res = await widget.quranModule.offlineAudioService.importZipFile(
+          reciterId: reciter.id,
+          zipFilePath: zipFilePath,
+          onProgress: onProgress,
+        );
+        if (!res.isSuccess) {
+          throw Exception(res.errorMessage ?? 'تعذر فك ضغط ملف الـ ZIP');
+        }
+        return res.importedVersesCount;
+      },
+    );
 
-      if (result == null) {
-        // User cancelled picker
-        return;
-      }
-
-      if (result.isSuccess) {
-        await _refreshOfflineAudioStatus();
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: AppColors.goldAccent),
-                SizedBox(width: 8),
-                Text('تم الاستيراد بنجاح', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-            content: Text(
-              'تم استخراج واستيراد ${result.importedVersesCount} آية بصيغة MP3 للشيخ ${reciter.nameArabic} بنجاح!\n\nيمكنك الآن الاستماع لتلاوات هذه الآيات بالكامل بدون إنترنت.',
-              style: const TextStyle(fontSize: 13, height: 1.4),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('تم'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.errorMessage ?? 'تعذر استيراد ملف الـ ZIP'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isImportingZip = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ أثناء الاستيراد: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+    if (mounted) {
+      await _refreshOfflineAudioStatus();
     }
   }
 
@@ -605,15 +572,9 @@ class _QuranSettingsTabState extends State<QuranSettingsTab> {
                               foregroundColor: Colors.black87,
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                             ),
-                            icon: _isImportingZip
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                                  )
-                                : const Icon(Icons.upload_file_rounded, size: 16),
+                            icon: const Icon(Icons.upload_file_rounded, size: 16),
                             label: const Text('استيراد ملف ZIP من جهازك', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                            onPressed: _isImportingZip ? null : () => _handlePickAndImportZip(activeReciter),
+                            onPressed: () => _handlePickAndImportZip(activeReciter),
                           ),
 
                           // Download Surahs on-demand button

@@ -246,7 +246,7 @@ class TawasheehOfflineAudioService {
   Future<TawasheehImportResult> importZipFile({
     required String zipFilePath,
     TawasheehStore? store,
-    void Function(int count)? onProgress,
+    void Function(int current, int total, String fileName)? onProgress,
   }) async {
     await init();
     try {
@@ -264,6 +264,7 @@ class TawasheehOfflineAudioService {
       int importedCount = 0;
       int matchedCount = 0;
       int totalBytes = 0;
+      final totalFiles = archive.length;
       final customItems = <TawasheehItem>[];
 
       for (final file in archive) {
@@ -278,7 +279,7 @@ class TawasheehOfflineAudioService {
               file.writeContent(output);
               importedCount++;
               totalBytes += file.size;
-              onProgress?.call(importedCount);
+              onProgress?.call(importedCount, totalFiles, baseName);
             } finally {
               await output.close();
             }

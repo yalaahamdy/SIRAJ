@@ -12,8 +12,20 @@ enum SirajMediaType {
   sharawyKhawatir,
 }
 
+/// Delegate interface allowing individual audio modules to handle notification actions.
+abstract class SirajMediaNotificationDelegate {
+  void onPlayPause();
+  void onNext() {}
+  void onPrevious() {}
+  void onSkipForward() {}
+  void onSkipBackward() {}
+  void onStop() {}
+}
+
 /// Dedicated media playback notification service (§14, §20, §32).
-/// Displays sticky MediaStyle notifications with transport controls (Play, Pause, Next, Prev, Stop).
+/// Displays sticky MediaStyle notifications with transport controls (Play, Pause, Next, Prev, Skip, Stop).
+/// Uses Android Foreground Service with mediaPlayback type to ensure audio continues playing
+/// even when the phone screen is locked or when battery optimizations are enabled.
 class SirajMediaNotificationService {
   static SirajMediaNotificationService instance = SirajMediaNotificationService();
 
@@ -21,17 +33,32 @@ class SirajMediaNotificationService {
   static const String mediaChannelId = 'siraj_media_playback_channel_v1';
   static const String mediaChannelName = 'مشغل صوتيات سِراج الشريف';
   static const String mediaChannelDescription =
-      'إشعار تفاعلي للتحكم في إذاعة القرآن الكريم والتواشيح والتلاوات القرآنية';
+      'إشعار تفاعلي للتحكم في إذاعة القرآن الكريم والتواشيح والتلاوات القرآنية وخواطر الشعراوي';
 
   static const String actionPlayPause = 'siraj_media_play_pause';
   static const String actionNext = 'siraj_media_next';
   static const String actionPrevious = 'siraj_media_prev';
+  static const String actionSkipForward = 'siraj_media_skip_forward';
+  static const String actionSkipBackward = 'siraj_media_skip_backward';
   static const String actionStop = 'siraj_media_stop';
 
-  // Action listeners
+  // Registered delegates per media type
+  final Map<SirajMediaType, SirajMediaNotificationDelegate> _delegates = {};
+
+  void registerDelegate(SirajMediaType type, SirajMediaNotificationDelegate delegate) {
+    _delegates[type] = delegate;
+  }
+
+  void unregisterDelegate(SirajMediaType type) {
+    _delegates.remove(type);
+  }
+
+  // Fallback direct action listeners
   VoidCallback? onPlayPause;
   VoidCallback? onNext;
   VoidCallback? onPrevious;
+  VoidCallback? onSkipForward;
+  VoidCallback? onSkipBackward;
   VoidCallback? onStop;
 
   bool _isShowing = false;
@@ -55,6 +82,8 @@ class SirajMediaNotificationService {
     required SirajMediaType type,
     bool hasNext = true,
     bool hasPrevious = true,
+    Duration? position,
+    Duration? duration,
   }) async {
     _lastTitle = title;
     _lastSubtitle = subtitle;
@@ -80,6 +109,60 @@ class SirajMediaNotificationService {
         AndroidNotificationAction(
           actionPlayPause,
           isPlaying ? 'إيقاف مؤقت' : 'تشغيل',
+          showsUserInterface: false,
+          cancelNotification: false,
+        ),
+      );
+      actions.add(
+        const AndroidNotificationAction(
+          actionStop,
+          'إغلاق',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      );
+    } else if (type == SirajMediaType.sharawyKhawatir) {
+      // Sheikh El-Sharawy Khawatir: -10s, Prev, Play/Pause, Next, +10s, Stop
+      actions.add(
+        const AndroidNotificationAction(
+          actionSkipBackward,
+          '-10 ث',
+          showsUserInterface: false,
+          cancelNotification: false,
+        ),
+      );
+      if (hasPrevious) {
+        actions.add(
+          const AndroidNotificationAction(
+            actionPrevious,
+            'السابق',
+            showsUserInterface: false,
+            cancelNotification: false,
+          ),
+        );
+      }
+      actions.add(
+        AndroidNotificationAction(
+          actionPlayPause,
+          isPlaying ? 'إيقاف مؤقت' : 'تشغيل',
+          showsUserInterface: false,
+          cancelNotification: false,
+        ),
+      );
+      if (hasNext) {
+        actions.add(
+          const AndroidNotificationAction(
+            actionNext,
+            'التالي',
+            showsUserInterface: false,
+            cancelNotification: false,
+          ),
+        );
+      }
+      actions.add(
+        const AndroidNotificationAction(
+          actionSkipForward,
+          '+10 ث',
           showsUserInterface: false,
           cancelNotification: false,
         ),
@@ -132,6 +215,10 @@ class SirajMediaNotificationService {
       );
     }
 
+    final hasValidDuration = duration != null && duration.inSeconds > 0;
+    final currentSec = position?.inSeconds ?? 0;
+    final safeProgress = hasValidDuration ? currentSec.clamp(0, duration.inSeconds) : 0;
+
     final androidDetails = AndroidNotificationDetails(
       mediaChannelId,
       mediaChannelName,
@@ -147,6 +234,11 @@ class SirajMediaNotificationService {
       colorized: true,
       category: AndroidNotificationCategory.transport,
       visibility: NotificationVisibility.public,
+      largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
+      showProgress: hasValidDuration,
+      maxProgress: hasValidDuration ? duration.inSeconds : 0,
+      progress: safeProgress,
+      indeterminate: false,
       styleInformation: const MediaStyleInformation(),
       actions: actions,
       subText: _getCategoryLabel(type),
@@ -164,13 +256,32 @@ class SirajMediaNotificationService {
     );
 
     try {
-      await notificationsPlugin.show(
-        id: mediaNotificationId,
-        title: title,
-        body: subtitle,
-        notificationDetails: details,
-        payload: 'siraj_media_playback',
-      );
+      final androidPlugin = notificationsPlugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidPlugin != null && isPlaying) {
+        await androidPlugin.startForegroundService(
+          id: mediaNotificationId,
+          title: title,
+          body: subtitle,
+          notificationDetails: androidDetails,
+          payload: 'siraj_media_playback',
+          foregroundServiceTypes: {AndroidServiceForegroundType.foregroundServiceTypeMediaPlayback},
+        );
+      } else {
+        if (androidPlugin != null && !isPlaying) {
+          try {
+            await androidPlugin.stopForegroundService();
+          } catch (_) {}
+        }
+        await notificationsPlugin.show(
+          id: mediaNotificationId,
+          title: title,
+          body: subtitle,
+          notificationDetails: details,
+          payload: 'siraj_media_playback',
+        );
+      }
     } catch (e) {
       debugPrint('Error showing media notification: $e');
     }
@@ -191,6 +302,14 @@ class SirajMediaNotificationService {
       }
     } catch (_) {}
 
+    final androidPlugin = SirajNotificationManager.instance.notificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      try {
+        await androidPlugin.stopForegroundService();
+      } catch (_) {}
+    }
+
     try {
       await SirajNotificationManager.instance.notificationsPlugin.cancel(
         id: mediaNotificationId,
@@ -198,20 +317,52 @@ class SirajMediaNotificationService {
     } catch (_) {}
   }
 
-  /// Dispatches incoming notification action to registered listener.
+  /// Dispatches incoming notification action to registered delegate or listener.
   void handleAction(String actionId) {
+    final delegate = _lastType != null ? _delegates[_lastType] : null;
+
     switch (actionId) {
       case actionPlayPause:
-        onPlayPause?.call();
+        if (delegate != null) {
+          delegate.onPlayPause();
+        } else {
+          onPlayPause?.call();
+        }
         break;
       case actionNext:
-        onNext?.call();
+        if (delegate != null) {
+          delegate.onNext();
+        } else {
+          onNext?.call();
+        }
         break;
       case actionPrevious:
-        onPrevious?.call();
+        if (delegate != null) {
+          delegate.onPrevious();
+        } else {
+          onPrevious?.call();
+        }
+        break;
+      case actionSkipForward:
+        if (delegate != null) {
+          delegate.onSkipForward();
+        } else {
+          onSkipForward?.call();
+        }
+        break;
+      case actionSkipBackward:
+        if (delegate != null) {
+          delegate.onSkipBackward();
+        } else {
+          onSkipBackward?.call();
+        }
         break;
       case actionStop:
-        onStop?.call();
+        if (delegate != null) {
+          delegate.onStop();
+        } else {
+          onStop?.call();
+        }
         cancelMediaNotification();
         break;
     }

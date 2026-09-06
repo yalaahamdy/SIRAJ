@@ -94,6 +94,8 @@ class SharawyAudioService {
   Stream<Duration> get durationStream => _durationController.stream;
   Stream<Duration?> get sleepTimerStream => _sleepTimerController.stream;
 
+  DateTime? _lastNotificationProgressTime;
+
   void _init() {
     _playerStateSub = _player.onPlayerStateChanged.listen((state) {
       if (state == PlayerState.playing) {
@@ -116,6 +118,14 @@ class SharawyAudioService {
     _positionSub = _player.onPositionChanged.listen((pos) {
       _currentPosition = pos;
       _positionController.add(pos);
+      if (_status == SharawyAudioStatus.playing) {
+        final now = DateTime.now();
+        if (_lastNotificationProgressTime == null ||
+            now.difference(_lastNotificationProgressTime!).inSeconds >= 5) {
+          _lastNotificationProgressTime = now;
+          _updateMediaNotification(isPlaying: true);
+        }
+      }
     });
 
     _durationSub = _player.onDurationChanged.listen((dur) {
@@ -127,17 +137,10 @@ class SharawyAudioService {
   }
 
   void _attachMediaNotificationHandlers() {
-    final mediaService = SirajMediaNotificationService.instance;
-    mediaService.onPlayPause = () {
-      if (_status == SharawyAudioStatus.playing) {
-        pause();
-      } else if (_status == SharawyAudioStatus.paused) {
-        resume();
-      }
-    };
-    mediaService.onNext = () => playNext();
-    mediaService.onPrevious = () => playPrevious();
-    mediaService.onStop = () => stop();
+    SirajMediaNotificationService.instance.registerDelegate(
+      SirajMediaType.sharawyKhawatir,
+      _SharawyMediaNotificationDelegate(this),
+    );
   }
 
   void setPlaylist(List<SharawyItem> items) {
@@ -191,10 +194,10 @@ class SharawyAudioService {
     if (_status == SharawyAudioStatus.paused) {
       onPlaybackStarted?.call();
       try {
-        await _player.playUrl((_currentItem!.localFilePath != null &&
-                _currentItem!.localFilePath!.isNotEmpty)
-            ? _currentItem!.localFilePath!
-            : _currentItem!.url);
+        await _player.resume();
+        if (_currentPosition > Duration.zero) {
+          await _player.seek(_currentPosition);
+        }
         _status = SharawyAudioStatus.playing;
         _statusController.add(_status);
         _updateMediaNotification(isPlaying: true);
@@ -383,10 +386,13 @@ class SharawyAudioService {
       type: SirajMediaType.sharawyKhawatir,
       hasNext: _playlist.isNotEmpty,
       hasPrevious: _playlist.isNotEmpty,
+      position: _currentPosition,
+      duration: _totalDuration,
     );
   }
 
   Future<void> dispose() async {
+    SirajMediaNotificationService.instance.unregisterDelegate(SirajMediaType.sharawyKhawatir);
     _sleepTicker?.cancel();
     await _playerStateSub?.cancel();
     await _positionSub?.cancel();
@@ -398,4 +404,34 @@ class SharawyAudioService {
     await _durationController.close();
     await _sleepTimerController.close();
   }
+}
+
+/// Notification delegate handling transport controls specifically for Sheikh El-Sharawy Khawatir.
+class _SharawyMediaNotificationDelegate implements SirajMediaNotificationDelegate {
+  final SharawyAudioService service;
+  _SharawyMediaNotificationDelegate(this.service);
+
+  @override
+  void onPlayPause() {
+    if (service.status == SharawyAudioStatus.playing) {
+      service.pause();
+    } else if (service.status == SharawyAudioStatus.paused) {
+      service.resume();
+    }
+  }
+
+  @override
+  void onNext() => service.playNext();
+
+  @override
+  void onPrevious() => service.playPrevious();
+
+  @override
+  void onSkipForward() => service.skipForward(const Duration(seconds: 10));
+
+  @override
+  void onSkipBackward() => service.skipBackward(const Duration(seconds: 10));
+
+  @override
+  void onStop() => service.stop();
 }

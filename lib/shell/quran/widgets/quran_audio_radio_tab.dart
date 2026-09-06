@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../modules/quran/domain/quran_reciter.dart';
 import '../../../../modules/quran/domain/surah.dart';
@@ -6,6 +7,7 @@ import '../../../../modules/quran/quran_module.dart';
 import '../../../../modules/quran/services/quran_audio_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import 'zip_import_progress_dialog.dart';
 
 /// Professional Quran Audio Studio & Radio Sub-Tab (§14, §16, §20).
 /// Provides an authentic, compact, and full-featured listening experience:
@@ -115,47 +117,33 @@ class _QuranAudioRadioTabState extends State<QuranAudioRadioTab> {
 
   Future<void> _handleImportZip() async {
     final reciter = _audioService.activeReciter;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('جارٍ اختيار وقراءة ملف الـ ZIP لتلاوات الشيخ ${reciter.nameArabic}...'),
-        duration: const Duration(seconds: 3),
-      ),
+
+    final files = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip'],
+      dialogTitle: 'اختر ملف ZIP يحتوي على تلاوات الشيخ ${reciter.nameArabic}',
     );
 
-    final res = await widget.quranModule.offlineAudioService.pickAndImportZip(reciterId: reciter.id);
-    if (!mounted || res == null) return;
+    if (files.isEmpty || files.first.path == null) return;
+    final zipFilePath = files.first.path!;
+    if (!mounted) return;
 
-    if (res.isSuccess) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: AppColors.goldAccent),
-              SizedBox(width: 8),
-              Text('تم استيراد التلاوات بنجاح', style: TextStyle(fontSize: 16)),
-            ],
-          ),
-          content: Text(
-            'تم استخراج واستيراد ${res.importedVersesCount} آية بصيغة MP3 للشيخ ${reciter.nameArabic} بنجاح!\n\nيمكنك الآن الاستماع لتلاوات هذه الآيات بالكامل بدون إنترنت.',
-            style: const TextStyle(fontSize: 13, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('تم'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res.errorMessage ?? 'تعذر استيراد ملف الـ ZIP.'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
+    await ZipImportProgressDialog.show(
+      context: context,
+      title: 'استيراد تلاوات الشيخ ${reciter.nameArabic}',
+      subtitle: 'جارٍ فك ضغط ملف الـ ZIP واستخراج الآيات...',
+      task: (onProgress) async {
+        final res = await widget.quranModule.offlineAudioService.importZipFile(
+          reciterId: reciter.id,
+          zipFilePath: zipFilePath,
+          onProgress: onProgress,
+        );
+        if (!res.isSuccess) {
+          throw Exception(res.errorMessage ?? 'تعذر فك ضغط ملف الـ ZIP');
+        }
+        return res.importedVersesCount;
+      },
+    );
   }
 
   @override

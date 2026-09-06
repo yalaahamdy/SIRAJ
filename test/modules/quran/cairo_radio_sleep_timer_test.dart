@@ -39,6 +39,12 @@ class MockRadioPlayerAdapter implements RadioAudioPlayerAdapter {
   }
 
   @override
+  Future<void> resume() async {
+    isPaused = false;
+    _playerStateController.add(PlayerState.playing);
+  }
+
+  @override
   Future<void> stop() async {
     isStopped = true;
     _playerStateController.add(PlayerState.stopped);

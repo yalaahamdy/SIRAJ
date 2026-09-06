@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../core/i18n/app_strings.dart';
 import '../core/storage/memory_storage.dart';
 import 'seed/content_seed_engine.dart';
@@ -81,16 +84,15 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
     AppThemeController(storageRegistry: _storage);
     SirajFeedbackAudioService(storageRegistry: _storage);
 
-    // Initialize notification channels & permissions
+    // Initialize notification channels
     SirajNotificationManager.instance.init();
-    SirajNotificationManager.instance.requestPermissions();
 
     // Initialize location & compass services
     _locationEngine = LocationEngine(storageRegistry: _storage);
     _compassService = DeviceSensorCompassService();
 
-    // Trigger automatic background location acquisition & persistence
-    _locationEngine.acquireLocation();
+    // Request all permissions together in one unified session
+    _requestUnifiedPermissions();
 
     // Initialize core modules
     _prayerModule = PrayerModule(storageRegistry: _storage);
@@ -195,6 +197,29 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  Future<void> _requestUnifiedPermissions() async {
+    if (kIsWeb) return;
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) {
+        _locationEngine.acquireLocation();
+        return;
+      }
+    } catch (_) {
+      return;
+    }
+
+    try {
+      await [
+        Permission.notification,
+        Permission.location,
+      ].request();
+    } catch (_) {}
+
+    if (mounted) {
+      _locationEngine.acquireLocation();
+    }
+  }
+
   void _initNotificationListeners() {
     // 1. Athan stop action from notification button
     SirajNotificationManager.instance.onAthanStopRequested = () {
@@ -231,7 +256,21 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   }
 
   void _initMediaNotificationSync() {
-    // Media notifications transport controls
+    // Register type delegates for clean separation
+    SirajMediaNotificationService.instance.registerDelegate(
+      SirajMediaType.cairoRadio,
+      _CairoRadioNotificationDelegate(_quranModule.radioService),
+    );
+    SirajMediaNotificationService.instance.registerDelegate(
+      SirajMediaType.tawasheeh,
+      _TawasheehNotificationDelegate(_quranModule.radioService),
+    );
+    SirajMediaNotificationService.instance.registerDelegate(
+      SirajMediaType.quranRecitation,
+      _QuranRecitationNotificationDelegate(_quranModule.audioService),
+    );
+
+    // Media notifications transport fallback controls
     SirajMediaNotificationService.instance.onPlayPause = () {
       if (_quranModule.radioService.isPlaying) {
         _quranModule.radioService.pause();
@@ -241,37 +280,76 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
         _quranModule.audioService.pause();
       } else if (_quranModule.audioService.currentReport.status == AudioPlaybackStatus.paused) {
         _quranModule.audioService.resume();
+      } else if (_quranModule.sharawyAudioService.status == SharawyAudioStatus.playing) {
+        _quranModule.sharawyAudioService.pause();
+      } else if (_quranModule.sharawyAudioService.status == SharawyAudioStatus.paused) {
+        _quranModule.sharawyAudioService.resume();
       }
     };
 
     SirajMediaNotificationService.instance.onNext = () {
       if (_quranModule.radioService.mode == CairoRadioMode.tawasheeh) {
         _quranModule.radioService.nextTawasheeh();
-      } else {
+      } else if (_quranModule.audioService.currentReport.status == AudioPlaybackStatus.playing ||
+          _quranModule.audioService.currentReport.status == AudioPlaybackStatus.paused) {
         _quranModule.audioService.nextAyah();
+      } else if (_quranModule.sharawyAudioService.status == SharawyAudioStatus.playing ||
+          _quranModule.sharawyAudioService.status == SharawyAudioStatus.paused) {
+        _quranModule.sharawyAudioService.playNext();
       }
     };
 
     SirajMediaNotificationService.instance.onPrevious = () {
       if (_quranModule.radioService.mode == CairoRadioMode.tawasheeh) {
         _quranModule.radioService.previousTawasheeh();
-      } else {
+      } else if (_quranModule.audioService.currentReport.status == AudioPlaybackStatus.playing ||
+          _quranModule.audioService.currentReport.status == AudioPlaybackStatus.paused) {
         _quranModule.audioService.previousAyah();
+      } else if (_quranModule.sharawyAudioService.status == SharawyAudioStatus.playing ||
+          _quranModule.sharawyAudioService.status == SharawyAudioStatus.paused) {
+        _quranModule.sharawyAudioService.playPrevious();
+      }
+    };
+
+    SirajMediaNotificationService.instance.onSkipForward = () {
+      if (_quranModule.sharawyAudioService.status == SharawyAudioStatus.playing ||
+          _quranModule.sharawyAudioService.status == SharawyAudioStatus.paused) {
+        _quranModule.sharawyAudioService.skipForward(const Duration(seconds: 10));
+      }
+    };
+
+    SirajMediaNotificationService.instance.onSkipBackward = () {
+      if (_quranModule.sharawyAudioService.status == SharawyAudioStatus.playing ||
+          _quranModule.sharawyAudioService.status == SharawyAudioStatus.paused) {
+        _quranModule.sharawyAudioService.skipBackward(const Duration(seconds: 10));
       }
     };
 
     SirajMediaNotificationService.instance.onStop = () {
       _quranModule.radioService.stop();
       _quranModule.audioService.stop();
+      _quranModule.sharawyAudioService.stop();
     };
 
-    // Sleep timer auto-completion listener
+    // Sleep timer auto-completion listeners
     _quranModule.radioService.onSleepTimerCompleted = () {
       SirajMediaNotificationService.instance.cancelMediaNotification();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم إيقاف تشغيل الصوت تلقائياً لانتهاء فترة النوم 🌙'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    };
+
+    _quranModule.sharawyAudioService.onSleepTimerCompleted = () {
+      SirajMediaNotificationService.instance.cancelMediaNotification();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إيقاف تشغيل خواطر التفسير تلقائياً لانتهاء فترة النوم 🌙'),
             duration: Duration(seconds: 4),
           ),
         );
@@ -298,11 +376,15 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
             subtitle: tawasheeh?.reciter ?? 'كبار المبتهلين',
             isPlaying: isPlaying,
             type: SirajMediaType.tawasheeh,
+            position: _quranModule.radioService.currentPosition,
+            duration: _quranModule.radioService.totalDuration,
           );
         }
       } else if (status == CairoRadioStatus.idle) {
         if (_quranModule.audioService.currentReport.status != AudioPlaybackStatus.playing &&
-            _quranModule.audioService.currentReport.status != AudioPlaybackStatus.paused) {
+            _quranModule.audioService.currentReport.status != AudioPlaybackStatus.paused &&
+            _quranModule.sharawyAudioService.status != SharawyAudioStatus.playing &&
+            _quranModule.sharawyAudioService.status != SharawyAudioStatus.paused) {
           SirajMediaNotificationService.instance.cancelMediaNotification();
         }
       }
@@ -320,9 +402,13 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
           subtitle: report.reciterName,
           isPlaying: report.status == AudioPlaybackStatus.playing,
           type: SirajMediaType.quranRecitation,
+          position: report.position,
+          duration: report.duration,
         );
       } else if (report.status == AudioPlaybackStatus.stopped || report.status == AudioPlaybackStatus.idle) {
-        if (_quranModule.radioService.status == CairoRadioStatus.idle) {
+        if (_quranModule.radioService.status == CairoRadioStatus.idle &&
+            _quranModule.sharawyAudioService.status != SharawyAudioStatus.playing &&
+            _quranModule.sharawyAudioService.status != SharawyAudioStatus.paused) {
           SirajMediaNotificationService.instance.cancelMediaNotification();
         }
       }
@@ -477,4 +563,93 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+class _CairoRadioNotificationDelegate implements SirajMediaNotificationDelegate {
+  final CairoRadioAudioService radioService;
+  _CairoRadioNotificationDelegate(this.radioService);
+
+  @override
+  void onPlayPause() {
+    if (radioService.isPlaying) {
+      radioService.pause();
+    } else if (radioService.status == CairoRadioStatus.paused) {
+      radioService.play();
+    }
+  }
+
+  @override
+  void onNext() {}
+
+  @override
+  void onPrevious() {}
+
+  @override
+  void onSkipForward() {}
+
+  @override
+  void onSkipBackward() {}
+
+  @override
+  void onStop() {
+    radioService.stop();
+  }
+}
+
+class _TawasheehNotificationDelegate implements SirajMediaNotificationDelegate {
+  final CairoRadioAudioService radioService;
+  _TawasheehNotificationDelegate(this.radioService);
+
+  @override
+  void onPlayPause() {
+    if (radioService.isPlaying) {
+      radioService.pause();
+    } else if (radioService.status == CairoRadioStatus.paused) {
+      radioService.play();
+    }
+  }
+
+  @override
+  void onNext() => radioService.nextTawasheeh();
+
+  @override
+  void onPrevious() => radioService.previousTawasheeh();
+
+  @override
+  void onSkipForward() {}
+
+  @override
+  void onSkipBackward() {}
+
+  @override
+  void onStop() => radioService.stop();
+}
+
+class _QuranRecitationNotificationDelegate implements SirajMediaNotificationDelegate {
+  final QuranAudioService audioService;
+  _QuranRecitationNotificationDelegate(this.audioService);
+
+  @override
+  void onPlayPause() {
+    if (audioService.currentReport.status == AudioPlaybackStatus.playing) {
+      audioService.pause();
+    } else if (audioService.currentReport.status == AudioPlaybackStatus.paused) {
+      audioService.resume();
+    }
+  }
+
+  @override
+  void onNext() => audioService.nextAyah();
+
+  @override
+  void onPrevious() => audioService.previousAyah();
+
+  @override
+  void onSkipForward() {}
+
+  @override
+  void onSkipBackward() {}
+
+  @override
+  void onStop() => audioService.stop();
 }

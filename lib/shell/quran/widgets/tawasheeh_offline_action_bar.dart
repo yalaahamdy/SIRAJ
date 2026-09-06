@@ -1,7 +1,9 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../modules/quran/services/tawasheeh_offline_audio_service.dart';
 import '../../../../modules/quran/store/tawasheeh_store.dart';
 import '../../theme/app_colors.dart';
+import 'zip_import_progress_dialog.dart';
 
 /// Interactive offline storage & ZIP import action bar for Tawasheeh (§14, §20).
 class TawasheehOfflineActionBar extends StatefulWidget {
@@ -37,69 +39,36 @@ class _TawasheehOfflineActionBarState extends State<TawasheehOfflineActionBar> {
   }
 
   Future<void> _handlePickAndImportZip() async {
-    setState(() => _isImporting = true);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('جارٍ اختيار وقراءة ملف الـ ZIP واستخراج الابتهالات...'),
-        duration: Duration(seconds: 3),
-      ),
+    final files = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip'],
+      dialogTitle: 'اختر ملف ZIP يحتوي على التواشيح والابتهالات',
     );
 
-    try {
-      final res = await TawasheehOfflineAudioService.instance.pickAndImportZip(
-        store: widget.tawasheehStore,
-      );
-      if (!mounted) return;
-      setState(() => _isImporting = false);
+    if (files.isEmpty || files.first.path == null) return;
+    final zipFilePath = files.first.path!;
+    if (!mounted) return;
 
-      if (res == null) return;
+    await ZipImportProgressDialog.show(
+      context: context,
+      title: 'استيراد التواشيح والابتهالات',
+      subtitle: 'جارٍ فك ضغط ملف الـ ZIP واستخراج الابتهالات...',
+      task: (onProgress) async {
+        final res = await TawasheehOfflineAudioService.instance.importZipFile(
+          zipFilePath: zipFilePath,
+          store: widget.tawasheehStore,
+          onProgress: onProgress,
+        );
+        if (!res.isSuccess) {
+          throw Exception(res.errorMessage ?? 'تعذر فك ضغط ملف الـ ZIP');
+        }
+        return res.importedTracksCount;
+      },
+    );
 
-      if (res.isSuccess) {
-        await _refreshCount();
-        widget.onDataChanged();
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: AppColors.goldAccent),
-                SizedBox(width: 8),
-                Text('تم استيراد التواشيح بنجاح', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-            content: Text(
-              'تم بنجاح استخراج واستيراد ${res.importedTracksCount} تسجيلاً صوتياً.\n'
-              'تمت مطابقة ${res.matchedExistingCount} مقطعاً مع أرشيف كبار المبتهلين.\n\n'
-              'يمكنك الآن الاستماع لهذه الابتهالات بدون اتصال بالإنترنت.',
-              style: const TextStyle(fontSize: 13, height: 1.4),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('تم'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res.errorMessage ?? 'تعذر استيراد ملف الـ ZIP.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isImporting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('حدث خطأ أثناء الاستيراد: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+    if (mounted) {
+      await _refreshCount();
+      widget.onDataChanged();
     }
   }
 

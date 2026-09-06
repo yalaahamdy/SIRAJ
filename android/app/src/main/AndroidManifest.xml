@@ -64,6 +64,13 @@
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+
+        <!-- Foreground Service for persistent audio playback when screen is locked -->
+        <service
+            android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="mediaPlayback" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

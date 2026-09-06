@@ -8,6 +8,7 @@ import 'tawasheeh_offline_audio_service.dart';
 abstract class RadioAudioPlayerAdapter {
   Future<void> playUrl(String url);
   Future<void> pause();
+  Future<void> resume();
   Future<void> stop();
   Future<void> setVolume(double volume);
   Future<void> seek(Duration position);
@@ -60,6 +61,13 @@ class MockRadioPlayerAdapter implements RadioAudioPlayerAdapter {
   Future<void> pause() async {
     isPaused = true;
     _playerStateController.add(PlayerState.paused);
+  }
+
+  @override
+  Future<void> resume() async {
+    isPaused = false;
+    isStopped = false;
+    _playerStateController.add(PlayerState.playing);
   }
 
   @override
@@ -151,6 +159,15 @@ class ProductionRadioPlayerAdapter implements RadioAudioPlayerAdapter {
       await _player!.pause();
     } else {
       _fallbackController.add(PlayerState.paused);
+    }
+  }
+
+  @override
+  Future<void> resume() async {
+    if (_player != null) {
+      await _player!.resume();
+    } else {
+      _fallbackController.add(PlayerState.playing);
     }
   }
 

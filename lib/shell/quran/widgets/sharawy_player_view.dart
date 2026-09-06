@@ -774,7 +774,15 @@ class _SharawyPlayerViewState extends State<SharawyPlayerView>
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         onTap: () {
-          widget.audioService.playItem(item, playlist: allFilteredItems);
+          if (isCurrent) {
+            if (isPlaying) {
+              widget.audioService.pause();
+            } else {
+              widget.audioService.resume();
+            }
+          } else {
+            widget.audioService.playItem(item, playlist: allFilteredItems);
+          }
         },
         leading: Container(
           width: 40,

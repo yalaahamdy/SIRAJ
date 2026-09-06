@@ -100,7 +100,10 @@ class QuranOfflineAudioService {
   }
 
   /// Lets the user pick a ZIP file from device storage and imports it for the reciter.
-  Future<QuranZipImportResult?> pickAndImportZip({required String reciterId}) async {
+  Future<QuranZipImportResult?> pickAndImportZip({
+    required String reciterId,
+    void Function(int current, int total, String fileName)? onProgress,
+  }) async {
     await init();
     try {
       final files = await FilePicker.pickFiles(
@@ -114,7 +117,11 @@ class QuranOfflineAudioService {
       }
 
       final zipFilePath = files.first.path!;
-      return await importZipFile(reciterId: reciterId, zipFilePath: zipFilePath);
+      return await importZipFile(
+        reciterId: reciterId,
+        zipFilePath: zipFilePath,
+        onProgress: onProgress,
+      );
     } catch (e) {
       return QuranZipImportResult(
         isSuccess: false,
@@ -127,7 +134,7 @@ class QuranOfflineAudioService {
   Future<QuranZipImportResult> importZipFile({
     required String reciterId,
     required String zipFilePath,
-    void Function(int extractedCount)? onProgress,
+    void Function(int current, int total, String fileName)? onProgress,
   }) async {
     await init();
     final targetDir = await getReciterDirectory(reciterId);
@@ -146,6 +153,7 @@ class QuranOfflineAudioService {
 
       int importedCount = 0;
       int totalBytes = 0;
+      final totalFiles = archive.length;
 
       for (final file in archive) {
         if (file.isFile) {
@@ -158,7 +166,7 @@ class QuranOfflineAudioService {
               file.writeContent(output);
               importedCount++;
               totalBytes += file.size;
-              onProgress?.call(importedCount);
+              onProgress?.call(importedCount, totalFiles, normalizedName);
             } catch (_) {
             } finally {
               await output.close();

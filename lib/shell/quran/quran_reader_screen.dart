@@ -781,6 +781,23 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
 
     try {
       final player = AudioPlayer();
+      player.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            isSpeakerphoneOn: true,
+            stayAwake: true,
+            contentType: AndroidContentType.music,
+            usageType: AndroidUsageType.media,
+            audioFocus: AndroidAudioFocus.gain,
+          ),
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {
+              AVAudioSessionOptions.defaultToSpeaker,
+            },
+          ),
+        ),
+      );
       _recitationAudioPosSub = player.onPositionChanged.listen((pos) {
         if (mounted) setState(() => _recitationPlaybackPosition = pos);
       });
