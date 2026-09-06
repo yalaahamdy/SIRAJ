@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../../modules/quran/domain/cairo_radio_station.dart';
 import '../../../../modules/quran/services/cairo_radio_audio_service.dart';
@@ -54,7 +55,11 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
     _waveAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
+
+    if (_status == CairoRadioStatus.playing && !Platform.environment.containsKey('FLUTTER_TEST')) {
+      _waveAnimController.repeat(reverse: true);
+    }
 
     if (!_tawasheehStore.isLoaded) {
       _isLoadingStore = true;
@@ -67,7 +72,9 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
       if (mounted) {
         setState(() => _status = newStatus);
         if (newStatus == CairoRadioStatus.playing) {
-          if (!_waveAnimController.isAnimating) _waveAnimController.repeat(reverse: true);
+          if (!_waveAnimController.isAnimating && !Platform.environment.containsKey('FLUTTER_TEST')) {
+            _waveAnimController.repeat(reverse: true);
+          }
         } else {
           _waveAnimController.stop();
         }

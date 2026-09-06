@@ -20,9 +20,12 @@ import 'services/quran_offline_audio_service.dart';
 import 'services/quran_reader_service.dart';
 import 'services/quran_tafsir_service.dart';
 import 'services/quran_user_data_service.dart';
+import 'services/sharawy_audio_service.dart';
+import 'services/sharawy_offline_audio_service.dart';
 import 'store/canonical_quran_package.dart';
 import 'store/canonical_quran_store.dart';
 import 'store/quran_content_diff_engine.dart';
+import 'store/sharawy_store.dart';
 
 /// Unified Module Facade for the Quran Subsystem (L2).
 /// Implements [QuranModuleContract] and encapsulates all Quran store, reader, audio, and user data services.
@@ -38,6 +41,9 @@ class QuranModule implements QuranModuleContract {
   final QuranContentDiffEngine diffEngine;
   final StorageRegistry storageRegistry;
   final QuranRecitationSessionStore recitationSessionStore;
+  final SharawyStore sharawyStore;
+  final SharawyAudioService sharawyAudioService;
+  final SharawyOfflineAudioService sharawyOfflineAudioService;
 
   QuranModule({
     required StorageRegistry storageRegistry,
@@ -46,6 +52,8 @@ class QuranModule implements QuranModuleContract {
     QuranAudioService? audioServiceInstance,
     QuranTafsirService? tafsirServiceInstance,
     CairoRadioAudioService? radioServiceInstance,
+    SharawyStore? sharawyStoreInstance,
+    SharawyAudioService? sharawyAudioServiceInstance,
   }) : this._internal(
           store: storeInstance ?? ReadOnlyCanonicalQuranStore(),
           storageRegistry: storageRegistry,
@@ -53,6 +61,8 @@ class QuranModule implements QuranModuleContract {
           audioService: audioServiceInstance,
           tafsirService: tafsirServiceInstance,
           radioService: radioServiceInstance,
+          sharawyStore: sharawyStoreInstance,
+          sharawyAudioService: sharawyAudioServiceInstance,
         );
 
   QuranModule._internal({
@@ -62,6 +72,8 @@ class QuranModule implements QuranModuleContract {
     QuranAudioService? audioService,
     QuranTafsirService? tafsirService,
     CairoRadioAudioService? radioService,
+    SharawyStore? sharawyStore,
+    SharawyAudioService? sharawyAudioService,
   })  : recitationSessionStore = QuranRecitationSessionStore(
           storageRegistry: storageRegistry,
         ),
@@ -81,15 +93,24 @@ class QuranModule implements QuranModuleContract {
         audioService = audioService ?? QuranAudioService(store: store),
         offlineAudioService = QuranOfflineAudioService.instance..init(),
         radioService = radioService ?? CairoRadioAudioService(),
+        sharawyStore = sharawyStore ?? SharawyStore(),
+        sharawyAudioService = sharawyAudioService ?? SharawyAudioService(),
+        sharawyOfflineAudioService = SharawyOfflineAudioService.instance..init(),
         tafsirService = tafsirService ?? DefaultQuranTafsirService(),
         diffEngine = QuranContentDiffEngine(clock: clock) {
     // Coordinate mutual audio exclusivity
     this.radioService.onPlaybackStarted = () {
       this.audioService.stop();
+      this.sharawyAudioService.pause();
+    };
+    this.sharawyAudioService.onPlaybackStarted = () {
+      this.radioService.pause();
+      this.audioService.stop();
     };
     this.audioService.reportStream.listen((report) {
       if (report.status == AudioPlaybackStatus.playing) {
         this.radioService.pause();
+        this.sharawyAudioService.pause();
       }
     });
   }

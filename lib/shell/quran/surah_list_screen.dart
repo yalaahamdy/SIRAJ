@@ -10,6 +10,7 @@ import '../widgets/state_views.dart';
 import 'widgets/cairo_radio_live_view.dart';
 import 'widgets/quran_audio_radio_tab.dart';
 import 'widgets/quran_settings_tab.dart';
+import 'widgets/sharawy_player_view.dart';
 
 /// Screen displaying the 114 Surahs, 30 Juzs, Quran settings & audio studio, and search (§3..§10, §20..§35, §50..§55).
 class SurahListScreen extends StatefulWidget {
@@ -41,7 +42,7 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _loadAllData();
   }
 
@@ -105,6 +106,7 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
               tabs: const [
                 Tab(text: 'السور'),
                 Tab(text: 'إذاعة القاهرة'),
+                Tab(text: 'خواطر الشعراوي'),
                 Tab(text: 'التلاوة'),
                 Tab(text: 'الأجزاء'),
                 Tab(text: 'الإعدادات'),
@@ -155,6 +157,10 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
                         _buildSurahsTab(context, isDark),
                         CairoRadioLiveView(
                           radioService: widget.quranModule.radioService,
+                        ),
+                        SharawyPlayerView(
+                          audioService: widget.quranModule.sharawyAudioService,
+                          sharawyStore: widget.quranModule.sharawyStore,
                         ),
                         QuranAudioRadioTab(
                           quranModule: widget.quranModule,

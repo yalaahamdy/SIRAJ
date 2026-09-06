@@ -64,10 +64,13 @@ enum RadioSleepTimerDuration {
   fifteenMinutes(15, '15 دقيقة'),
   thirtyMinutes(30, '30 دقيقة'),
   fortyFiveMinutes(45, '45 دقيقة'),
-  sixtyMinutes(60, 'ساعة واحدة');
+  sixtyMinutes(60, 'ساعة واحدة'),
+  custom(0, 'مخصص');
 
   final int minutes;
   final String labelArabic;
 
   const RadioSleepTimerDuration(this.minutes, this.labelArabic);
+
+  Duration get duration => Duration(minutes: minutes);
 }

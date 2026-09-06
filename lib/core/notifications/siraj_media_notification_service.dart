@@ -9,6 +9,7 @@ enum SirajMediaType {
   cairoRadio,
   tawasheeh,
   quranRecitation,
+  sharawyKhawatir,
 }
 
 /// Dedicated media playback notification service (§14, §20, §32).
@@ -224,6 +225,8 @@ class SirajMediaNotificationService {
         return 'تواشيح وابتهالات';
       case SirajMediaType.quranRecitation:
         return 'القرآن الكريم';
+      case SirajMediaType.sharawyKhawatir:
+        return 'خواطر الشيخ الشعراوي';
     }
   }
 }

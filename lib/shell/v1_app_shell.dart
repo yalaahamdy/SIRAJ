@@ -15,6 +15,7 @@ import '../modules/quran/quran_module.dart';
 import '../modules/quran/services/cairo_radio_audio_service.dart';
 import '../modules/quran/services/flutter_audio_player_adapter.dart';
 import '../modules/quran/services/quran_audio_service.dart';
+import '../modules/quran/services/sharawy_audio_service.dart';
 import '../modules/seerah/seerah_module.dart';
 import '../modules/zakat/zakat_module.dart';
 import '../core/location/location_engine.dart';
@@ -108,11 +109,15 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
       player: ProductionRadioPlayerAdapter(),
     );
     CairoRadioAudioService.setMockInstance(realRadioService);
+    final realSharawyAudioService = SharawyAudioService(
+      player: ProductionRadioPlayerAdapter(),
+    );
     _quranModule = QuranModule(
       storageRegistry: _storage,
       storeInstance: baseQuranModule.store,
       audioServiceInstance: realAudioService,
       radioServiceInstance: realRadioService,
+      sharawyAudioServiceInstance: realSharawyAudioService,
     );
     AppRouter.defaultQuranModule = _quranModule;
     _memorizationModule = MemorizationModule(
