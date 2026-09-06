@@ -22,6 +22,8 @@ import '../core/location/location_models.dart';
 import '../core/location/sensor_compass_service.dart';
 import '../modules/prayer/domain/calculation_parameters.dart';
 import '../modules/prayer/domain/prayer_adjustments.dart';
+import '../modules/prayer/domain/prayer_type.dart';
+import '../modules/quran/domain/cairo_radio_station.dart';
 import 'adhkar/adhkar_home_screen.dart';
 import 'companion/home_dashboard_view.dart';
 import 'prayer/prayer_screen.dart';
@@ -31,6 +33,8 @@ import 'theme/app_colors.dart';
 import 'theme/app_theme_controller.dart';
 import '../core/audio/siraj_feedback_audio_service.dart';
 import '../core/notifications/siraj_notification_manager.dart';
+import '../core/notifications/siraj_media_notification_service.dart';
+import 'prayer/screens/siraj_athan_full_screen_view.dart';
 import 'v1_more_screen.dart';
 import 'widgets/state_views.dart';
 
@@ -50,7 +54,7 @@ class V1AppShell extends StatefulWidget {
   State<V1AppShell> createState() => _V1AppShellState();
 }
 
-class _V1AppShellState extends State<V1AppShell> {
+class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   late int _currentIndex;
   late final StorageRegistry _storage;
 
@@ -165,6 +169,158 @@ class _V1AppShellState extends State<V1AppShell> {
     _scheduleBackgroundPrayerAlarms();
     _locationEngine.locationStream.listen((newLoc) {
       _scheduleBackgroundPrayerAlarms(location: newLoc);
+    });
+
+    // Register app lifecycle observer & notification wiring
+    WidgetsBinding.instance.addObserver(this);
+    _initNotificationListeners();
+    _initMediaNotificationSync();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _quranModule.radioService.checkSleepTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _initNotificationListeners() {
+    // 1. Athan stop action from notification button
+    SirajNotificationManager.instance.onAthanStopRequested = () {
+      _prayerModule.athanAudioService.stopAthan();
+    };
+
+    // 2. Action buttons (Open prayer, open qiblah)
+    SirajNotificationManager.instance.onActionReceived = (actionId, payload) {
+      if (!mounted) return;
+      if (actionId == SirajNotificationManager.actionOpenPrayer ||
+          actionId == SirajNotificationManager.actionOpenQiblah) {
+        setState(() => _currentIndex = 1);
+      }
+    };
+
+    // 3. Notification body tapped
+    SirajNotificationManager.instance.onNotificationTapped = (payload) {
+      if (!mounted) return;
+      if (_prayerModule.athanAudioService.isPlaying) {
+        final now = _prayerModule.clock.nowLocal();
+        SirajAthanFullScreenView.show(
+          context,
+          prayerType: PrayerType.dhuhr,
+          prayerTime: now,
+          locationName: _locationEngine.currentEffectiveLocation.cityName ?? 'موقعك الحالي',
+          audioService: _prayerModule.athanAudioService,
+          onOpenQiblah: () => setState(() => _currentIndex = 1),
+          onOpenAdhkar: () => setState(() => _currentIndex = 3),
+        );
+      } else {
+        setState(() => _currentIndex = 1);
+      }
+    };
+  }
+
+  void _initMediaNotificationSync() {
+    // Media notifications transport controls
+    SirajMediaNotificationService.instance.onPlayPause = () {
+      if (_quranModule.radioService.isPlaying) {
+        _quranModule.radioService.pause();
+      } else if (_quranModule.radioService.status == CairoRadioStatus.paused) {
+        _quranModule.radioService.play();
+      } else if (_quranModule.audioService.currentReport.status == AudioPlaybackStatus.playing) {
+        _quranModule.audioService.pause();
+      } else if (_quranModule.audioService.currentReport.status == AudioPlaybackStatus.paused) {
+        _quranModule.audioService.resume();
+      }
+    };
+
+    SirajMediaNotificationService.instance.onNext = () {
+      if (_quranModule.radioService.mode == CairoRadioMode.tawasheeh) {
+        _quranModule.radioService.nextTawasheeh();
+      } else {
+        _quranModule.audioService.nextAyah();
+      }
+    };
+
+    SirajMediaNotificationService.instance.onPrevious = () {
+      if (_quranModule.radioService.mode == CairoRadioMode.tawasheeh) {
+        _quranModule.radioService.previousTawasheeh();
+      } else {
+        _quranModule.audioService.previousAyah();
+      }
+    };
+
+    SirajMediaNotificationService.instance.onStop = () {
+      _quranModule.radioService.stop();
+      _quranModule.audioService.stop();
+    };
+
+    // Sleep timer auto-completion listener
+    _quranModule.radioService.onSleepTimerCompleted = () {
+      SirajMediaNotificationService.instance.cancelMediaNotification();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إيقاف تشغيل الصوت تلقائياً لانتهاء فترة النوم 🌙'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    };
+
+    // Synchronize Radio & Tawasheeh status with media notification
+    _quranModule.radioService.statusStream.listen((status) {
+      final isPlaying = status == CairoRadioStatus.playing;
+      final isPaused = status == CairoRadioStatus.paused;
+
+      if (isPlaying || isPaused) {
+        if (_quranModule.radioService.mode == CairoRadioMode.liveRadio) {
+          SirajMediaNotificationService.instance.showMediaNotification(
+            title: 'إذاعة القرآن الكريم من القاهرة',
+            subtitle: 'البث الحي المباشر (98.2 FM)',
+            isPlaying: isPlaying,
+            type: SirajMediaType.cairoRadio,
+          );
+        } else {
+          final tawasheeh = _quranModule.radioService.currentTawasheeh;
+          SirajMediaNotificationService.instance.showMediaNotification(
+            title: tawasheeh?.cleanTitle ?? 'ابتهال شريف',
+            subtitle: tawasheeh?.reciter ?? 'كبار المبتهلين',
+            isPlaying: isPlaying,
+            type: SirajMediaType.tawasheeh,
+          );
+        }
+      } else if (status == CairoRadioStatus.idle) {
+        if (_quranModule.audioService.currentReport.status != AudioPlaybackStatus.playing &&
+            _quranModule.audioService.currentReport.status != AudioPlaybackStatus.paused) {
+          SirajMediaNotificationService.instance.cancelMediaNotification();
+        }
+      }
+    });
+
+    // Synchronize Quran Recitation reports with media notification
+    _quranModule.audioService.reportStream.listen((report) {
+      if (report.status == AudioPlaybackStatus.playing || report.status == AudioPlaybackStatus.paused) {
+        final surah = report.surahNumber != null
+            ? _quranModule.store.getSurah(report.surahNumber!).valueOrNull?.nameArabic ?? 'القرآن الكريم'
+            : 'القرآن الكريم';
+        final ayahInfo = report.ayahNumber != null ? ' — الآية ${report.ayahNumber}' : '';
+        SirajMediaNotificationService.instance.showMediaNotification(
+          title: 'سورة $surah$ayahInfo',
+          subtitle: report.reciterName,
+          isPlaying: report.status == AudioPlaybackStatus.playing,
+          type: SirajMediaType.quranRecitation,
+        );
+      } else if (report.status == AudioPlaybackStatus.stopped || report.status == AudioPlaybackStatus.idle) {
+        if (_quranModule.radioService.status == CairoRadioStatus.idle) {
+          SirajMediaNotificationService.instance.cancelMediaNotification();
+        }
+      }
     });
   }
 

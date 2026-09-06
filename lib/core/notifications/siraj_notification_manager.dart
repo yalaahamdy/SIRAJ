@@ -3,15 +3,27 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'siraj_media_notification_service.dart';
 
-/// مدير إشعارات سِراج المحلية للصلوات والأذكار (§17, §32)
+/// مدير إشعارات سِراج المحلية للصلوات والأذكار والوسائط (§17, §32)
 class SirajNotificationManager {
   static final SirajNotificationManager instance = SirajNotificationManager._internal();
 
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin get notificationsPlugin => _notifications;
   bool _isInitialized = false;
 
   SirajNotificationManager._internal();
+
+  // إجراءات الإشعارات التفاعلية للأذان
+  static const String actionStopAthan = 'action_stop_athan';
+  static const String actionOpenPrayer = 'action_open_prayer';
+  static const String actionOpenQiblah = 'action_open_qiblah';
+
+  // مستمعات الأحداث التفاعلية
+  VoidCallback? onAthanStopRequested;
+  void Function(String actionId, String? payload)? onActionReceived;
+  void Function(String? payload)? onNotificationTapped;
 
   // القناة المخصصة للأذان الصوتي الكامل ذو الأولوية القصوى
   static const String athanChannelId = 'siraj_athan_channel_v4';
@@ -54,7 +66,8 @@ class SirajNotificationManager {
       await _notifications.initialize(
         settings: initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          debugPrint('Notification clicked: ${response.payload}');
+          debugPrint('Notification clicked: payload=${response.payload}, actionId=${response.actionId}');
+          _handleNotificationResponse(response);
         },
       );
 
@@ -98,6 +111,17 @@ class SirajNotificationManager {
             enableVibration: true,
           );
           await androidPlugin.createNotificationChannel(standardChannel);
+
+          // 3. قناة وسائط التشغيل الصامتة (للتحكم في الراديو والتواشيح والقرآن)
+          const mediaChannel = AndroidNotificationChannel(
+            SirajMediaNotificationService.mediaChannelId,
+            SirajMediaNotificationService.mediaChannelName,
+            description: SirajMediaNotificationService.mediaChannelDescription,
+            importance: Importance.low,
+            playSound: false,
+            enableVibration: false,
+          );
+          await androidPlugin.createNotificationChannel(mediaChannel);
         }
       }
 
@@ -183,6 +207,7 @@ class SirajNotificationManager {
       icon: '@mipmap/ic_launcher',
       fullScreenIntent: true,
       ticker: title,
+      actions: _buildAthanActions(playAthanSound),
     );
 
     const darwinDetails = DarwinNotificationDetails(
@@ -257,6 +282,7 @@ class SirajNotificationManager {
         icon: '@mipmap/ic_launcher',
         fullScreenIntent: true,
         ticker: title,
+        actions: _buildAthanActions(playAthanSound),
       );
 
       const darwinDetails = DarwinNotificationDetails(
@@ -319,5 +345,42 @@ class SirajNotificationManager {
     try {
       await _notifications.cancelAll();
     } catch (_) {}
+  }
+
+  /// يوزع إجراءات الأزرار المنبثقة من الإشعارات
+  void _handleNotificationResponse(NotificationResponse response) {
+    if (response.actionId == actionStopAthan) {
+      onAthanStopRequested?.call();
+    } else if (response.actionId != null && response.actionId!.startsWith('siraj_media_')) {
+      SirajMediaNotificationService.instance.handleAction(response.actionId!);
+    } else if (response.actionId == null || response.actionId!.isEmpty) {
+      onNotificationTapped?.call(response.payload);
+    }
+    onActionReceived?.call(response.actionId ?? '', response.payload);
+  }
+
+  /// يبني أزرار الإجراءات التفاعلية للأذان
+  List<AndroidNotificationAction> _buildAthanActions(bool isAthan) {
+    if (!isAthan) return const [];
+    return const [
+      AndroidNotificationAction(
+        actionStopAthan,
+        'إيقاف الأذان',
+        showsUserInterface: false,
+        cancelNotification: true,
+      ),
+      AndroidNotificationAction(
+        actionOpenPrayer,
+        'مواقيت الصلاة',
+        showsUserInterface: true,
+        cancelNotification: false,
+      ),
+      AndroidNotificationAction(
+        actionOpenQiblah,
+        'اتجاه القبلة',
+        showsUserInterface: true,
+        cancelNotification: false,
+      ),
+    ];
   }
 }

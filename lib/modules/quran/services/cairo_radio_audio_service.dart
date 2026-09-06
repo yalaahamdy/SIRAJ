@@ -241,7 +241,11 @@ class CairoRadioAudioService {
   // Sleep Timer state
   Timer? _sleepCountdownTimer;
   Duration? _sleepTimerRemaining;
+  DateTime? _sleepTargetTime;
   RadioSleepTimerDuration _activeSleepDuration = RadioSleepTimerDuration.none;
+
+  /// Callback fired when sleep timer reaches zero and initiates shutdown.
+  void Function()? onSleepTimerCompleted;
 
   // Broadcasters
   final _statusController = StreamController<CairoRadioStatus>.broadcast();
@@ -320,6 +324,7 @@ class CairoRadioAudioService {
   String? get errorMessage => _errorMessage;
   RadioSleepTimerDuration get activeSleepDuration => _activeSleepDuration;
   Duration? get sleepTimerRemaining => _sleepTimerRemaining;
+  DateTime? get sleepTargetTime => _sleepTargetTime;
 
   CairoRadioMode get mode => _mode;
   Stream<CairoRadioMode> get modeStream => _modeController.stream;
@@ -545,30 +550,74 @@ class CairoRadioAudioService {
 
   // --- Sleep Timer Engine ---
 
-  /// Configures and starts an automated sleep timer.
+  /// Configures and starts an automated sleep timer based on standard preset intervals.
   void setSleepTimer(RadioSleepTimerDuration duration) {
     cancelSleepTimer();
     _activeSleepDuration = duration;
 
     if (duration == RadioSleepTimerDuration.none) {
       _sleepTimerRemaining = null;
+      _sleepTargetTime = null;
       _sleepTimerController.add(null);
       return;
     }
 
-    _sleepTimerRemaining = Duration(minutes: duration.minutes);
+    _startSleepTimerWithDuration(Duration(minutes: duration.minutes));
+  }
+
+  /// Configures and starts an automated sleep timer with an arbitrary duration (e.g. for testing).
+  void setCustomSleepTimer(Duration duration, {RadioSleepTimerDuration preset = RadioSleepTimerDuration.fifteenMinutes}) {
+    cancelSleepTimer();
+    _activeSleepDuration = preset;
+    _startSleepTimerWithDuration(duration);
+  }
+
+  void _startSleepTimerWithDuration(Duration duration) {
+    _sleepTargetTime = DateTime.now().add(duration);
+    _sleepTimerRemaining = duration;
     _sleepTimerController.add(_sleepTimerRemaining);
 
     _sleepCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_sleepTimerRemaining == null || _sleepTimerRemaining!.inSeconds <= 1) {
-        // Timer completed -> stop live stream gracefully
-        cancelSleepTimer();
-        stop();
-      } else {
-        _sleepTimerRemaining = _sleepTimerRemaining! - const Duration(seconds: 1);
-        _sleepTimerController.add(_sleepTimerRemaining);
-      }
+      _checkSleepTimerExpiry();
     });
+  }
+
+  /// Evaluates sleep timer against wall-clock time, resilient to OS Doze mode and screen locks.
+  Future<void> checkSleepTimer() async {
+    await _checkSleepTimerExpiry();
+  }
+
+  Future<void> _checkSleepTimerExpiry() async {
+    if (_sleepTargetTime == null) {
+      cancelSleepTimer();
+      return;
+    }
+
+    final diff = _sleepTargetTime!.difference(DateTime.now());
+    if (diff <= Duration.zero) {
+      // Target time reached or passed -> authoritative immediate shutdown
+      cancelSleepTimer();
+      await forceSleepStop();
+    } else {
+      _sleepTimerRemaining = diff;
+      _sleepTimerController.add(_sleepTimerRemaining);
+    }
+  }
+
+  /// Performs an authoritative, hard shutdown of playback when sleep timer expires.
+  Future<void> forceSleepStop() async {
+    _setStatus(CairoRadioStatus.idle);
+    _activeUrlIndex = 0;
+    try {
+      await _player.setVolume(0.0);
+    } catch (_) {}
+    try {
+      await _player.pause();
+    } catch (_) {}
+    try {
+      await _player.stop();
+    } catch (_) {}
+    onSleepTimerCompleted?.call();
   }
 
   /// Cancels any active sleep timer.
@@ -576,6 +625,7 @@ class CairoRadioAudioService {
     _sleepCountdownTimer?.cancel();
     _sleepCountdownTimer = null;
     _sleepTimerRemaining = null;
+    _sleepTargetTime = null;
     _activeSleepDuration = RadioSleepTimerDuration.none;
     _sleepTimerController.add(null);
   }

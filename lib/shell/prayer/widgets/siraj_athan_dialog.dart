@@ -3,6 +3,7 @@ import '../../../modules/prayer/domain/prayer_type.dart';
 import '../../../modules/prayer/services/athan_audio_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/siraj_app_logo.dart';
+import '../screens/siraj_athan_full_screen_view.dart';
 
 /// نافذة الأذان التفاعلية عند دخول وقت الصلاة
 void showSirajAthanDialog({
@@ -171,15 +172,35 @@ class SirajAthanDialog extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              TextButton(
-                onPressed: () {
-                  audioService.stopAthan();
-                  Navigator.of(context).pop();
-                },
-                child: Text(
-                  'إغلاق',
-                  style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontSize: 13),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.fullscreen_rounded, size: 17),
+                    label: const Text('شاشة الأذان الكاملة'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      SirajAthanFullScreenView.show(
+                        context,
+                        prayerType: prayerType,
+                        prayerTime: prayerTime,
+                        locationName: locationName,
+                        audioService: audioService,
+                        onMarkPrayed: onMarkPrayed,
+                      );
+                    },
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      audioService.stopAthan();
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      'إغلاق',
+                      style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
