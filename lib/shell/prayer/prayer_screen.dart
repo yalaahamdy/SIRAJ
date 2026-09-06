@@ -66,7 +66,6 @@ class _PrayerScreenState extends State<PrayerScreen> {
   StreamSubscription<GeoCoordinates>? _locationSubscription;
   bool _isAcquiringLocation = false;
   DateTime? _lastComputedNextPrayerTime;
-  bool _showCompass = false;
   final Set<String> _firedPrayersToday = {};
 
   @override
@@ -392,8 +391,12 @@ class _PrayerScreenState extends State<PrayerScreen> {
                             _buildDailyScheduleCard(context, isDark),
                             const SizedBox(height: AppSpacing.m),
 
-                            // Qibla Compass Card - Hidden by default behind dedicated button
-                            _buildQiblaCompassSection(context, isDark),
+                            // Qibla Compass Card
+                            QiblaCompassView(
+                              qibla: _qiblaResult,
+                              isDark: isDark,
+                              compassService: widget.compassService,
+                            ),
                             const SizedBox(height: AppSpacing.m),
 
                             // Calculation Method & Transparent Assumptions Disclosure
@@ -727,92 +730,6 @@ class _PrayerScreenState extends State<PrayerScreen> {
                 );
               },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQiblaCompassSection(BuildContext context, bool isDark) {
-    final degrees = _qiblaResult?.directionDegrees.toStringAsFixed(1) ?? '--';
-
-    return Card(
-      elevation: 0.5,
-      color: isDark ? AppColors.surfaceDark : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: isDark ? AppColors.borderDark : Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.explore_rounded, color: AppColors.primary, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            AppStrings.qiblaDirection,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                          ),
-                          Text(
-                            ': $degrees°',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'الكعبة المشرفة بمكة المكرمة',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? const Color(0xFFCBD5E1) : Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => setState(() => _showCompass = !_showCompass),
-                  icon: Icon(
-                    _showCompass ? Icons.visibility_off_rounded : Icons.explore_rounded,
-                    size: 16,
-                  ),
-                  label: Text(_showCompass ? 'إخفاء البوصلة' : 'إظهار البوصلة'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? AppColors.goldAccentLight : AppColors.primary,
-                    side: BorderSide(
-                      color: (isDark ? AppColors.goldAccentLight : AppColors.primary).withValues(alpha: 0.5),
-                    ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  ),
-                ),
-              ],
-            ),
-            if (_showCompass) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              QiblaCompassView(
-                qibla: _qiblaResult,
-                isDark: isDark,
-                compassService: widget.compassService,
-              ),
-            ],
           ],
         ),
       ),

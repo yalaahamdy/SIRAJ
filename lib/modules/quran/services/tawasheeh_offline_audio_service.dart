@@ -203,13 +203,14 @@ class TawasheehOfflineAudioService {
             }
 
             if (matchedItem == null && store != null) {
-              final clean = fileName.replaceAll(RegExp(r'\.mp3$', caseSensitive: false), '').trim();
+              final clean = _cleanTrackTitle(fileName);
+              final reciter = _detectReciterName(fileName);
               newCustomItems.add(
                 TawasheehItem(
                   id: 'local_tawasheeh_${DateTime.now().millisecondsSinceEpoch}_$imported',
                   cleanTitle: clean,
-                  fullTitle: clean,
-                  reciter: 'تسجيل محلي',
+                  fullTitle: fileName,
+                  reciter: reciter,
                   duration: '--:--',
                   durationSeconds: 0.0,
                   url: '',
@@ -223,7 +224,7 @@ class TawasheehOfflineAudioService {
       }
 
       if (newCustomItems.isNotEmpty && store != null) {
-        store.addCustomItems(newCustomItems);
+        await store.addCustomItems(newCustomItems);
       }
 
       return TawasheehImportResult(
@@ -296,16 +297,14 @@ class TawasheehOfflineAudioService {
               }
 
               if (!matched) {
-                final clean = baseName
-                    .replaceAll(RegExp(r'\.mp3$', caseSensitive: false), '')
-                    .replaceAll(RegExp(r'^\d+[\s\-_]+'), '')
-                    .trim();
+                final clean = _cleanTrackTitle(baseName);
+                final reciter = _detectReciterName(baseName);
                 customItems.add(
                   TawasheehItem(
                     id: 'custom_zip_${DateTime.now().millisecondsSinceEpoch}_$importedCount',
-                    cleanTitle: clean.isNotEmpty ? clean : baseName,
+                    cleanTitle: clean,
                     fullTitle: baseName,
-                    reciter: _detectReciterName(baseName),
+                    reciter: reciter,
                     duration: '--:--',
                     durationSeconds: 0.0,
                     url: '',
@@ -322,7 +321,7 @@ class TawasheehOfflineAudioService {
       await input.close();
 
       if (customItems.isNotEmpty && store != null) {
-        store.addCustomItems(customItems);
+        await store.addCustomItems(customItems);
       }
 
       if (importedCount == 0) {
@@ -396,7 +395,7 @@ class TawasheehOfflineAudioService {
         return false;
       }
     } catch (e) {
-      onError?.call('خطأ أثناء تنزيل الابتهال: $e');
+      onError?.call('حدث خطأ أثناء الاتصال بالخادم: $e');
       client.close(force: true);
       return false;
     }
@@ -412,64 +411,67 @@ class TawasheehOfflineAudioService {
       await dir.create(recursive: true);
     }
     if (store != null) {
-      store.clearLocalPaths();
+      await store.clearLocalPaths();
     }
   }
 
-  /// Fuzzy matching between extracted filename and Tawasheeh metadata.
+  /// Strict matching to ensure user imported audio files NEVER overwrite catalog items erroneously.
   bool _matchesTawasheeh(String fileName, TawasheehItem item) {
     final f = fileName.toLowerCase().trim();
     final clean = item.cleanTitle.toLowerCase().trim();
     final reciter = item.reciter.toLowerCase().trim();
 
-    // Match by item ID
-    if (f.startsWith(item.id.toLowerCase())) return true;
+    // Match by exact item ID
+    final idLower = item.id.toLowerCase();
+    if (f == '$idLower.mp3' || f == '$idLower.m4a' || f.startsWith('${idLower}_')) {
+      return true;
+    }
 
-    // Match by prefix index (e.g. "16 - " or "01 - " matching id "tawasheeh_016")
-    final match = RegExp(r'^0*(\d+)').firstMatch(f);
-    if (match != null) {
-      final fileIndex = int.tryParse(match.group(1)!);
-      final itemIndex = int.tryParse(item.id.replaceAll(RegExp(r'[^\d]'), ''));
-      if (fileIndex != null && itemIndex != null && fileIndex == itemIndex) {
+    // Match by exact archive.org file name in URL
+    if (item.url.isNotEmpty) {
+      final decodedUrl = Uri.decodeComponent(item.url).toLowerCase();
+      final urlFileName = decodedUrl.split('/').last.trim();
+      if (urlFileName.isNotEmpty && f == urlFileName) {
         return true;
       }
     }
 
-    // Match by reciter and significant title keywords
-    if (reciter.isNotEmpty && f.contains(reciter)) {
-      final words = clean.split(RegExp(r'\s+')).where((w) => w.length > 3);
-      for (final w in words) {
-        if (f.contains(w)) return true;
+    // Match only if reciter AND significant unique title match
+    if (reciter.isNotEmpty && clean.isNotEmpty && clean.length > 5 && f.contains(reciter)) {
+      final normClean = clean.replaceAll(RegExp(r'[^\w\u0600-\u06FF]'), ' ').trim();
+      final normFile = f.replaceAll(RegExp(r'[^\w\u0600-\u06FF]'), ' ').trim();
+      if (normFile.contains(normClean)) {
+        return true;
       }
     }
 
     return false;
   }
 
-  String _detectReciterName(String fileName) {
-    const knownReciters = [
-      'محمد عمران',
-      'نصر الدين طوبار',
-      'نصرالدين طوبار',
-      'كامل يوسف البهتيمي',
-      'محمد الطوخي',
-      'محمد الطوخى',
-      'إسماعيل السمكري',
-      'اسماعيل السمكرى',
-      'محمد الهلباوي',
-      'حسن قاسم',
-      'سعيد حافظ',
-      'سلامة الريدي',
-      'سلامة الريدى',
-      'ممدوح عبد الجليل',
-      'عبد السميع بيومي',
-    ];
+  String _cleanTrackTitle(String fileName) {
+    var title = fileName
+        .replaceAll(RegExp(r'\.(mp3|m4a|wav|aac|ogg|flac)$', caseSensitive: false), '')
+        .replaceAll(RegExp(r'^\d+[\s\-_.]+'), '') // Strip leading track numbers (e.g. 01 - or 01.)
+        .replaceAll(RegExp(r'[_\-]+'), ' ')
+        .trim();
+    return title.isNotEmpty ? title : fileName;
+  }
 
-    for (final r in knownReciters) {
-      if (fileName.contains(r)) {
-        return r.replaceAll('ى', 'ي').replaceAll('نصرالدين', 'نصر الدين');
-      }
-    }
-    return 'كبار المبتهلين';
+  String _detectReciterName(String fileName) {
+    if (fileName.contains('النقشبندي')) return 'سيد النقشبندي';
+    if (fileName.contains('الفشني')) return 'طه الفشني';
+    if (fileName.contains('نصر الدين') || fileName.contains('نصرالدين') || fileName.contains('طوبار')) return 'نصر الدين طوبار';
+    if (fileName.contains('عمران')) return 'محمد عمران';
+    if (fileName.contains('البهتيمي')) return 'كامل يوسف البهتيمي';
+    if (fileName.contains('الطوخي') || fileName.contains('الطوخى')) return 'محمد الطوخي';
+    if (fileName.contains('السمكري') || fileName.contains('السمكرى')) return 'إسماعيل السمكري';
+    if (fileName.contains('الهلباوي') || fileName.contains('الهلباوى')) return 'محمد الهلباوي';
+    if (fileName.contains('حسن قاسم')) return 'حسن قاسم';
+    if (fileName.contains('سعيد حافظ')) return 'سعيد حافظ';
+    if (fileName.contains('الريدي') || fileName.contains('الريدى')) return 'سلامة الريدي';
+    if (fileName.contains('ممدوح عبد الجليل')) return 'ممدوح عبد الجليل';
+    if (fileName.contains('عبد السميع بيومي') || fileName.contains('عبد السميع بيومى')) return 'عبد السميع بيومي';
+    if (fileName.contains('عبد العظيم زاهر')) return 'عبد العظيم زاهر';
+    return 'تسجيلات مستوردة';
   }
 }

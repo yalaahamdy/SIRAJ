@@ -1037,7 +1037,47 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Offline Status or Download Action
-                  if (item.isOfflineAvailable)
+                  if (item.isCustomLocal) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Tooltip(
+                        message: 'تسجيل مستورد محلياً',
+                        child: Icon(
+                          Icons.folder_special_rounded,
+                          size: 19,
+                          color: AppColors.goldAccent,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                      tooltip: 'حذف هذا التسجيل من الجهاز',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      color: isDark ? Colors.red.shade300 : Colors.red.shade600,
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('حذف التسجيل المستورد'),
+                            content: Text('هل تريد بالتأكيد حذف "${item.cleanTitle}" من جهازك؟'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('حذف', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true && mounted) {
+                          await widget.tawasheehStore.removeCustomItem(item.id);
+                          setState(() {});
+                        }
+                      },
+                    ),
+                  ] else if (item.isOfflineAvailable)
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 4),
                       child: Tooltip(

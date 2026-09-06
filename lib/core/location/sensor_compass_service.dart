@@ -39,8 +39,8 @@ class DeviceSensorCompassService implements SensorCompassService {
         (event) {
           _hasSensor = true;
           // Calculate heading in horizontal plane from magnetometer vector
-          // atan2(-y, x) yields heading in radians clockwise from north
-          double headingRad = math.atan2(-event.y, event.x);
+          // atan2(-x, y) yields heading in radians clockwise from north for standard phone orientation
+          double headingRad = math.atan2(-event.x, event.y);
           double headingDeg = (headingRad * 180.0 / math.pi) % 360.0;
           if (headingDeg < 0.0) {
             headingDeg += 360.0;

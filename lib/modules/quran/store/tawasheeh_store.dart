@@ -8,6 +8,9 @@ import '../domain/tawasheeh_item.dart';
 class TawasheehStore {
   static const String assetPath = 'assets/quran/audio/tawasheeh_collection.json';
 
+  static const String _customItemsFile = 'tawasheeh_custom_items.json';
+  static const String _localPathsFile = 'tawasheeh_local_paths.json';
+
   final List<TawasheehItem> _items = [];
   final Set<String> _favoriteIds = {};
   bool _isLoaded = false;
@@ -45,6 +48,8 @@ class TawasheehStore {
       _isLoaded = true;
     }
     await _loadPersistedFavorites();
+    await _loadPersistedCustomItems();
+    await _loadPersistedLocalPaths();
   }
 
   bool isFavorite(String id) => _favoriteIds.contains(id);
@@ -81,17 +86,89 @@ class TawasheehStore {
     } catch (_) {}
   }
 
+  Future<void> _persistCustomItems() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final file = File('${docDir.path}${Platform.pathSeparator}$_customItemsFile');
+      final customs = _items.where((it) => it.isCustomLocal).map((it) => it.toJson()).toList();
+      await file.writeAsString(json.encode(customs));
+    } catch (_) {}
+  }
+
+  Future<void> _loadPersistedCustomItems() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final file = File('${docDir.path}${Platform.pathSeparator}$_customItemsFile');
+      if (file.existsSync()) {
+        final decoded = json.decode(await file.readAsString()) as List<dynamic>;
+        for (final itemJson in decoded) {
+          if (itemJson is Map<String, dynamic>) {
+            final item = TawasheehItem.fromJson(itemJson);
+            // Verify file still exists if localFilePath is set
+            if (item.localFilePath != null && item.localFilePath!.isNotEmpty) {
+              if (File(item.localFilePath!).existsSync()) {
+                if (!_items.any((existing) => existing.id == item.id)) {
+                  _items.add(item);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistLocalPaths() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final file = File('${docDir.path}${Platform.pathSeparator}$_localPathsFile');
+      final pathMap = <String, String>{};
+      for (final it in _items) {
+        if (!it.isCustomLocal && it.localFilePath != null && it.localFilePath!.isNotEmpty) {
+          pathMap[it.id] = it.localFilePath!;
+        }
+      }
+      await file.writeAsString(json.encode(pathMap));
+    } catch (_) {}
+  }
+
+  Future<void> _loadPersistedLocalPaths() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final file = File('${docDir.path}${Platform.pathSeparator}$_localPathsFile');
+      if (file.existsSync()) {
+        final decoded = json.decode(await file.readAsString()) as Map<String, dynamic>;
+        for (final entry in decoded.entries) {
+          final idx = _items.indexWhere((it) => it.id == entry.key);
+          if (idx != -1 && File(entry.value.toString()).existsSync()) {
+            _items[idx] = _items[idx].copyWith(localFilePath: entry.value.toString());
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
   /// Filters items by search query, reciter name, and favorite status.
-  List<TawasheehItem> filter({String? query, String? reciter, bool onlyFavorites = false}) {
+  List<TawasheehItem> filter({
+    String? query,
+    String? reciter,
+    bool onlyFavorites = false,
+    bool onlyDownloads = false,
+  }) {
     return _items.where((item) {
       if (onlyFavorites || reciter == 'المفضلة') {
         if (!_favoriteIds.contains(item.id)) return false;
+      }
+
+      if (onlyDownloads || reciter == 'التنزيلات') {
+        if (!item.isCustomLocal && !item.isOfflineAvailable) return false;
       }
 
       final matchesReciter = reciter == null ||
           reciter.isEmpty ||
           reciter == 'الكل' ||
           reciter == 'المفضلة' ||
+          reciter == 'التنزيلات' ||
           item.reciter == reciter;
 
       final q = (query ?? '').trim().toLowerCase();
@@ -103,7 +180,7 @@ class TawasheehStore {
     }).toList();
   }
 
-  /// Returns unique sorted list of all available reciter names, with favorites if any.
+  /// Returns unique sorted list of all available reciter names, with favorites and downloads if any.
   List<String> getReciters() {
     final set = <String>{};
     for (final item in _items) {
@@ -113,9 +190,11 @@ class TawasheehStore {
     }
     final list = set.toList();
     list.sort();
+    final hasDownloads = _items.any((it) => it.isCustomLocal || it.isOfflineAvailable);
     return [
       'الكل',
       if (_favoriteIds.isNotEmpty) 'المفضلة',
+      if (hasDownloads) 'التنزيلات',
       ...list,
     ];
   }
@@ -133,25 +212,47 @@ class TawasheehStore {
     final index = _items.indexWhere((it) => it.id == id);
     if (index != -1) {
       _items[index] = _items[index].copyWith(localFilePath: localPath);
+      _persistLocalPaths();
     }
   }
 
-  /// Appends custom user-imported recordings to the store.
-  void addCustomItems(List<TawasheehItem> newItems) {
+  /// Appends custom user-imported recordings to the store and persists them.
+  Future<void> addCustomItems(List<TawasheehItem> newItems) async {
     for (final it in newItems) {
-      final exists = _items.any((existing) => existing.id == it.id || existing.localFilePath == it.localFilePath);
+      final exists = _items.any((existing) => existing.id == it.id || (existing.localFilePath != null && existing.localFilePath == it.localFilePath));
       if (!exists) {
         _items.add(it);
       }
     }
+    await _persistCustomItems();
+  }
+
+  /// Removes a custom imported recording from the store and storage.
+  Future<void> removeCustomItem(String id) async {
+    final index = _items.indexWhere((it) => it.id == id);
+    if (index != -1) {
+      final item = _items[index];
+      if (item.localFilePath != null && item.localFilePath!.isNotEmpty) {
+        try {
+          final file = File(item.localFilePath!);
+          if (file.existsSync()) {
+            await file.delete();
+          }
+        } catch (_) {}
+      }
+      _items.removeAt(index);
+      await _persistCustomItems();
+    }
   }
 
   /// Resets all local file associations in the store.
-  void clearLocalPaths() {
+  Future<void> clearLocalPaths() async {
     for (int i = 0; i < _items.length; i++) {
       _items[i] = _items[i].copyWith(localFilePath: '');
     }
     _items.removeWhere((it) => it.isCustomLocal);
+    await _persistCustomItems();
+    await _persistLocalPaths();
   }
 
   static const List<TawasheehItem> _fallbackSeedItems = [
