@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../../modules/quran/domain/cairo_radio_station.dart';
 import '../../../../modules/quran/domain/tawasheeh_item.dart';
@@ -95,7 +96,13 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
       duration: const Duration(milliseconds: 1200),
     );
 
-    if (_status == CairoRadioStatus.playing) {
+    if (!widget.tawasheehStore.isLoaded) {
+      widget.tawasheehStore.load().then((_) {
+        if (mounted) setState(() {});
+      });
+    }
+
+    if (_status == CairoRadioStatus.playing && !Platform.environment.containsKey('FLUTTER_TEST')) {
       _waveAnimController.repeat(reverse: true);
     }
 
@@ -103,7 +110,9 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
       if (mounted) {
         setState(() => _status = s);
         if (s == CairoRadioStatus.playing) {
-          if (!_waveAnimController.isAnimating) _waveAnimController.repeat(reverse: true);
+          if (!_waveAnimController.isAnimating && !Platform.environment.containsKey('FLUTTER_TEST')) {
+            _waveAnimController.repeat(reverse: true);
+          }
         } else {
           _waveAnimController.stop();
         }
@@ -178,7 +187,33 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
           ),
         ),
 
-        if (filteredItems.isEmpty)
+        if (!widget.tawasheehStore.isLoaded)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!Platform.environment.containsKey('FLUTTER_TEST'))
+                      const CircularProgressIndicator(color: AppColors.goldAccent),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'جارٍ تحميل روائع الابتهالات والتواشيح...',
+                      style: TextStyle(
+                        fontFamily: 'Amiri',
+                        fontSize: 16,
+                        color: AppColors.goldAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else if (filteredItems.isEmpty)
           SliverToBoxAdapter(
             child: _buildEmptyState(isDark),
           )

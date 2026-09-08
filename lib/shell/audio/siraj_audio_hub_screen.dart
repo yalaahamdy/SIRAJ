@@ -41,7 +41,12 @@ class SirajAudioHubScreenState extends State<SirajAudioHubScreen>
   @override
   void initState() {
     super.initState();
-    _tawasheehStore = widget.tawasheehStore ?? TawasheehStore();
+    _tawasheehStore = widget.tawasheehStore ?? widget.quranModule.tawasheehStore;
+    if (!_tawasheehStore.isLoaded) {
+      _tawasheehStore.load().then((_) {
+        if (mounted) setState(() {});
+      });
+    }
     _tabController = TabController(
       length: 4,
       vsync: this,

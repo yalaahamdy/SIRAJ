@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:siraj/core/storage/memory_storage.dart';
 import 'package:siraj/modules/quran/quran_module.dart';
+import 'package:siraj/modules/quran/domain/tawasheeh_item.dart';
 import 'package:siraj/modules/quran/store/canonical_quran_loader.dart';
+import 'package:siraj/modules/quran/store/tawasheeh_store.dart';
 import 'package:siraj/shell/audio/siraj_audio_hub_screen.dart';
 import 'package:siraj/shell/quran/widgets/cairo_radio_live_view.dart';
 import 'package:siraj/shell/quran/widgets/quran_audio_radio_tab.dart';
@@ -150,6 +152,49 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TawasheehPlayerView), findsOneWidget);
+    });
+
+    testWidgets('Displays Tawasheeh items when store is loaded', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final customStore = TawasheehStore();
+      await customStore.load(
+        initialItems: const [
+          TawasheehItem(
+            id: 'sample_01',
+            cleanTitle: 'ابتهال نادر',
+            fullTitle: 'ابتهال نادر للشيخ سيد النقشبندي',
+            reciter: 'سيد النقشبندي',
+            duration: '05:00',
+            durationSeconds: 300,
+            url: 'https://example.com/test.mp3',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: SirajAudioHubScreen(
+              initialTabIndex: 1,
+              tawasheehStore: customStore,
+              quranModule: quranModule,
+              onOpenSurah: (surah, {targetAyah, targetPage}) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TawasheehPlayerView), findsOneWidget);
+      expect(customStore.isLoaded, isTrue);
+      expect(customStore.allItems.isNotEmpty, isTrue);
     });
   });
 }

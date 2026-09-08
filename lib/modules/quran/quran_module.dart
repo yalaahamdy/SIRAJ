@@ -26,6 +26,7 @@ import 'store/canonical_quran_package.dart';
 import 'store/canonical_quran_store.dart';
 import 'store/quran_content_diff_engine.dart';
 import 'store/sharawy_store.dart';
+import 'store/tawasheeh_store.dart';
 
 /// Unified Module Facade for the Quran Subsystem (L2).
 /// Implements [QuranModuleContract] and encapsulates all Quran store, reader, audio, and user data services.
@@ -44,6 +45,7 @@ class QuranModule implements QuranModuleContract {
   final SharawyStore sharawyStore;
   final SharawyAudioService sharawyAudioService;
   final SharawyOfflineAudioService sharawyOfflineAudioService;
+  final TawasheehStore tawasheehStore;
 
   QuranModule({
     required StorageRegistry storageRegistry,
@@ -54,6 +56,7 @@ class QuranModule implements QuranModuleContract {
     CairoRadioAudioService? radioServiceInstance,
     SharawyStore? sharawyStoreInstance,
     SharawyAudioService? sharawyAudioServiceInstance,
+    TawasheehStore? tawasheehStoreInstance,
   }) : this._internal(
           store: storeInstance ?? ReadOnlyCanonicalQuranStore(),
           storageRegistry: storageRegistry,
@@ -63,6 +66,7 @@ class QuranModule implements QuranModuleContract {
           radioService: radioServiceInstance,
           sharawyStore: sharawyStoreInstance,
           sharawyAudioService: sharawyAudioServiceInstance,
+          tawasheehStore: tawasheehStoreInstance,
         );
 
   QuranModule._internal({
@@ -74,6 +78,7 @@ class QuranModule implements QuranModuleContract {
     CairoRadioAudioService? radioService,
     SharawyStore? sharawyStore,
     SharawyAudioService? sharawyAudioService,
+    TawasheehStore? tawasheehStore,
   })  : recitationSessionStore = QuranRecitationSessionStore(
           storageRegistry: storageRegistry,
         ),
@@ -96,6 +101,7 @@ class QuranModule implements QuranModuleContract {
         sharawyStore = sharawyStore ?? SharawyStore(),
         sharawyAudioService = sharawyAudioService ?? SharawyAudioService(),
         sharawyOfflineAudioService = SharawyOfflineAudioService.instance..init(),
+        tawasheehStore = tawasheehStore ?? TawasheehStore(),
         tafsirService = tafsirService ?? DefaultQuranTafsirService(),
         diffEngine = QuranContentDiffEngine(clock: clock) {
     // Coordinate mutual audio exclusivity
