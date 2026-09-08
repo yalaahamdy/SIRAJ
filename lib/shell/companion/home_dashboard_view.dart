@@ -16,8 +16,13 @@ import '../../../modules/quran/services/cairo_radio_audio_service.dart';
 
 class HomeDashboardView extends StatefulWidget {
   final CompanionModule module;
+  final Function(int tabIndex)? onNavigateToAudio;
 
-  const HomeDashboardView({super.key, required this.module});
+  const HomeDashboardView({
+    super.key,
+    required this.module,
+    this.onNavigateToAudio,
+  });
 
   @override
   State<HomeDashboardView> createState() => _HomeDashboardViewState();
@@ -203,7 +208,6 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
 
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF131F2E) : const Color(0xFFFBF8F3),
                   borderRadius: BorderRadius.circular(14),
@@ -211,20 +215,33 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
                     color: AppColors.goldAccent.withValues(alpha: isDark ? 0.35 : 0.45),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.goldAccent.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.radio_rounded,
-                        color: isDark ? AppColors.goldAccentLight : AppColors.goldAccent,
-                        size: 20,
-                      ),
-                    ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      if (widget.onNavigateToAudio != null) {
+                        widget.onNavigateToAudio!(0);
+                      } else {
+                        Navigator.pushNamed(context, AppRouter.audioHub, arguments: {'tab': 0});
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.goldAccent.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.radio_rounded,
+                              color: isDark ? AppColors.goldAccentLight : AppColors.goldAccent,
+                              size: 20,
+                            ),
+                          ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -282,7 +299,10 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
                           }
                         },
                       ),
-                  ],
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               );
             },
@@ -320,6 +340,16 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
                   icon: Icons.menu_book_rounded,
                   route: AppRouter.quran,
                   color: AppColors.primaryAction(context),
+                ),
+                _buildNavChip(
+                  context,
+                  title: 'الصوتيات والإذاعة',
+                  icon: Icons.headphones_rounded,
+                  route: AppRouter.audioHub,
+                  color: const Color(0xFFD4AF37),
+                  onTapOverride: widget.onNavigateToAudio != null
+                      ? () => widget.onNavigateToAudio!(0)
+                      : null,
                 ),
                 _buildNavChip(
                   context,
@@ -454,6 +484,7 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
     required IconData icon,
     required String route,
     required Color color,
+    VoidCallback? onTapOverride,
   }) {
     return ActionChip(
       avatar: Icon(icon, size: 16, color: color),
@@ -467,7 +498,7 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
       ),
       backgroundColor: AppColors.cardBackground(context),
       side: BorderSide(color: AppColors.border(context)),
-      onPressed: () => Navigator.pushNamed(context, route),
+      onPressed: onTapOverride ?? () => Navigator.pushNamed(context, route),
     );
   }
 

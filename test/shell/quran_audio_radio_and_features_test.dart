@@ -80,7 +80,7 @@ void main() {
       expect(constraints?.minWidth == double.infinity || container.margin?.horizontal == 0, isTrue);
     });
 
-    testWidgets('SurahListScreen includes the new Radio and Recitation sub-tab', (tester) async {
+    testWidgets('SurahListScreen includes the 3 dedicated reading tabs: Surahs, Juzs, and Settings', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: SurahListScreen(
@@ -91,18 +91,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Check the 4 tabs exist
+      // Check the 3 reading tabs exist
       expect(find.text('السور'), findsOneWidget);
-      expect(find.text('التلاوة'), findsOneWidget);
       expect(find.text('الأجزاء'), findsOneWidget);
       expect(find.text('الإعدادات'), findsOneWidget);
-
-      // Switch to Radio tab
-      await tester.tap(find.text('التلاوة'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(QuranAudioRadioTab), findsOneWidget);
-      expect(find.text(kDefaultAbdulBasitReciter.nameArabic), findsWidgets);
 
       // Switch to Settings tab
       await tester.tap(find.text('الإعدادات'));

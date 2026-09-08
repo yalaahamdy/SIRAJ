@@ -21,6 +21,7 @@ import '../adhkar/adhkar_home_screen.dart';
 import '../adhkar/dhikr_detail_screen.dart';
 import '../adhkar/occasion_adhkar_screen.dart';
 import '../ai/ai_search_query_screen.dart';
+import '../audio/siraj_audio_hub_screen.dart';
 import '../companion/home_dashboard_view.dart';
 import '../fasting/fasting_calendar_screen.dart';
 import '../fasting/fasting_dashboard_screen.dart';
@@ -125,6 +126,7 @@ class AppRouter {
   static const String hajjLocations = '/hajj/locations';
   static const String hajjPreparation = '/hajj/preparation';
   static const String settings = '/settings';
+  static const String audioHub = '/audio';
   static QuranModule? defaultQuranModule;
   static AdhkarModule? defaultAdhkarModule;
   static MemorizationModule? defaultMemorizationModule;
@@ -802,6 +804,46 @@ class AppRouter {
               ),
             ),
           ),
+        ),
+        settings: routeSettings,
+      );
+    }
+
+    // Handle Audio Studio deep links like /audio, /audio/radio, /audio/tawasheeh, /audio/sharawy, /audio/recitation
+    if (name == audioHub || name.startsWith('/audio/')) {
+      final quranMod = defaultQuranModule ?? QuranModule(storageRegistry: MemoryStorageRegistry());
+      int initialTab = 0;
+      if (name == '/audio/radio') {
+        initialTab = 0;
+      } else if (name == '/audio/tawasheeh') {
+        initialTab = 1;
+      } else if (name == '/audio/sharawy') {
+        initialTab = 2;
+      } else if (name == '/audio/recitation') {
+        initialTab = 3;
+      } else {
+        final args = routeSettings.arguments;
+        if (args is Map && args['tab'] is int) {
+          initialTab = args['tab'] as int;
+        }
+      }
+
+      return MaterialPageRoute(
+        builder: (ctx) => SirajAudioHubScreen(
+          initialTabIndex: initialTab,
+          quranModule: quranMod,
+          onOpenSurah: (surahNum, {targetPage, targetAyah}) {
+            Navigator.pushNamed(
+              ctx,
+              quranReader,
+              arguments: {
+                'surah_number': surahNum,
+                'page_number': targetPage,
+                'ayah_number': targetAyah,
+                'module': quranMod,
+              },
+            );
+          },
         ),
         settings: routeSettings,
       );

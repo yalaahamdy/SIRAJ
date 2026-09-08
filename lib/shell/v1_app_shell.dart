@@ -29,6 +29,7 @@ import '../modules/prayer/domain/prayer_adjustments.dart';
 import '../modules/prayer/domain/prayer_type.dart';
 import '../modules/quran/domain/cairo_radio_station.dart';
 import 'adhkar/adhkar_home_screen.dart';
+import 'audio/siraj_audio_hub_screen.dart';
 import 'companion/home_dashboard_view.dart';
 import 'prayer/prayer_screen.dart';
 import 'quran/surah_list_screen.dart';
@@ -61,6 +62,7 @@ class V1AppShell extends StatefulWidget {
 class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   late int _currentIndex;
   late final StorageRegistry _storage;
+  final GlobalKey<SirajAudioHubScreenState> _audioHubKey = GlobalKey<SirajAudioHubScreenState>();
 
   late final PrayerModule _prayerModule;
   late final QuranModule _quranModule;
@@ -247,7 +249,7 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
           locationName: _locationEngine.currentEffectiveLocation.cityName ?? 'موقعك الحالي',
           audioService: _prayerModule.athanAudioService,
           onOpenQiblah: () => setState(() => _currentIndex = 1),
-          onOpenAdhkar: () => setState(() => _currentIndex = 3),
+          onOpenAdhkar: () => setState(() => _currentIndex = 4),
         );
       } else {
         setState(() => _currentIndex = 1);
@@ -457,7 +459,13 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final screens = <Widget>[
       // 0. Home Command Center
-      HomeDashboardView(module: _companionModule),
+      HomeDashboardView(
+        module: _companionModule,
+        onNavigateToAudio: (tabIndex) {
+          setState(() => _currentIndex = 3);
+          _audioHubKey.currentState?.switchToTab(tabIndex);
+        },
+      ),
 
       // 1. Prayer & Qibla
       PrayerScreen(
@@ -483,10 +491,28 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
         },
       ),
 
-      // 3. Adhkar & Counter
+      // 3. Audio Studio (الصوتيات: إذاعة القاهرة، التواشيح، خواطر الشعراوي، التلاوة)
+      SirajAudioHubScreen(
+        key: _audioHubKey,
+        quranModule: _quranModule,
+        onOpenSurah: (surahNum, {targetPage, targetAyah}) {
+          Navigator.pushNamed(
+            context,
+            AppRouter.quranReader,
+            arguments: {
+              'surah_number': surahNum,
+              'page_number': targetPage,
+              'ayah_number': targetAyah,
+              'module': _quranModule,
+            },
+          );
+        },
+      ),
+
+      // 4. Adhkar & Counter
       AdhkarHomeScreen(module: _adhkarModule),
 
-      // 4. Knowledge & More
+      // 5. Knowledge & More
       V1MoreHomeScreen(companionModule: _companionModule),
     ];
 
@@ -549,6 +575,10 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
             BottomNavigationBarItem(
               icon: Icon(Icons.menu_book_rounded),
               label: 'المصحف',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.headphones_rounded),
+              label: 'الصوتيات',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.auto_stories_rounded),

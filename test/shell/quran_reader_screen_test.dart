@@ -38,7 +38,6 @@ void main() {
 
       // Check Tabs
       expect(find.text('السور'), findsOneWidget);
-      expect(find.text('التلاوة'), findsOneWidget);
       expect(find.text('الأجزاء'), findsOneWidget);
       expect(find.text('الإعدادات'), findsOneWidget);
 

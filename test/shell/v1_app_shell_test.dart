@@ -33,10 +33,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify all 5 tab labels in bottom navigation bar
+      // Verify all 6 tab labels in bottom navigation bar
       expect(find.text('الرئيسية'), findsOneWidget);
       expect(find.text('الصلاة'), findsOneWidget);
       expect(find.text('المصحف'), findsOneWidget);
+      expect(find.text('الصوتيات'), findsOneWidget);
       expect(find.text('الأذكار'), findsOneWidget);
       expect(find.text('المزيد'), findsOneWidget);
 
@@ -47,7 +48,7 @@ void main() {
       expect(find.text('الروتين اليومي المتوازن'), findsOneWidget);
     });
 
-    testWidgets('Tapping bottom tabs switches between Prayer, Quran, Adhkar, and More views', (tester) async {
+    testWidgets('Tapping bottom tabs switches between Prayer, Quran, Audio, Adhkar, and More views', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -86,7 +87,20 @@ void main() {
       expect(find.text('السور'), findsOneWidget);
       expect(find.text('الأجزاء'), findsOneWidget);
 
-      // Switch to Tab 3: Adhkar
+      // Switch to Tab 3: Audio Hub (الصوتيات)
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomNavigationBar),
+          matching: find.byIcon(Icons.headphones_rounded),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('إذاعة القاهرة'), findsOneWidget);
+      expect(find.text('التواشيح'), findsOneWidget);
+      expect(find.text('خواطر الشعراوي'), findsOneWidget);
+      expect(find.text('التلاوة'), findsOneWidget);
+
+      // Switch to Tab 4: Adhkar
       await tester.tap(
         find.descendant(
           of: find.byType(BottomNavigationBar),
@@ -97,7 +111,7 @@ void main() {
       expect(find.text('الأذكار والأدعية'), findsWidgets);
       expect(find.text('المناسبة الحالية'), findsOneWidget);
 
-      // Switch to Tab 4: More
+      // Switch to Tab 5: More
       await tester.tap(
         find.descendant(
           of: find.byType(BottomNavigationBar),
