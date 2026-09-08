@@ -12,6 +12,7 @@ class SirajAthanFullScreenView extends StatefulWidget {
   final String locationName;
   final AthanAudioService audioService;
   final VoidCallback? onMarkPrayed;
+  final VoidCallback? onSnooze;
   final VoidCallback? onOpenQiblah;
   final VoidCallback? onOpenAdhkar;
 
@@ -22,6 +23,7 @@ class SirajAthanFullScreenView extends StatefulWidget {
     required this.locationName,
     required this.audioService,
     this.onMarkPrayed,
+    this.onSnooze,
     this.onOpenQiblah,
     this.onOpenAdhkar,
   });
@@ -33,6 +35,7 @@ class SirajAthanFullScreenView extends StatefulWidget {
     required String locationName,
     required AthanAudioService audioService,
     VoidCallback? onMarkPrayed,
+    VoidCallback? onSnooze,
     VoidCallback? onOpenQiblah,
     VoidCallback? onOpenAdhkar,
   }) {
@@ -45,6 +48,7 @@ class SirajAthanFullScreenView extends StatefulWidget {
           locationName: locationName,
           audioService: audioService,
           onMarkPrayed: onMarkPrayed,
+          onSnooze: onSnooze,
           onOpenQiblah: onOpenQiblah,
           onOpenAdhkar: onOpenAdhkar,
         ),
@@ -310,20 +314,20 @@ class _SirajAthanFullScreenViewState extends State<SirajAthanFullScreenView>
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  // Prayed Confirmation Button
+                                  const SizedBox(width: 10),
+                                  // Snooze Button
                                   Expanded(
-                                    child: FilledButton.icon(
+                                    child: OutlinedButton.icon(
                                       onPressed: () {
                                         widget.audioService.stopAthan();
-                                        widget.onMarkPrayed?.call();
+                                        widget.onSnooze?.call();
                                         Navigator.of(context).pop();
                                       },
-                                      icon: const Icon(Icons.check_circle_rounded, size: 18),
-                                      label: const Text('أديت الصلاة'),
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: AppColors.goldAccent,
-                                        foregroundColor: Colors.black87,
+                                      icon: const Icon(Icons.snooze_rounded, size: 18),
+                                      label: const Text('تأجيل 5 دقائق'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFFE5C07B),
+                                        side: BorderSide(color: const Color(0xFFDAA520).withValues(alpha: 0.6)),
                                         padding: const EdgeInsets.symmetric(vertical: 13),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
@@ -332,6 +336,28 @@ class _SirajAthanFullScreenViewState extends State<SirajAthanFullScreenView>
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 10),
+                              // Prayed Confirmation Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: () {
+                                    widget.audioService.stopAthan();
+                                    widget.onMarkPrayed?.call();
+                                    Navigator.of(context).pop();
+                                  },
+                                  icon: const Icon(Icons.check_circle_rounded, size: 19),
+                                  label: const Text('أديت الصلاة'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppColors.goldAccent,
+                                    foregroundColor: Colors.black87,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                ),
                               ),
 
                               const SizedBox(height: 12),

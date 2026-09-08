@@ -40,6 +40,7 @@ import '../core/audio/siraj_feedback_audio_service.dart';
 import '../core/notifications/siraj_notification_manager.dart';
 import '../core/notifications/siraj_media_notification_service.dart';
 import 'prayer/screens/siraj_athan_full_screen_view.dart';
+import 'prayer/widgets/siraj_athan_overlay_banner.dart';
 import 'v1_more_screen.dart';
 import 'widgets/state_views.dart';
 
@@ -228,33 +229,93 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
       _prayerModule.athanAudioService.stopAthan();
     };
 
-    // 2. Action buttons (Open prayer, open qiblah)
+    // 1.1 Athan snooze action (5 minutes)
+    SirajNotificationManager.instance.onAthanSnoozeRequested = () {
+      _prayerModule.athanAudioService.stopAthan();
+      final snoozeTime = DateTime.now().add(const Duration(minutes: 5));
+      SirajNotificationManager.instance.schedulePrayerNotification(
+        id: 88899,
+        title: 'تنبيه الأذان المؤجل (بعد 5 دقائق)',
+        body: 'حان موعد أداء الصلاة المفروضة',
+        scheduledTime: snoozeTime,
+        playAthanSound: true,
+      );
+    };
+
+    // 2. Action buttons (Open prayer, open qiblah, open adhkar)
     SirajNotificationManager.instance.onActionReceived = (actionId, payload) {
       if (!mounted) return;
       if (actionId == SirajNotificationManager.actionOpenPrayer ||
           actionId == SirajNotificationManager.actionOpenQiblah) {
         setState(() => _currentIndex = 1);
+      } else if (actionId == SirajNotificationManager.actionOpenAdhkar) {
+        setState(() => _currentIndex = 4);
       }
     };
 
     // 3. Notification body tapped
     SirajNotificationManager.instance.onNotificationTapped = (payload) {
       if (!mounted) return;
-      if (_prayerModule.athanAudioService.isPlaying) {
+      if (_prayerModule.athanAudioService.isPlaying || (payload != null && payload.startsWith('siraj_athan'))) {
         final now = _prayerModule.clock.nowLocal();
+        PrayerType prayerType = PrayerType.dhuhr;
+        if (payload != null) {
+          for (final type in PrayerType.values) {
+            if (payload.contains(type.name)) {
+              prayerType = type;
+              break;
+            }
+          }
+        }
         SirajAthanFullScreenView.show(
+          context,
+          prayerType: prayerType,
+          prayerTime: now,
+          locationName: _locationEngine.currentEffectiveLocation.cityName ?? 'موقعك الحالي',
+          audioService: _prayerModule.athanAudioService,
+          onSnooze: () {
+            final snoozeTime = DateTime.now().add(const Duration(minutes: 5));
+            SirajNotificationManager.instance.schedulePrayerNotification(
+              id: 88899,
+              title: 'تنبيه الأذان المؤجل (بعد 5 دقائق)',
+              body: 'حان موعد أداء الصلاة المفروضة',
+              scheduledTime: snoozeTime,
+              playAthanSound: true,
+            );
+          },
+          onOpenQiblah: () => setState(() => _currentIndex = 1),
+          onOpenAdhkar: () => setState(() => _currentIndex = 4),
+        );
+      } else if (payload == 'siraj_adhkar') {
+        setState(() => _currentIndex = 4);
+      } else {
+        setState(() => _currentIndex = 1);
+      }
+    };
+
+    // 4. In-App Floating Overlay Banner when Athan starts playing while user is browsing app
+    _prayerModule.athanAudioService.isPlayingStream.listen((isPlaying) {
+      if (isPlaying && mounted) {
+        final now = _prayerModule.clock.nowLocal();
+        SirajAthanOverlayBanner.show(
           context,
           prayerType: PrayerType.dhuhr,
           prayerTime: now,
           locationName: _locationEngine.currentEffectiveLocation.cityName ?? 'موقعك الحالي',
           audioService: _prayerModule.athanAudioService,
-          onOpenQiblah: () => setState(() => _currentIndex = 1),
-          onOpenAdhkar: () => setState(() => _currentIndex = 4),
+          onSnooze: () {
+            final snoozeTime = DateTime.now().add(const Duration(minutes: 5));
+            SirajNotificationManager.instance.schedulePrayerNotification(
+              id: 88899,
+              title: 'تنبيه الأذان المؤجل (بعد 5 دقائق)',
+              body: 'حان موعد أداء الصلاة المفروضة',
+              scheduledTime: snoozeTime,
+              playAthanSound: true,
+            );
+          },
         );
-      } else {
-        setState(() => _currentIndex = 1);
       }
-    };
+    });
   }
 
   void _initMediaNotificationSync() {
@@ -270,6 +331,10 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
     SirajMediaNotificationService.instance.registerDelegate(
       SirajMediaType.quranRecitation,
       _QuranRecitationNotificationDelegate(_quranModule.audioService),
+    );
+    SirajMediaNotificationService.instance.registerDelegate(
+      SirajMediaType.sharawyKhawatir,
+      _SharawyNotificationDelegate(_quranModule.sharawyAudioService),
     );
 
     // Media notifications transport fallback controls
@@ -683,3 +748,33 @@ class _QuranRecitationNotificationDelegate implements SirajMediaNotificationDele
   @override
   void onStop() => audioService.stop();
 }
+
+class _SharawyNotificationDelegate implements SirajMediaNotificationDelegate {
+  final SharawyAudioService sharawyService;
+  _SharawyNotificationDelegate(this.sharawyService);
+
+  @override
+  void onPlayPause() {
+    if (sharawyService.status == SharawyAudioStatus.playing) {
+      sharawyService.pause();
+    } else if (sharawyService.status == SharawyAudioStatus.paused) {
+      sharawyService.resume();
+    }
+  }
+
+  @override
+  void onNext() => sharawyService.playNext();
+
+  @override
+  void onPrevious() => sharawyService.playPrevious();
+
+  @override
+  void onSkipForward() => sharawyService.skipForward(const Duration(seconds: 10));
+
+  @override
+  void onSkipBackward() => sharawyService.skipBackward(const Duration(seconds: 10));
+
+  @override
+  void onStop() => sharawyService.stop();
+}
+

@@ -6,6 +6,7 @@ import '../../../modules/prayer/domain/prayer_type.dart';
 import '../../../modules/prayer/prayer_module.dart';
 import '../../../core/notifications/siraj_notification_manager.dart';
 import '../widgets/athan_preview_card.dart';
+import 'siraj_athan_full_screen_view.dart';
 
 /// Screen for configuring Athan audio, per-prayer alert modes, and reminders (§17, §32).
 class AthanSettingsScreen extends StatefulWidget {
@@ -266,6 +267,75 @@ class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
               },
             ),
           ),
+          const SizedBox(height: 24),
+
+          // Section 4: Lockscreen Popups & System Overlay
+          const Text(
+            'النوافذ المنبثقة وشاشة القفل',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.screen_lock_portrait_rounded, color: AppColors.primary),
+                    title: Text('إيقاظ الهاتف فوق شاشة القفل', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('عرض شاشة الأذان التفاعلية الكبيرة فور دخول الوقت حتى لو كان الهاتف مقفلاً'),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        widget.prayerModule.athanAudioService.playAthan(
+                          soundOption: AthanSoundOption.abdulbasit,
+                          volume: _settings.masterVolume,
+                        );
+                        SirajAthanFullScreenView.show(
+                          context,
+                          prayerType: PrayerType.asr,
+                          prayerTime: DateTime.now(),
+                          locationName: 'القاهرة، مصر',
+                          audioService: widget.prayerModule.athanAudioService,
+                          onSnooze: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('تم تأجيل تنبيه الأذان 5 دقائق')),
+                            );
+                          },
+                          onMarkPrayed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('تقبل الله طاعتكم وصالح أعمالكم 🤲')),
+                            );
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.open_in_full_rounded, size: 18),
+                      label: const Text('تجربة محاكاة شاشة الأذان المنبثقة الكاملة الآن'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );

@@ -76,11 +76,40 @@ void main() {
         ),
       );
 
+      await tester.ensureVisible(find.text('أديت الصلاة'));
       await tester.tap(find.text('أديت الصلاة'));
       await tester.pump();
 
       expect(mockAudioService.isPlaying, isFalse);
       expect(markPrayedCalled, isTrue);
     });
+
+    testWidgets('Tapping snooze button invokes onSnooze callback and stops athan', (tester) async {
+      bool snoozeCalled = false;
+      await mockAudioService.playAthan(soundOption: AthanSoundOption.abdulbasit);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SirajAthanFullScreenView(
+            prayerType: PrayerType.asr,
+            prayerTime: DateTime(2026, 9, 6, 15, 30),
+            locationName: 'القاهرة، مصر',
+            audioService: mockAudioService,
+            onSnooze: () {
+              snoozeCalled = true;
+            },
+          ),
+        ),
+      );
+
+      expect(find.text('تأجيل 5 دقائق'), findsOneWidget);
+      await tester.ensureVisible(find.text('تأجيل 5 دقائق'));
+      await tester.tap(find.text('تأجيل 5 دقائق'));
+      await tester.pump();
+
+      expect(mockAudioService.isPlaying, isFalse);
+      expect(snoozeCalled, isTrue);
+    });
   });
 }
+

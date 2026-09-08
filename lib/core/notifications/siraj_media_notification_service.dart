@@ -68,11 +68,13 @@ class SirajMediaNotificationService {
   String? _lastSubtitle;
   bool? _lastIsPlaying;
   SirajMediaType? _lastType;
+  String? _lastArtworkPath;
 
   String? get lastTitle => _lastTitle;
   String? get lastSubtitle => _lastSubtitle;
   bool? get lastIsPlaying => _lastIsPlaying;
   SirajMediaType? get lastType => _lastType;
+  String? get lastArtworkPath => _lastArtworkPath;
 
   /// Shows or updates active media notification with current playback state and metadata.
   Future<void> showMediaNotification({
@@ -84,11 +86,13 @@ class SirajMediaNotificationService {
     bool hasPrevious = true,
     Duration? position,
     Duration? duration,
+    String? artworkPath,
   }) async {
     _lastTitle = title;
     _lastSubtitle = subtitle;
     _lastIsPlaying = isPlaying;
     _lastType = type;
+    _lastArtworkPath = artworkPath;
     _isShowing = true;
 
     if (kIsWeb) return;
@@ -175,8 +179,15 @@ class SirajMediaNotificationService {
           cancelNotification: true,
         ),
       );
-    } else {
-      // Tawasheeh or Quran Recitation: Prev, Play/Pause, Next, Stop
+      // Tawasheeh or Quran Recitation: -10s, Prev, Play/Pause, Next, +10s, Stop
+      actions.add(
+        const AndroidNotificationAction(
+          actionSkipBackward,
+          '-10 ث',
+          showsUserInterface: false,
+          cancelNotification: false,
+        ),
+      );
       if (hasPrevious) {
         actions.add(
           const AndroidNotificationAction(
@@ -207,6 +218,14 @@ class SirajMediaNotificationService {
       }
       actions.add(
         const AndroidNotificationAction(
+          actionSkipForward,
+          '+10 ث',
+          showsUserInterface: false,
+          cancelNotification: false,
+        ),
+      );
+      actions.add(
+        const AndroidNotificationAction(
           actionStop,
           'إغلاق',
           showsUserInterface: false,
@@ -218,6 +237,13 @@ class SirajMediaNotificationService {
     final hasValidDuration = duration != null && duration.inSeconds > 0;
     final currentSec = position?.inSeconds ?? 0;
     final safeProgress = hasValidDuration ? currentSec.clamp(0, duration.inSeconds) : 0;
+
+    AndroidBitmap<Object> largeIconBitmap;
+    if (artworkPath != null && File(artworkPath).existsSync()) {
+      largeIconBitmap = FilePathAndroidBitmap(artworkPath);
+    } else {
+      largeIconBitmap = const DrawableResourceAndroidBitmap('ic_launcher');
+    }
 
     final androidDetails = AndroidNotificationDetails(
       mediaChannelId,
@@ -234,7 +260,7 @@ class SirajMediaNotificationService {
       colorized: true,
       category: AndroidNotificationCategory.transport,
       visibility: NotificationVisibility.public,
-      largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
+      largeIcon: largeIconBitmap,
       showProgress: hasValidDuration,
       maxProgress: hasValidDuration ? duration.inSeconds : 0,
       progress: safeProgress,
