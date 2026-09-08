@@ -6,9 +6,8 @@ import '../../../../modules/quran/services/cairo_radio_audio_service.dart';
 import '../../../../modules/quran/store/tawasheeh_store.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
-import 'tawasheeh_player_view.dart';
 
-/// Full-featured, spiritual live radio studio interface for Cairo Quran Radio & Historic Tawasheeh (§14, §20).
+/// Full-featured, spiritual live radio studio interface for Cairo Quran Radio (§14, §20).
 class CairoRadioLiveView extends StatefulWidget {
   final CairoRadioAudioService radioService;
   final TawasheehStore? tawasheehStore;
@@ -26,31 +25,26 @@ class CairoRadioLiveView extends StatefulWidget {
 class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
     with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late AnimationController _waveAnimController;
-  late final TawasheehStore _tawasheehStore;
 
   @override
   bool get wantKeepAlive => true;
 
   StreamSubscription<CairoRadioStatus>? _statusSub;
   StreamSubscription<Duration?>? _sleepSub;
-  StreamSubscription<CairoRadioMode>? _modeSub;
 
   CairoRadioStatus _status = CairoRadioStatus.idle;
-  CairoRadioMode _activeMode = CairoRadioMode.liveRadio;
   Duration? _sleepRemaining;
   double _volume = 0.85;
   bool _isMuted = false;
-  bool _isLoadingStore = false;
 
   @override
   void initState() {
     super.initState();
-    _tawasheehStore = widget.tawasheehStore ?? TawasheehStore();
     _status = widget.radioService.status;
-    _activeMode = widget.radioService.mode;
     _sleepRemaining = widget.radioService.sleepTimerRemaining;
     _volume = widget.radioService.volume;
     _isMuted = widget.radioService.isMuted;
+    widget.radioService.setMode(CairoRadioMode.liveRadio);
 
     _waveAnimController = AnimationController(
       vsync: this,
@@ -59,13 +53,6 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
 
     if (_status == CairoRadioStatus.playing && !Platform.environment.containsKey('FLUTTER_TEST')) {
       _waveAnimController.repeat(reverse: true);
-    }
-
-    if (!_tawasheehStore.isLoaded) {
-      _isLoadingStore = true;
-      _tawasheehStore.load().then((_) {
-        if (mounted) setState(() => _isLoadingStore = false);
-      });
     }
 
     _statusSub = widget.radioService.statusStream.listen((newStatus) {
@@ -84,12 +71,6 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
     _sleepSub = widget.radioService.sleepTimerStream.listen((rem) {
       if (mounted) setState(() => _sleepRemaining = rem);
     });
-
-    _modeSub = widget.radioService.modeStream.listen((mode) {
-      if (mounted && _activeMode != mode) {
-        setState(() => _activeMode = mode);
-      }
-    });
   }
 
   @override
@@ -97,7 +78,6 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
     _waveAnimController.dispose();
     _statusSub?.cancel();
     _sleepSub?.cancel();
-    _modeSub?.cancel();
     super.dispose();
   }
 
@@ -115,41 +95,12 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
     final isConnecting = _status == CairoRadioStatus.connecting;
     final isError = _status == CairoRadioStatus.error;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Top Switcher: Live Radio vs Historic Tawasheeh
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
-          child: _buildModeSwitcher(isDark),
-        ),
-
-        Expanded(
-          child: _activeMode == CairoRadioMode.tawasheeh
-              ? (_isLoadingStore
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(color: AppColors.goldAccent),
-                          SizedBox(height: 12),
-                          Text(
-                            'جارٍ تحميل أرشيف التواشيح والابتهالات النادرة...',
-                            style: TextStyle(fontFamily: 'Amiri', fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    )
-                  : TawasheehPlayerView(
-                      radioService: widget.radioService,
-                      tawasheehStore: _tawasheehStore,
-                    ))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // 1. Radio Station Hero Identity Card
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. Radio Station Hero Identity Card
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -588,116 +539,6 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
           ),
           const SizedBox(height: 16),
         ],
-      ),
-    ),
-  ),
-],
-);
-}
-
-  Widget _buildModeSwitcher(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1EBE0),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.goldAccent.withValues(alpha: isDark ? 0.35 : 0.45),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildModeTab(
-              title: 'إذاعة القرآن (القاهرة)',
-              icon: Icons.radio_rounded,
-              isSelected: _activeMode == CairoRadioMode.liveRadio,
-              onTap: () {
-                setState(() => _activeMode = CairoRadioMode.liveRadio);
-                widget.radioService.setMode(CairoRadioMode.liveRadio);
-              },
-              isDark: isDark,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: _buildModeTab(
-              title: 'التواشيح والابتهالات',
-              icon: Icons.mic_external_on_rounded,
-              isSelected: _activeMode == CairoRadioMode.tawasheeh,
-              onTap: () {
-                setState(() => _activeMode = CairoRadioMode.tawasheeh);
-                widget.radioService.setMode(CairoRadioMode.tawasheeh);
-              },
-              isDark: isDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModeTab({
-    required String title,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? const Color(0xFF0F172A) : Colors.white)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: isSelected
-              ? Border.all(
-                  color: AppColors.goldAccent.withValues(alpha: 0.65),
-                  width: 1.2,
-                )
-              : null,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 17,
-              color: isSelected
-                  ? AppColors.goldAccent
-                  : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected
-                      ? (isDark ? AppColors.goldAccentLight : AppColors.primary)
-                      : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

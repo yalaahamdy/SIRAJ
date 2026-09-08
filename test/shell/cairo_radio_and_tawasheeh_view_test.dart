@@ -49,7 +49,7 @@ void main() {
       await radioService.dispose();
     });
 
-    testWidgets('Renders mode switcher and defaults to Live Radio view', (tester) async {
+    testWidgets('Renders dedicated Live Radio view with Station Hero and Sleep Timer', (tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -66,18 +66,17 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 200));
-
-      // Check mode switcher exists
-      expect(find.text('إذاعة القرآن (القاهرة)'), findsOneWidget);
-      expect(find.text('التواشيح والابتهالات'), findsOneWidget);
 
       // Check Live Radio Hero elements exist
       expect(find.text('FM 98.2 MHz'), findsOneWidget);
       expect(find.text('إذاعة القرآن الكريم من القاهرة'), findsOneWidget);
       expect(find.text('مؤقت النوم (إيقاف تلقائي للبث)'), findsOneWidget);
+
+      // Verify no duplicate mode switcher
+      expect(find.text('إذاعة القرآن (القاهرة)'), findsNothing);
     });
 
-    testWidgets('Switches to Tawasheeh mode and renders player and recordings catalog', (tester) async {
+    testWidgets('Renders TawasheehPlayerView with player and recordings catalog', (tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -86,7 +85,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: CairoRadioLiveView(
+            body: TawasheehPlayerView(
               radioService: radioService,
               tawasheehStore: tawasheehStore,
             ),
@@ -95,11 +94,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 200));
 
-      // Tap on Tawasheeh tab
-      await tester.tap(find.text('التواشيح والابتهالات'));
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // Expect TawasheehPlayerView to be rendered
+      // Expect TawasheehPlayerView to be rendered directly
       expect(find.byType(TawasheehPlayerView), findsOneWidget);
       expect(find.text('ابتهالات وتواشيح نادرة'), findsOneWidget);
       expect(find.text('عرض 2 تسجيلاً نادراً'), findsOneWidget);
@@ -132,21 +127,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 200));
       expect(tester.takeException(), isNull);
-
-      // Switch to Tawasheeh
-      await tester.tap(find.text('التواشيح والابتهالات'));
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // Scroll down to reveal items on short screen
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -350));
-      await tester.pump(const Duration(milliseconds: 300));
-
-      final itemFinder = find.text('ابتهال: إلهى . إن يكن ذنبى عظيما');
-      await tester.tap(itemFinder.first);
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(tester.takeException(), isNull);
-      expect(find.byType(TawasheehPlayerView), findsOneWidget);
+      expect(find.byType(CairoRadioLiveView), findsOneWidget);
     });
 
     testWidgets('TawasheehOfflineActionBar toggles collapsed and expanded states smoothly', (tester) async {
@@ -158,7 +139,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: CairoRadioLiveView(
+            body: TawasheehPlayerView(
               radioService: radioService,
               tawasheehStore: tawasheehStore,
             ),
@@ -166,10 +147,6 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 200));
-
-      // Switch to Tawasheeh
-      await tester.tap(find.text('التواشيح والابتهالات'));
-      await tester.pump(const Duration(milliseconds: 300));
 
       // By default, the offline action bar is collapsed (shows 'إدارة', not 'إخفاء')
       expect(find.text('إدارة'), findsOneWidget);
