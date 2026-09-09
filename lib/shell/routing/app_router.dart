@@ -899,6 +899,11 @@ class AppRouter {
         final surahNum = args['surah_number'] as int? ?? 1;
         final pageNum = args['page_number'] as int?;
         final ayahNum = args['ayah_number'] as int?;
+        final isMemMode = args['is_memorization_mode'] as bool? ?? false;
+        final memStart = args['memorization_start_ayah'] as int?;
+        final memEnd = args['memorization_end_ayah'] as int?;
+        final memMod = args['memorization_module'] as MemorizationModule? ?? defaultMemorizationModule;
+        final isReview = args['is_review_mode'] as bool? ?? false;
 
         return MaterialPageRoute(
           builder: (_) => QuranReaderScreen(
@@ -906,6 +911,11 @@ class AppRouter {
             initialSurahNumber: surahNum,
             initialPageNumber: pageNum,
             initialAyahNumber: ayahNum,
+            isMemorizationMode: isMemMode,
+            memorizationStartAyah: memStart,
+            memorizationEndAyah: memEnd,
+            memorizationModule: memMod,
+            isReviewMode: isReview,
           ),
           settings: routeSettings,
         );

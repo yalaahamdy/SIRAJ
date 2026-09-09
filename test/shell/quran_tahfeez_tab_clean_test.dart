@@ -40,7 +40,7 @@ void main() {
       );
     }
 
-    testWidgets('Tahfeez Tab 1: Directly displays plan, wird verses and surahs with zero overflow', (tester) async {
+    testWidgets('Tahfeez Tab 1: Directly displays plan, wird target card and surahs with zero overflow', (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -60,17 +60,17 @@ void main() {
       expect(find.textContaining('جزء عم'), findsOneWidget);
       expect(find.text('المحفوظ'), findsOneWidget);
       expect(find.text('المتبقي'), findsOneWidget);
+      expect(find.text('نسبة الإنجاز'), findsOneWidget);
 
       // Check Today's Wird Section
       expect(find.text('ورد الحفظ لليوم'), findsOneWidget);
-      expect(find.text('استماع'), findsWidgets);
-      expect(find.text('حفظ الآية'), findsWidgets);
+      expect(find.text('ابدأ الحفظ والتسميع في المصحف 📖🎙️'), findsOneWidget);
 
       // Check Plan Surahs List
-      expect(find.text('سور الخطة المقررة'), findsOneWidget);
+      expect(find.text('سور الخطة المقررة:'), findsOneWidget);
     });
 
-    testWidgets('Tahfeez Tab 2: Tapping "حفظ الآية" marks verse memorized immediately', (tester) async {
+    testWidgets('Tahfeez Tab 2: Tapping "ابدأ الحفظ والتسميع في المصحف" navigates to reader with target', (tester) async {
       await tester.pumpWidget(
         createTestApp(
           QuranTahfeezTab(
@@ -82,36 +82,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final markBtn = find.text('حفظ الآية').first;
-      await tester.tap(markBtn);
+      final startBtn = find.text('ابدأ الحفظ والتسميع في المصحف 📖🎙️');
+      expect(startBtn, findsOneWidget);
+      await tester.tap(startBtn);
       await tester.pumpAndSettle();
 
-      expect(find.text('تم حفظها ✅'), findsOneWidget);
-    });
-
-    testWidgets('Tahfeez Tab 3: Toggling hide/reveal hides and reveals the verse', (tester) async {
-      await tester.pumpWidget(
-        createTestApp(
-          QuranTahfeezTab(
-            quranModule: quranModule,
-            memorizationModule: memorizationModule,
-            onOpenSurah: (sNum, {targetPage, targetAyah}) {},
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final hideBtn = find.byTooltip('إخفاء للتسميع الغيبي').first;
-      await tester.tap(hideBtn);
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('الآية مخفية للتسميع الغيبي'), findsOneWidget);
-
-      // Tap again to reveal
-      await tester.tap(find.textContaining('الآية مخفية للتسميع الغيبي'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('الآية مخفية للتسميع الغيبي'), findsNothing);
+      // In reader in memorization mode: header card should be visible
+      expect(find.textContaining('ورد الحفظ المقرر لليوم'), findsOneWidget);
+      expect(find.text('بدء التسميع الآلي 🎙️'), findsOneWidget);
+      expect(find.text('استماع وترديد 🎧'), findsOneWidget);
     });
   });
 }

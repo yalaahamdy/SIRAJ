@@ -32,6 +32,7 @@ class PlanSetupScreen extends StatefulWidget {
 
 class _PlanSetupScreenState extends State<PlanSetupScreen> {
   final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _dailyNewController = TextEditingController();
   PlanSelectionMode _selectionMode = PlanSelectionMode.byJuz;
 
   int _selectedJuz = 30; // Default to Juz Amma
@@ -58,6 +59,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _dailyNewController.dispose();
     super.dispose();
   }
 
@@ -71,8 +73,9 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     final plan = planRes.valueOrNull ??
         MemorizationPlan.createDefaultJuzAmma(widget.memorizationModule.clock.nowUtc());
 
-    _dailyNew = plan.dailyNewAyahs.clamp(1, 30);
-    _dailyReview = plan.dailyReviewTarget.clamp(5, 100);
+    _dailyNew = plan.dailyNewAyahs > 0 ? plan.dailyNewAyahs : 5;
+    _dailyNewController.text = '$_dailyNew';
+    _dailyReview = plan.dailyReviewTarget > 0 ? plan.dailyReviewTarget : 20;
 
     if (widget.initialTargetAyahKey != null) {
       final k = widget.initialTargetAyahKey!;
@@ -651,7 +654,12 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      onPressed: () => setState(() => _dailyNew = t),
+                      onPressed: () {
+                        setState(() {
+                          _dailyNew = t;
+                          _dailyNewController.text = '$t';
+                        });
+                      },
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text('$t آيات', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -660,6 +668,75 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
                   ),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+              ),
+              child: Row(
+                children: [
+                  const Text('أو اكتب عدداً مخصصاً:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 22),
+                    color: AppColors.primary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'إنقاص آية',
+                    onPressed: () {
+                      if (_dailyNew > 1) {
+                        setState(() {
+                          _dailyNew--;
+                          _dailyNewController.text = '$_dailyNew';
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 54,
+                    height: 36,
+                    child: TextFormField(
+                      controller: _dailyNewController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      onChanged: (val) {
+                        final parsed = int.tryParse(val);
+                        if (parsed != null && parsed > 0) {
+                          setState(() {
+                            _dailyNew = parsed;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 22),
+                    color: AppColors.primary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'زيادة آية',
+                    onPressed: () {
+                      setState(() {
+                        _dailyNew++;
+                        _dailyNewController.text = '$_dailyNew';
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 6),
+                  const Text('آية / يوم', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                ],
+              ),
             ),
           ],
         ),

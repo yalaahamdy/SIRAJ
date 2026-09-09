@@ -8,6 +8,7 @@ import '../../modules/quran/domain/quran_reader_modes.dart';
 import '../../modules/quran/domain/quran_reciter.dart';
 import '../../modules/quran/domain/surah.dart';
 import '../../modules/quran/quran_module.dart';
+import '../../modules/memorization/memorization_module.dart';
 import '../../modules/quran/services/quran_audio_service.dart';
 import '../../modules/quran/services/quran_typography_service.dart';
 import '../../core/audio/siraj_feedback_audio_service.dart';
@@ -47,6 +48,11 @@ class QuranReaderScreen extends StatefulWidget {
   final int? initialPageNumber;
   final QuranRecitationRecorder? recorder;
   final QuranRecitationRecognitionGateway? recognitionGateway;
+  final bool isMemorizationMode;
+  final int? memorizationStartAyah;
+  final int? memorizationEndAyah;
+  final MemorizationModule? memorizationModule;
+  final bool isReviewMode;
 
   const QuranReaderScreen({
     super.key,
@@ -56,6 +62,11 @@ class QuranReaderScreen extends StatefulWidget {
     this.initialPageNumber,
     this.recorder,
     this.recognitionGateway,
+    this.isMemorizationMode = false,
+    this.memorizationStartAyah,
+    this.memorizationEndAyah,
+    this.memorizationModule,
+    this.isReviewMode = false,
   });
 
   @override
@@ -67,6 +78,8 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
   int? _targetAyahNumber;
   Surah? _currentSurah;
   List<Ayah> _ayahs = [];
+  List<Ayah> _allSurahAyahs = [];
+  bool _filterToMemorizationTarget = true;
   Set<int> _bookmarkedAyahs = {};
   bool _isLoading = true;
   String? _errorMessage;
@@ -259,7 +272,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     }
 
     final surah = surahRes.valueOrNull!;
-    final ayahs = ayahsRes.valueOrNull!;
+    final allAyahs = ayahsRes.valueOrNull!;
     final bookmarks = bookmarksRes.valueOrNull ?? [];
 
     final bookmarkedSet = bookmarks
@@ -267,18 +280,31 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         .map((b) => b.ayahNumber)
         .toSet();
 
+    _allSurahAyahs = allAyahs;
+    List<Ayah> displayed = allAyahs;
+    if (widget.isMemorizationMode &&
+        _filterToMemorizationTarget &&
+        widget.memorizationStartAyah != null &&
+        widget.memorizationEndAyah != null) {
+      displayed = allAyahs
+          .where((a) =>
+              a.ayahNumber >= widget.memorizationStartAyah! &&
+              a.ayahNumber <= widget.memorizationEndAyah!)
+          .toList();
+    }
+
     setState(() {
       _currentSurah = surah;
-      _ayahs = ayahs;
+      _ayahs = displayed;
       _bookmarkedAyahs = bookmarkedSet;
       _isLoading = false;
     });
 
-    if (ayahs.isNotEmpty) {
+    if (allAyahs.isNotEmpty) {
       final targetIndex = _targetAyahNumber != null
-          ? (_targetAyahNumber! - 1).clamp(0, ayahs.length - 1)
+          ? (_targetAyahNumber! - 1).clamp(0, allAyahs.length - 1)
           : 0;
-      final targetAyah = ayahs[targetIndex];
+      final targetAyah = allAyahs[targetIndex];
 
       widget.quranModule.updateReadingPosition(
         surahNumber: surah.number,
@@ -1028,12 +1054,33 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     });
   }
 
-  void _finishInPlaceRecitation() {
+  Future<void> _finishInPlaceRecitation() async {
     _recitationTimer?.cancel();
     _recitationGateway.stopListening();
     _recitationTokenSub?.cancel();
     _disposeRecitationAudioPlayer();
     _recitationMistakeNoticeTimer?.cancel();
+
+    final target = _activeRecitationTarget;
+    final wordsMap = _recitationWordsMap;
+    final mode = _activeRecitationMode;
+
+    int totalWords = 0;
+    int revealedWords = 0;
+    if (wordsMap != null) {
+      for (final wordsList in wordsMap.values) {
+        for (final w in wordsList) {
+          totalWords++;
+          if (w.state == RecitationWordState.revealed) {
+            revealedWords++;
+          }
+        }
+      }
+    }
+
+    final double revealRatio = totalWords > 0 ? (revealedWords / totalWords) : 0.0;
+    final double masteryPercent = ((1.0 - revealRatio) * 100).clamp(0.0, 100.0);
+    final bool isPassed = revealRatio <= 0.05;
 
     setState(() {
       _isRecitationActive = false;
@@ -1046,10 +1093,167 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       _recitationMistakeNotice = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('اكتملت جلسة التسميع بنجاح وتمت مراجعة الآيات في المصحف.'),
-        duration: Duration(seconds: 3),
+    if (target != null && wordsMap != null && mode == RecitationMode.recognition) {
+      if (isPassed && widget.memorizationModule != null) {
+        for (int a = target.startAyah; a <= target.endAyah; a++) {
+          await widget.memorizationModule!.setAyahMemorizedStatus(
+            AyahKey(surahNumber: _currentSurahNumber, ayahNumber: a),
+            true,
+          );
+        }
+        SirajFeedbackAudioService.instance.playSuccess();
+      }
+
+      if (mounted) {
+        _showMemorizationEvaluationResult(
+          isPassed: isPassed,
+          target: target,
+          totalWords: totalWords,
+          revealedWords: revealedWords,
+          masteryPercent: masteryPercent,
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('اكتملت جلسة التسميع بنجاح وتمت مراجعة الآيات في المصحف.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showMemorizationEvaluationResult({
+    required bool isPassed,
+    required QuranRecitationTarget target,
+    required int totalWords,
+    required int revealedWords,
+    required double masteryPercent,
+  }) {
+    if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF1E232A) : Colors.white,
+        title: Row(
+          children: [
+            Icon(
+              isPassed ? Icons.stars_rounded : Icons.info_outline_rounded,
+              color: isPassed ? AppColors.goldAccent : Colors.amber,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isPassed ? 'مبارك! أتقنت التسميع 🌟' : 'محاولة طيبة وخطوة للإتقان 🌿',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isPassed
+                  ? 'ما شاء الله! سمعت الآيات المقررة غيباً بنسبة استحضار ذاتي بلغت ${masteryPercent.toStringAsFixed(1)}% (استعنت بإظهار $revealedWords كلمة فقط من أصل $totalWords).\n\nتم اعتماد وحفظ الآيات من ${target.startAyah} إلى ${target.endAyah} في سورة ${target.surahNameArabic} بنجاح، وتم تحديث خطتك في لوحة التحفيظ.'
+                  : 'بلغت نسبة الكلمات المستعان بها ${((revealedWords / (totalWords > 0 ? totalWords : 1)) * 100).toStringAsFixed(1)}% (أظهرت $revealedWords كلمة من أصل $totalWords).\n\nيشترط النظام ألا تتجاوز نسبة المساعدة 5% (إتقان غيبي 95% فأكثر) لاعتماد حفظ الورد تلقائياً.\nيمكنك الاستماع للتلاوة ثم إعادة التسميع لتثبيت حفظك.',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (isPassed ? Colors.green : Colors.amber).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const FittedBox(fit: BoxFit.scaleDown, child: Text('إجمالي الكلمات', style: TextStyle(fontSize: 10, color: Colors.grey))),
+                        FittedBox(fit: BoxFit.scaleDown, child: Text('$totalWords', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const FittedBox(fit: BoxFit.scaleDown, child: Text('كلمات المساعدة', style: TextStyle(fontSize: 10, color: Colors.grey))),
+                        FittedBox(fit: BoxFit.scaleDown, child: Text('$revealedWords', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const FittedBox(fit: BoxFit.scaleDown, child: Text('نسبة الإتقان', style: TextStyle(fontSize: 10, color: Colors.grey))),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${masteryPercent.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: isPassed ? Colors.green : Colors.amber,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (isPassed) ...[
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('متابعة القراءة'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context, true);
+              },
+              child: const Text('العودة لخطة الحفظ 🎯'),
+            ),
+          ] else ...[
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إغلاق'),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('إعادة التسميع 🎙️'),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _startInPlaceRecitation(target, RecitationMode.recognition);
+              },
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1096,6 +1300,142 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       _selectionController.clearSelection();
       _loadSurahData();
     }
+  }
+
+  Widget _buildMemorizationHeaderCard(QuranTypographyConfig config, bool isDark) {
+    final startAyah = widget.memorizationStartAyah ?? 1;
+    final endAyah = widget.memorizationEndAyah ?? (_ayahs.isNotEmpty ? _ayahs.last.ayahNumber : 1);
+    final count = (endAyah - startAyah + 1).clamp(1, 999);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF1E232A)
+            : AppColors.goldAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.goldAccent.withValues(alpha: 0.5),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.goldAccent.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.isReviewMode ? Icons.history_edu_rounded : Icons.star_rounded,
+                  color: AppColors.goldAccent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.isReviewMode ? 'ورد مراجعة وتثبيت الماضي' : 'ورد الحفظ المقرر لليوم',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'سورة ${_currentSurah?.nameArabic ?? ''} — الآيات ($startAyah إلى $endAyah) • $count آيات',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              if (_allSurahAyahs.isNotEmpty)
+                TextButton(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _filterToMemorizationTarget = !_filterToMemorizationTarget;
+                      if (_filterToMemorizationTarget) {
+                        _ayahs = _allSurahAyahs
+                            .where((a) => a.ayahNumber >= startAyah && a.ayahNumber <= endAyah)
+                            .toList();
+                      } else {
+                        _ayahs = List.from(_allSurahAyahs);
+                      }
+                    });
+                  },
+                  child: Text(
+                    _filterToMemorizationTarget ? 'عرض السورة كاملة' : 'عزل الورد فقط',
+                    style: const TextStyle(fontSize: 11, color: AppColors.primary),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.6)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.headphones_rounded, size: 16),
+                  label: const Text('استماع وترديد 🎧', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    widget.quranModule.audioService.playRange(
+                      _currentSurahNumber,
+                      startAyah,
+                      endAyah,
+                      repeatCount: 3,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.mic_rounded, size: 16),
+                  label: const Text('بدء التسميع الآلي 🎙️', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    _startInPlaceRecitation(
+                      QuranRecitationTarget(
+                        surahNumber: _currentSurahNumber,
+                        surahNameArabic: _currentSurah?.nameArabic ?? '',
+                        startAyah: startAyah,
+                        endAyah: endAyah,
+                      ),
+                      RecitationMode.recognition,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildReadingContent(QuranTypographyConfig config) {
@@ -1322,7 +1662,17 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                     Center(
                       child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: config.maxWidth),
-                        child: _buildReadingContent(config),
+                        child: Column(
+                          children: [
+                            if (widget.isMemorizationMode)
+                              _buildMemorizationHeaderCard(
+                                config,
+                                config.themeMode == QuranReaderThemeMode.dark ||
+                                    Theme.of(context).brightness == Brightness.dark,
+                              ),
+                            Expanded(child: _buildReadingContent(config)),
+                          ],
+                        ),
                       ),
                     ),
 

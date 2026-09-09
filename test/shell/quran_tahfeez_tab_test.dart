@@ -5,6 +5,7 @@ import 'package:siraj/core/storage/memory_storage.dart';
 import 'package:siraj/modules/memorization/memorization_module.dart';
 import 'package:siraj/modules/quran/quran_module.dart';
 import 'package:siraj/shell/memorization/past_memorization_exam_screen.dart';
+import 'package:siraj/shell/memorization/plan_setup_screen.dart';
 import 'package:siraj/shell/quran/widgets/quran_tahfeez_tab.dart';
 import '../fixtures/quran/canonical_quran_fixture.dart';
 
@@ -40,7 +41,7 @@ void main() {
       );
     }
 
-    testWidgets('QuranTahfeezTab renders header banner, metrics grid, plan card, and past exam card', (tester) async {
+    testWidgets('QuranTahfeezTab renders plan hero card, today wird card, and plan surahs', (tester) async {
       await tester.pumpWidget(
         createTestApp(
           QuranTahfeezTab(
@@ -53,30 +54,21 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Header Banner
-      expect(find.text('برنامج تحفيظ وتثبيت القرآن الكريم'), findsOneWidget);
+      // Header Plan Card
+      expect(find.textContaining('خطة'), findsWidgets);
+      expect(find.text('المحفوظ'), findsOneWidget);
+      expect(find.text('المتبقي'), findsOneWidget);
+      expect(find.text('نسبة الإنجاز'), findsOneWidget);
 
-      // Metrics Grid (Stat cards)
-      expect(find.text('ورد جديد اليوم'), findsOneWidget);
-      expect(find.text('مستحق للمراجعة'), findsOneWidget);
-      expect(find.text('المحفوظ والمتقن'), findsOneWidget);
-      expect(find.text('تمكين حفظ الماضي'), findsOneWidget);
+      // Today's Wird Card
+      expect(find.text('ورد الحفظ لليوم'), findsOneWidget);
+      expect(find.text('ابدأ الحفظ والتسميع في المصحف 📖🎙️'), findsOneWidget);
 
-      // Plan Card
-      expect(find.text('خطة التحفيظ المستهدفة'), findsOneWidget);
-      expect(find.text('تخصيص الخطة'), findsOneWidget);
-
-      // Past Memorization Card
-      expect(find.text('نظام تسميع واختبار (الماضي) — لتأكيد الحفظ'), findsOneWidget);
-      expect(find.text('بدء اختبار وتسميع الماضي الآن 🌟'), findsOneWidget);
-
-      // Daily Wird Section
-      expect(find.text('أوراد الحفظ والمراجعة لليوم'), findsOneWidget);
-      expect(find.text('1. ورد الحفظ الجديد (السبق)'), findsOneWidget);
-      expect(find.text('2. ورد المراجعة الصغرى (مراجعة القريب)'), findsOneWidget);
+      // Plan Surahs Section
+      expect(find.text('سور الخطة المقررة:'), findsOneWidget);
     });
 
-    testWidgets('Tapping on past exam button navigates to PastMemorizationExamScreen', (tester) async {
+    testWidgets('Tapping on plan edit button navigates to PlanSetupScreen', (tester) async {
       await tester.pumpWidget(
         createTestApp(
           QuranTahfeezTab(
@@ -89,17 +81,14 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Tap on past exam button
-      final pastExamBtn = find.text('بدء اختبار وتسميع الماضي الآن 🌟');
-      expect(pastExamBtn, findsOneWidget);
-      await tester.ensureVisible(pastExamBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(pastExamBtn);
+      final editBtn = find.byTooltip('تعديل أو إعادة ضبط الخطة');
+      expect(editBtn, findsOneWidget);
+      await tester.tap(editBtn);
       await tester.pumpAndSettle();
 
-      // Verify PastMemorizationExamScreen is pushed
-      expect(find.byType(PastMemorizationExamScreen), findsOneWidget);
-      expect(find.text('تسميع واختبار الماضي (تأكيد الحفظ)'), findsOneWidget);
+      // Verify PlanSetupScreen is pushed
+      expect(find.byType(PlanSetupScreen), findsOneWidget);
+      expect(find.text('تخصيص خطة التحفيظ'), findsOneWidget);
     });
   });
 }
