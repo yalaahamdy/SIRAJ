@@ -8,6 +8,7 @@ import '../../../../modules/quran/services/sharawy_offline_audio_service.dart';
 import '../../../../modules/quran/store/sharawy_store.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../audio/widgets/siraj_audio_boost_badge_button.dart';
 
 /// Full-featured, responsive, and spiritual interface for Sheikh Mohamed Metwally El-Sharawy's
 /// Quran Tafsir Khawatir archive (1,117 historic lessons) (§14, §20, §32).
@@ -428,7 +429,10 @@ class _SharawyPlayerViewState extends State<SharawyPlayerView>
                   ],
                 ),
               ),
-              if (_sleepRemaining != null)
+              const SizedBox(width: 6),
+              const SirajAudioBoostBadgeButton(compact: true),
+              if (_sleepRemaining != null) ...[
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -448,6 +452,7 @@ class _SharawyPlayerViewState extends State<SharawyPlayerView>
                     ],
                   ),
                 ),
+              ],
             ],
           ),
 
@@ -600,6 +605,13 @@ class _SharawyPlayerViewState extends State<SharawyPlayerView>
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   child: Icon(Icons.offline_pin_rounded, color: Colors.green, size: 20),
                 ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SirajAudioBoostBadgeButton(),
             ],
           ),
         ],

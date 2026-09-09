@@ -53,4 +53,28 @@ class SirajNativeOverlayBridge {
       return false;
     }
   }
+
+  /// يطلب إذن الشاشة الكاملة فوق القفل في أندرويد 14 فما فوق (USE_FULL_SCREEN_INTENT)
+  static Future<bool> requestFullScreenIntentPermission() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+    try {
+      final res = await _channel.invokeMethod<bool>('requestFullScreenIntentPermission');
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error requesting full screen intent permission: $e');
+      return false;
+    }
+  }
+
+  /// يجلب التطبيق إلى الواجهة الأمامية ويوقظ الشاشة
+  static Future<bool> bringAppToForeground() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('bringAppToForeground');
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error bringing app to foreground: $e');
+      return false;
+    }
+  }
 }

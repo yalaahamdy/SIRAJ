@@ -5,6 +5,7 @@ import '../../../modules/prayer/domain/prayer_notification_settings.dart';
 import '../../../modules/prayer/domain/prayer_type.dart';
 import '../../../modules/prayer/prayer_module.dart';
 import '../../../core/notifications/siraj_notification_manager.dart';
+import '../../../core/notifications/siraj_native_overlay_bridge.dart';
 import '../widgets/athan_preview_card.dart';
 import 'siraj_athan_full_screen_view.dart';
 
@@ -25,11 +26,25 @@ class AthanSettingsScreen extends StatefulWidget {
 
 class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
   late PrayerNotificationSettings _settings;
+  bool _notificationsGranted = true;
+  bool _overlayGranted = true;
 
   @override
   void initState() {
     super.initState();
     _settings = widget.prayerModule.notificationService.settings;
+    _checkSystemPermissions();
+  }
+
+  Future<void> _checkSystemPermissions() async {
+    final notifs = await SirajNotificationManager.instance.areNotificationsEnabled();
+    final overlay = await SirajNativeOverlayBridge.checkOverlayPermission();
+    if (mounted) {
+      setState(() {
+        _notificationsGranted = notifs;
+        _overlayGranted = overlay;
+      });
+    }
   }
 
   void _updateSettings(PrayerNotificationSettings newSettings) {
@@ -329,6 +344,126 @@ class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Section 5: Android System Permissions & Diagnostics
+          const Text(
+            'فحص صلاحيات النظام والتنبيهات (Android Permissions)',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // 1. Notification Permission Tile
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      _notificationsGranted ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
+                      color: _notificationsGranted ? Colors.green : Colors.orange,
+                      size: 28,
+                    ),
+                    title: const Text('إذن إشعارات النظام الرسمية', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text(
+                      _notificationsGranted
+                          ? 'مفعّل وممنوح بنجاح • تعمل إشعارات الأذان ومتحكمات الصوت بشكل سليم'
+                          : 'غير مفعّل • يلزم تفعيله لتصلك تنبيهات الصلاة وأزرار المشغل في الإشعارات',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _notificationsGranted ? Colors.green : Colors.orange.shade700,
+                      ),
+                    ),
+                    trailing: !_notificationsGranted
+                        ? OutlinedButton(
+                            onPressed: () async {
+                              await SirajNotificationManager.instance.requestPermissions();
+                              await _checkSystemPermissions();
+                            },
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.orange),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            ),
+                            child: const Text('تفعيل الإذن', style: TextStyle(fontSize: 12, color: Colors.orange)),
+                          )
+                        : null,
+                  ),
+                  const Divider(),
+
+                  // 2. Overlay & Lockscreen Permission Tile
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      _overlayGranted ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                      color: _overlayGranted ? Colors.green : AppColors.goldAccent,
+                      size: 28,
+                    ),
+                    title: const Text('إذن الظهور فوق التطبيقات وشاشة القفل', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text(
+                      _overlayGranted
+                          ? 'مفعّل وممنوح • تنبثق شاشة الأذان التفاعلية الكبيرة فور دخول الوقت'
+                          : 'يسمح بفتح نافذة الأذان تلقائياً وإيقاظ الهاتف حتى عند قفل الشاشة',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _overlayGranted ? Colors.green : null,
+                      ),
+                    ),
+                    trailing: OutlinedButton(
+                      onPressed: () async {
+                        await SirajNativeOverlayBridge.requestOverlayPermission();
+                        await _checkSystemPermissions();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: _overlayGranted ? Colors.grey : AppColors.goldAccent),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      ),
+                      child: Text(
+                        _overlayGranted ? 'الإعدادات' : 'منح الإذن',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _overlayGranted ? Colors.grey : AppColors.goldAccent,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Divider(),
+
+                  // 3. Android 14+ Full-Screen Intent Setting Button
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.alarm_on_rounded,
+                      color: AppColors.primary,
+                      size: 28,
+                    ),
+                    title: const Text('إذن شاشة الإنذار الكاملة (Android 14+)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text(
+                      'للأجهزة الحديثة لضمان عرض نافذة الأذان عند المنبه دون قيود النظام',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: OutlinedButton(
+                      onPressed: () async {
+                        await SirajNativeOverlayBridge.requestFullScreenIntentPermission();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      ),
+                      child: const Text('التحقق', style: TextStyle(fontSize: 12, color: AppColors.primary)),
                     ),
                   ),
                 ],

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../modules/quran/domain/cairo_radio_station.dart';
 import '../../../../modules/quran/services/cairo_radio_audio_service.dart';
 import '../../../../modules/quran/store/tawasheeh_store.dart';
+import '../../audio/widgets/siraj_audio_boost_badge_button.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 
@@ -407,6 +408,13 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
                       size: 20,
                       color: isDark ? Colors.grey[400] : Colors.grey[600],
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SirajAudioBoostBadgeButton(),
                   ],
                 ),
               ],

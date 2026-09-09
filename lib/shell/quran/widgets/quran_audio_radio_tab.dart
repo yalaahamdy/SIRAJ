@@ -7,6 +7,7 @@ import '../../../../modules/quran/quran_module.dart';
 import '../../../../modules/quran/services/quran_audio_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../audio/widgets/siraj_audio_boost_badge_button.dart';
 import 'zip_import_progress_dialog.dart';
 
 /// Professional Quran Audio Studio & Radio Sub-Tab (§14, §16, §20).
@@ -552,8 +553,8 @@ class _QuranAudioRadioTabState extends State<QuranAudioRadioTab> {
                     ],
                   ),
 
-                  // Balance placeholder with same width as speed chip
-                  const SizedBox(width: 48),
+                  // Audio Volume Booster Badge Button
+                  const SirajAudioBoostBadgeButton(compact: true),
                 ],
               ),
             ],

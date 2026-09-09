@@ -284,6 +284,29 @@ class SirajNotificationManager {
     return false;
   }
 
+  /// يفحص ما إذا كانت الإشعارات مفعلة ومسموح بها حالياً في إعدادات النظام
+  Future<bool> areNotificationsEnabled() async {
+    if (kIsWeb) return true;
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return true;
+    } catch (_) {}
+    if (Platform.isAndroid) {
+      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      return await androidPlugin?.areNotificationsEnabled() ?? true;
+    }
+    return true;
+  }
+
+  /// يفحص تفاصيل إطلاق التطبيق وما إذا كان قد فُتح عبر إشعار أذان أو منبه
+  Future<NotificationAppLaunchDetails?> getNotificationAppLaunchDetails() async {
+    if (!_isInitialized) await init();
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return null;
+    } catch (_) {}
+    return await _notifications.getNotificationAppLaunchDetails();
+  }
+
   /// إرسال إشعار فوري بحلول وقت الصلاة مع تشغيل صوت الأذان
   Future<void> showPrayerNotification({
     required int id,

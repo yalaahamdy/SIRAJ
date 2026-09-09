@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -26,7 +27,9 @@ import '../core/location/location_models.dart';
 import '../core/location/sensor_compass_service.dart';
 import '../modules/prayer/domain/calculation_parameters.dart';
 import '../modules/prayer/domain/prayer_adjustments.dart';
+import '../modules/prayer/domain/prayer_notification_settings.dart';
 import '../modules/prayer/domain/prayer_type.dart';
+import '../modules/prayer/domain/athan_sound_option.dart';
 import '../modules/quran/domain/cairo_radio_station.dart';
 import 'adhkar/adhkar_home_screen.dart';
 import 'audio/siraj_audio_hub_screen.dart';
@@ -78,6 +81,8 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   late final CompanionModule _companionModule;
   late final LocationEngine _locationEngine;
   late final SensorCompassService _compassService;
+  Timer? _prayerTimeCheckerTimer;
+  String? _lastTriggeredPrayerKey;
 
   @override
   void initState() {
@@ -185,17 +190,25 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _initNotificationListeners();
     _initMediaNotificationSync();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestUnifiedPermissions();
+      _checkAthanAppLaunch();
+      _startGlobalPrayerTimeWatcher();
+    });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _quranModule.radioService.checkSleepTimer();
+      _checkIfPrayerTimeArrived();
     }
   }
 
   @override
   void dispose() {
+    _prayerTimeCheckerTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -216,11 +229,139 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
         Permission.notification,
         Permission.location,
       ].request();
+      await SirajNotificationManager.instance.requestPermissions();
     } catch (_) {}
 
     if (mounted) {
       _locationEngine.acquireLocation();
     }
+  }
+
+  Future<void> _checkAthanAppLaunch() async {
+    if (kIsWeb) return;
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+    } catch (_) {}
+
+    final launchDetails = await SirajNotificationManager.instance.getNotificationAppLaunchDetails();
+    if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
+      final payload = launchDetails.notificationResponse?.payload;
+      if (payload != null && (payload.startsWith('siraj_athan') || payload == 'siraj_prayer')) {
+        final now = _prayerModule.clock.nowLocal();
+        PrayerType prayerType = PrayerType.dhuhr;
+        for (final type in PrayerType.values) {
+          if (payload.contains(type.name)) {
+            prayerType = type;
+            break;
+          }
+        }
+        if (mounted) {
+          SirajAthanFullScreenView.show(
+            context,
+            prayerType: prayerType,
+            prayerTime: now,
+            locationName: _locationEngine.currentEffectiveLocation.cityName ?? 'موقعك الحالي',
+            audioService: _prayerModule.athanAudioService,
+            onSnooze: () {
+              final snoozeTime = DateTime.now().add(const Duration(minutes: 5));
+              SirajNotificationManager.instance.schedulePrayerNotification(
+                id: 88899,
+                title: 'تنبيه الأذان المؤجل (بعد 5 دقائق)',
+                body: 'حان موعد أداء الصلاة المفروضة',
+                scheduledTime: snoozeTime,
+                playAthanSound: true,
+              );
+            },
+            onOpenQiblah: () => setState(() => _currentIndex = 1),
+            onOpenAdhkar: () => setState(() => _currentIndex = 4),
+          );
+        }
+      }
+    }
+  }
+
+  void _startGlobalPrayerTimeWatcher() {
+    _prayerTimeCheckerTimer?.cancel();
+    _prayerTimeCheckerTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _checkIfPrayerTimeArrived();
+    });
+  }
+
+  Future<void> _checkIfPrayerTimeArrived() async {
+    if (!mounted) return;
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+    } catch (_) {}
+
+    try {
+      final loc = _locationEngine.currentEffectiveLocation;
+      final now = _prayerModule.clock.nowLocal();
+      final scheduleRes = await _prayerModule.getSchedule(
+        date: now,
+        location: loc,
+        parameters: CalculationParameters.egyptian,
+      );
+      if (!scheduleRes.isSuccess || scheduleRes.valueOrNull == null) return;
+      final schedule = scheduleRes.valueOrNull!;
+      final settings = _prayerModule.notificationService.settings;
+
+      for (final entry in schedule.obligatoryPrayers) {
+        final diff = now.difference(entry.time);
+        // If current time is within [0, 90] seconds of prayer time
+        if (diff.inSeconds >= 0 && diff.inSeconds <= 90) {
+          final key = '${schedule.date.year}_${schedule.date.month}_${schedule.date.day}_${entry.type.name}';
+          if (_lastTriggeredPrayerKey == key) continue;
+          _lastTriggeredPrayerKey = key;
+
+          final perPrayer = settings.getSettingFor(entry.type);
+          if (perPrayer.mode == PrayerNotificationMode.disabled) continue;
+
+          final shouldPlayAudio = perPrayer.mode == PrayerNotificationMode.fullAthan ||
+              perPrayer.mode == PrayerNotificationMode.takbeerOnly;
+
+          // 1. Play authentic Athan audio
+          if (shouldPlayAudio && !_prayerModule.athanAudioService.isPlaying) {
+            _prayerModule.athanAudioService.playAthan(
+              soundOption: AthanSoundOption.abdulbasit,
+              volume: settings.masterVolume,
+            );
+          }
+
+          // 2. Show native system notification with Athan sound
+          SirajNotificationManager.instance.showPrayerNotification(
+            id: entry.type.index,
+            title: 'حان الآن موعد أذان ${entry.type.nameArabic}',
+            body: 'حي على الصلاة، حي على الفلاح — ${loc.cityName ?? "موقعك الحالي"}',
+            playAthanSound: shouldPlayAudio,
+            payload: 'siraj_athan_${entry.type.name}',
+          );
+
+          // 3. Pop up Fullscreen Athan view or overlay banner
+          if (mounted) {
+            SirajAthanFullScreenView.show(
+              context,
+              prayerType: entry.type,
+              prayerTime: entry.time,
+              locationName: loc.cityName ?? 'موقعك الحالي',
+              audioService: _prayerModule.athanAudioService,
+              onSnooze: () {
+                final snoozeTime = DateTime.now().add(const Duration(minutes: 5));
+                SirajNotificationManager.instance.schedulePrayerNotification(
+                  id: 88899,
+                  title: 'تنبيه الأذان المؤجل (بعد 5 دقائق)',
+                  body: 'حان موعد أداء الصلاة المفروضة',
+                  scheduledTime: snoozeTime,
+                  playAthanSound: true,
+                );
+              },
+              onOpenQiblah: () => setState(() => _currentIndex = 1),
+              onOpenAdhkar: () => setState(() => _currentIndex = 4),
+            );
+          }
+          break;
+        }
+      }
+    } catch (_) {}
   }
 
   void _initNotificationListeners() {
@@ -476,6 +617,30 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
         if (_quranModule.radioService.status == CairoRadioStatus.idle &&
             _quranModule.sharawyAudioService.status != SharawyAudioStatus.playing &&
             _quranModule.sharawyAudioService.status != SharawyAudioStatus.paused) {
+          SirajMediaNotificationService.instance.cancelMediaNotification();
+        }
+      }
+    });
+
+    // Synchronize Sheikh El-Sharawy Khawatir status with media notification
+    _quranModule.sharawyAudioService.statusStream.listen((status) {
+      final isPlaying = status == SharawyAudioStatus.playing;
+      final isPaused = status == SharawyAudioStatus.paused;
+
+      if (isPlaying || isPaused) {
+        final item = _quranModule.sharawyAudioService.currentItem;
+        SirajMediaNotificationService.instance.showMediaNotification(
+          title: item?.cleanTitle ?? 'خواطر الشيخ الشعراوي',
+          subtitle: 'الشيخ محمد متولي الشعراوي • خواطر التفسير',
+          isPlaying: isPlaying,
+          type: SirajMediaType.sharawyKhawatir,
+          position: _quranModule.sharawyAudioService.currentPosition,
+          duration: _quranModule.sharawyAudioService.totalDuration,
+        );
+      } else if (status == SharawyAudioStatus.idle) {
+        if (_quranModule.radioService.status == CairoRadioStatus.idle &&
+            _quranModule.audioService.currentReport.status != AudioPlaybackStatus.playing &&
+            _quranModule.audioService.currentReport.status != AudioPlaybackStatus.paused) {
           SirajMediaNotificationService.instance.cancelMediaNotification();
         }
       }

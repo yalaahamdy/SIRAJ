@@ -8,6 +8,7 @@ import '../../../../modules/quran/services/tawasheeh_offline_audio_service.dart'
 import '../../../../modules/quran/store/tawasheeh_store.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../audio/widgets/siraj_audio_boost_badge_button.dart';
 import 'tawasheeh_offline_action_bar.dart';
 
 /// Interactive player and catalog interface for the 80 rare Tawasheeh recordings (§14, §20).
@@ -310,6 +311,8 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
+              const SirajAudioBoostBadgeButton(compact: true),
               if (hasTrack) ...[
                 const SizedBox(width: 6),
                 Container(
@@ -715,6 +718,13 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 10),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SirajAudioBoostBadgeButton(),
+            ],
           ),
         ],
       ),

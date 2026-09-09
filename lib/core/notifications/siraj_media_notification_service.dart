@@ -125,8 +125,8 @@ class SirajMediaNotificationService {
           cancelNotification: true,
         ),
       );
-    } else if (type == SirajMediaType.sharawyKhawatir) {
-      // Sheikh El-Sharawy Khawatir: -10s, Prev, Play/Pause, Next, +10s, Stop
+    } else if (type == SirajMediaType.sharawyKhawatir || type == SirajMediaType.tawasheeh) {
+      // Sheikh El-Sharawy Khawatir & Tawasheeh: -10s, Prev, Play/Pause, Next, +10s, Stop
       actions.add(
         const AndroidNotificationAction(
           actionSkipBackward,
@@ -179,20 +179,13 @@ class SirajMediaNotificationService {
           cancelNotification: true,
         ),
       );
-      // Tawasheeh or Quran Recitation: -10s, Prev, Play/Pause, Next, +10s, Stop
-      actions.add(
-        const AndroidNotificationAction(
-          actionSkipBackward,
-          '-10 ث',
-          showsUserInterface: false,
-          cancelNotification: false,
-        ),
-      );
+    } else if (type == SirajMediaType.quranRecitation) {
+      // Quran Recitation: Prev Ayah, Play/Pause, Next Ayah, Stop
       if (hasPrevious) {
         actions.add(
           const AndroidNotificationAction(
             actionPrevious,
-            'السابق',
+            'الآية السابقة',
             showsUserInterface: false,
             cancelNotification: false,
           ),
@@ -210,20 +203,12 @@ class SirajMediaNotificationService {
         actions.add(
           const AndroidNotificationAction(
             actionNext,
-            'التالي',
+            'الآية التالية',
             showsUserInterface: false,
             cancelNotification: false,
           ),
         );
       }
-      actions.add(
-        const AndroidNotificationAction(
-          actionSkipForward,
-          '+10 ث',
-          showsUserInterface: false,
-          cancelNotification: false,
-        ),
-      );
       actions.add(
         const AndroidNotificationAction(
           actionStop,
@@ -286,14 +271,25 @@ class SirajMediaNotificationService {
           AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidPlugin != null && isPlaying) {
-        await androidPlugin.startForegroundService(
-          id: mediaNotificationId,
-          title: title,
-          body: subtitle,
-          notificationDetails: androidDetails,
-          payload: 'siraj_media_playback',
-          foregroundServiceTypes: {AndroidServiceForegroundType.foregroundServiceTypeMediaPlayback},
-        );
+        try {
+          await androidPlugin.startForegroundService(
+            id: mediaNotificationId,
+            title: title,
+            body: subtitle,
+            notificationDetails: androidDetails,
+            payload: 'siraj_media_playback',
+            foregroundServiceTypes: {AndroidServiceForegroundType.foregroundServiceTypeMediaPlayback},
+          );
+        } catch (fgsError) {
+          debugPrint('Foreground service failed, falling back to show(): $fgsError');
+          await notificationsPlugin.show(
+            id: mediaNotificationId,
+            title: title,
+            body: subtitle,
+            notificationDetails: details,
+            payload: 'siraj_media_playback',
+          );
+        }
       } else {
         if (androidPlugin != null && !isPlaying) {
           try {
