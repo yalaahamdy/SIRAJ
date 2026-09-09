@@ -301,7 +301,12 @@ class MemorizationModule {
   }
 
   /// Retrieves today's wird Ayahs for the active plan directly with full text.
-  Future<Result<List<Ayah>, Failure>> getTodayWirdAyahs(MemorizationPlan plan) async {
+  /// Supports custom daily targets and automatically includes the remainder of the
+  /// surah if 3 or fewer Ayahs remain (قاعدة ضم خواتيم السور تلقائياً).
+  Future<Result<List<Ayah>, Failure>> getTodayWirdAyahs(
+    MemorizationPlan plan, {
+    int? customTargetAyahs,
+  }) async {
     final allPlanAyahsRes = getPlanAyahs(plan);
     if (allPlanAyahsRes.isFailure) return Result.err(allPlanAyahsRes.failureOrNull!);
 
@@ -314,15 +319,47 @@ class MemorizationModule {
         .map((i) => i.ayahKey)
         .toSet();
 
+    final targetCount = (customTargetAyahs != null && customTargetAyahs > 0)
+        ? customTargetAyahs
+        : plan.dailyNewAyahs;
+
     // 1. Gather unmemorized ayahs up to daily target
-    final unmemorized = allPlanAyahs.where((a) => !memorizedKeys.contains(a.key)).take(plan.dailyNewAyahs).toList();
+    final unmemorized = allPlanAyahs.where((a) => !memorizedKeys.contains(a.key)).toList();
     if (unmemorized.isNotEmpty) {
-      return Result.ok(unmemorized);
+      final wird = _applyWirdBoundaryRules(unmemorized, targetCount);
+      return Result.ok(wird);
     }
 
     // 2. If all are memorized, take the first dailyTarget ayahs for revision
-    final revision = allPlanAyahs.take(plan.dailyNewAyahs).toList();
+    final revision = _applyWirdBoundaryRules(allPlanAyahs, targetCount);
     return Result.ok(revision);
+  }
+
+  /// Takes [targetCount] Ayahs from [availableAyahs] and, if 3 or fewer Ayahs remain
+  /// in the final surah reached by the wird, automatically appends them so the user
+  /// completes the surah instead of leaving a small remainder for the next session.
+  static List<Ayah> _applyWirdBoundaryRules(List<Ayah> availableAyahs, int targetCount) {
+    if (availableAyahs.isEmpty || targetCount <= 0) return const [];
+
+    final initialWird = availableAyahs.take(targetCount).toList();
+    if (initialWird.isEmpty) return const [];
+
+    // Check the final surah reached in this initial selection
+    final lastAyah = initialWird.last;
+    final lastSurahNumber = lastAyah.surahNumber;
+
+    // Find any remaining available Ayahs belonging to this same last surah
+    final remainingInSameSurah = availableAyahs
+        .skip(initialWird.length)
+        .takeWhile((a) => a.surahNumber == lastSurahNumber)
+        .toList();
+
+    // Auto-inclusion rule: if 1, 2, or 3 ayahs remain in this surah, include them!
+    if (remainingInSameSurah.isNotEmpty && remainingInSameSurah.length <= 3) {
+      initialWird.addAll(remainingInSameSurah);
+    }
+
+    return initialWird;
   }
 
   /// Evaluates whether an Ayah belongs to the given plan, correctly supporting

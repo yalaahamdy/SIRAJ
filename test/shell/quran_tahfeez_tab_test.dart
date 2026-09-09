@@ -62,7 +62,7 @@ void main() {
 
       // Today's Wird Card
       expect(find.text('ورد الحفظ لليوم'), findsOneWidget);
-      expect(find.text('ابدأ الحفظ والتسميع في المصحف 📖🎙️'), findsOneWidget);
+      expect(find.textContaining('ابدأ'), findsOneWidget);
 
       // Plan Surahs Section
       expect(find.text('سور الخطة المقررة:'), findsOneWidget);

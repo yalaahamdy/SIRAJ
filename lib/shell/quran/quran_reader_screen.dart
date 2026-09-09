@@ -286,7 +286,10 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         .toSet();
 
     _allSurahAyahs = allAyahs;
-    if (widget.memorizationEndAyah == null && allAyahs.isNotEmpty) {
+    if (_currentSurahNumber != widget.initialSurahNumber && allAyahs.isNotEmpty) {
+      _memorizationStartAyah = 1;
+      _memorizationEndAyah = allAyahs.last.ayahNumber;
+    } else if (widget.memorizationEndAyah == null && allAyahs.isNotEmpty) {
       _memorizationEndAyah = allAyahs.last.ayahNumber;
     }
     List<Ayah> displayed = allAyahs;
@@ -1072,20 +1075,27 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
 
     int totalWords = 0;
     int revealedWords = 0;
+    int recognizedWords = 0;
+    int hiddenWords = 0;
     if (wordsMap != null) {
       for (final wordsList in wordsMap.values) {
         for (final w in wordsList) {
           totalWords++;
           if (w.state == RecitationWordState.revealed) {
             revealedWords++;
+          } else if (w.state == RecitationWordState.recognized) {
+            recognizedWords++;
+          } else if (w.state == RecitationWordState.hidden) {
+            hiddenWords++;
           }
         }
       }
     }
 
+    final bool allWordsAttempted = (totalWords > 0) && (hiddenWords == 0);
     final double revealRatio = totalWords > 0 ? (revealedWords / totalWords) : 0.0;
-    final double masteryPercent = ((1.0 - revealRatio) * 100).clamp(0.0, 100.0);
-    final bool isPassed = revealRatio <= 0.05;
+    final double masteryPercent = totalWords > 0 ? ((recognizedWords / totalWords) * 100).clamp(0.0, 100.0) : 0.0;
+    final bool isPassed = allWordsAttempted && (revealRatio <= 0.05) && (masteryPercent >= 95.0);
 
     setState(() {
       _isRecitationActive = false;
@@ -1102,7 +1112,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       if (isPassed && widget.memorizationModule != null) {
         for (int a = target.startAyah; a <= target.endAyah; a++) {
           await widget.memorizationModule!.setAyahMemorizedStatus(
-            AyahKey(surahNumber: _currentSurahNumber, ayahNumber: a),
+            AyahKey(surahNumber: target.surahNumber, ayahNumber: a),
             true,
           );
         }
@@ -1112,9 +1122,12 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       if (mounted) {
         _showMemorizationEvaluationResult(
           isPassed: isPassed,
+          allWordsAttempted: allWordsAttempted,
           target: target,
           totalWords: totalWords,
+          recognizedWords: recognizedWords,
           revealedWords: revealedWords,
+          hiddenWords: hiddenWords,
           masteryPercent: masteryPercent,
         );
       }
@@ -1132,13 +1145,51 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
 
   void _showMemorizationEvaluationResult({
     required bool isPassed,
+    required bool allWordsAttempted,
     required QuranRecitationTarget target,
     required int totalWords,
+    required int recognizedWords,
     required int revealedWords,
+    required int hiddenWords,
     required double masteryPercent,
   }) {
     if (!mounted) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final String dialogTitle;
+    final IconData dialogIcon;
+    final Color dialogColor;
+    final String dialogMessage;
+
+    if (!allWordsAttempted) {
+      dialogTitle = 'لم يكتمل التسميع بعد ⏳';
+      dialogIcon = Icons.hourglass_bottom_rounded;
+      dialogColor = Colors.orange;
+      dialogMessage =
+          'تم إنهاء جلسة التسميع قبل استنطاق واستكمال كافة كلمات المقطع المقرر.\n\n'
+          'استمعت المنظومة إلى $recognizedWords كلمة بنجاح، بينما تبقى $hiddenWords كلمة لم تُسمَّع بعد (من أصل $totalWords كلمة).\n\n'
+          'يشترط النظام إكمال تسميع المقطع كاملاً بنسبة إتقان 95% فأكثر ومساعدة لا تتجاوز 5% لاعتماد حفظ الآيات تلقائياً.\n'
+          'يمكنك إعادة التسميع لإتمام المقطع كاملاً.';
+    } else if (isPassed) {
+      dialogTitle = 'مبارك! أتقنت التسميع 🌟';
+      dialogIcon = Icons.stars_rounded;
+      dialogColor = AppColors.goldAccent;
+      dialogMessage =
+          'ما شاء الله! سمّعت الآيات المقررة غيباً بنسبة استحضار ذاتي بلغت ${masteryPercent.toStringAsFixed(1)}% '
+          '(استعنت بإظهار $revealedWords كلمة فقط من أصل $totalWords).\n\n'
+          'تم اعتماد وحفظ الآيات من ${target.startAyah} إلى ${target.endAyah} في سورة ${target.surahNameArabic} بنجاح، '
+          'وتم تحديث خطتك في لوحة التحفيظ.';
+    } else {
+      dialogTitle = 'محاولة طيبة وخطوة للإتقان 🌿';
+      dialogIcon = Icons.info_outline_rounded;
+      dialogColor = Colors.amber;
+      dialogMessage =
+          'بلغت نسبة الكلمات المستعان بها ${((revealedWords / (totalWords > 0 ? totalWords : 1)) * 100).toStringAsFixed(1)}% '
+          '(أظهرت $revealedWords كلمة من أصل $totalWords) ونسبة الاستحضار الذاتي ${masteryPercent.toStringAsFixed(1)}%.\n\n'
+          'يشترط النظام ألا تتجاوز نسبة المساعدة 5% (إتقان غيبي 95% فأكثر) لاعتماد حفظ الورد تلقائياً.\n'
+          'يمكنك الاستماع للتلاوة ثم إعادة التسميع لتثبيت حفظك.';
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1148,14 +1199,14 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         title: Row(
           children: [
             Icon(
-              isPassed ? Icons.stars_rounded : Icons.info_outline_rounded,
-              color: isPassed ? AppColors.goldAccent : Colors.amber,
+              dialogIcon,
+              color: dialogColor,
               size: 28,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                isPassed ? 'مبارك! أتقنت التسميع 🌟' : 'محاولة طيبة وخطوة للإتقان 🌿',
+                dialogTitle,
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
@@ -1166,9 +1217,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isPassed
-                  ? 'ما شاء الله! سمعت الآيات المقررة غيباً بنسبة استحضار ذاتي بلغت ${masteryPercent.toStringAsFixed(1)}% (استعنت بإظهار $revealedWords كلمة فقط من أصل $totalWords).\n\nتم اعتماد وحفظ الآيات من ${target.startAyah} إلى ${target.endAyah} في سورة ${target.surahNameArabic} بنجاح، وتم تحديث خطتك في لوحة التحفيظ.'
-                  : 'بلغت نسبة الكلمات المستعان بها ${((revealedWords / (totalWords > 0 ? totalWords : 1)) * 100).toStringAsFixed(1)}% (أظهرت $revealedWords كلمة من أصل $totalWords).\n\nيشترط النظام ألا تتجاوز نسبة المساعدة 5% (إتقان غيبي 95% فأكثر) لاعتماد حفظ الورد تلقائياً.\nيمكنك الاستماع للتلاوة ثم إعادة التسميع لتثبيت حفظك.',
+              dialogMessage,
               style: TextStyle(
                 fontSize: 13,
                 height: 1.5,
@@ -1179,7 +1228,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: (isPassed ? Colors.green : Colors.amber).withValues(alpha: 0.1),
+                color: dialogColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1189,6 +1238,14 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                       children: [
                         const FittedBox(fit: BoxFit.scaleDown, child: Text('إجمالي الكلمات', style: TextStyle(fontSize: 10, color: Colors.grey))),
                         FittedBox(fit: BoxFit.scaleDown, child: Text('$totalWords', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const FittedBox(fit: BoxFit.scaleDown, child: Text('المنطوقة غيباً', style: TextStyle(fontSize: 10, color: Colors.grey))),
+                        FittedBox(fit: BoxFit.scaleDown, child: Text('$recognizedWords', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: recognizedWords > 0 ? Colors.green : Colors.grey))),
                       ],
                     ),
                   ),
@@ -1211,7 +1268,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
-                              color: isPassed ? Colors.green : Colors.amber,
+                              color: isPassed ? Colors.green : (allWordsAttempted ? Colors.amber : Colors.orange),
                             ),
                           ),
                         ),

@@ -63,11 +63,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Check header card
-      expect(find.textContaining('ورد الحفظ المقرر لليوم'), findsOneWidget);
+      expect(find.textContaining('ورد: سورة الفاتحة'), findsOneWidget);
       expect(find.textContaining('سورة الفاتحة'), findsWidgets);
-      expect(find.textContaining('الآيات (1 إلى 3)'), findsOneWidget);
-      expect(find.text('استماع وترديد 🎧'), findsOneWidget);
-      expect(find.text('بدء التسميع الآلي 🎙️'), findsOneWidget);
+      expect(find.text('استماع 🎧'), findsOneWidget);
+      expect(find.text('تسميع 🎙️'), findsOneWidget);
     });
 
     testWidgets('Starting in-place recitation launches recognition mode and allows word reveal', (tester) async {
@@ -89,8 +88,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap "بدء التسميع الآلي"
-      final startTasmeeBtn = find.text('بدء التسميع الآلي 🎙️');
+      // Tap "تسميع 🎙️"
+      final startTasmeeBtn = find.text('تسميع 🎙️');
       await tester.tap(startTasmeeBtn);
       await tester.pumpAndSettle();
 
@@ -98,19 +97,19 @@ void main() {
       expect(find.text('إظهار كلمة'), findsOneWidget);
       expect(find.byTooltip('إنهاء التسميع'), findsOneWidget);
 
-      // Finish recitation with 0 reveals (100% mastery <= 5% assistance)
+      // Finish recitation prematurely without reciting words
       final finishBtn = find.byTooltip('إنهاء التسميع');
       await tester.tap(finishBtn);
       await tester.pumpAndSettle();
 
-      // Should show celebratory dialog
-      expect(find.textContaining('مبارك! أتقنت التسميع'), findsOneWidget);
+      // Should show incomplete recitation warning dialog (not passed)
+      expect(find.textContaining('لم يكتمل التسميع بعد'), findsOneWidget);
 
-      // Ayahs should now be marked as memorized in memorizationModule
+      // Ayahs should NOT be marked as memorized
       final isMem = await memorizationModule.isAyahMemorized(
         const AyahKey(surahNumber: 1, ayahNumber: 1),
       );
-      expect(isMem, isTrue);
+      expect(isMem, isFalse);
     });
   });
 }

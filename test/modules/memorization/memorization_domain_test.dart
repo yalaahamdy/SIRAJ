@@ -1,11 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:siraj/core/storage/memory_storage.dart';
 import 'package:siraj/modules/memorization/domain/memorization_item.dart';
 import 'package:siraj/modules/memorization/domain/memorization_plan.dart';
 import 'package:siraj/modules/memorization/domain/memorization_state.dart';
 import 'package:siraj/modules/memorization/domain/mistake_record.dart';
 import 'package:siraj/modules/memorization/domain/review_quality.dart';
 import 'package:siraj/modules/memorization/domain/review_result.dart';
+import 'package:siraj/modules/memorization/memorization_module.dart';
 import 'package:siraj/modules/quran/domain/ayah_key.dart';
+import 'package:siraj/modules/quran/quran_module.dart';
+import '../../fixtures/quran/canonical_quran_fixture.dart';
 
 void main() {
   group('L2 Memorization Domain Models & Lifecycle Tests (§4, §5, §6)', () {
@@ -93,6 +97,50 @@ void main() {
       expect(plan.endAyah, equals(const AyahKey(surahNumber: 114, ayahNumber: 6)));
       expect(plan.dailyNewAyahs, equals(5));
       expect(plan.isActive, isTrue);
+    });
+
+    test('getTodayWirdAyahs auto-includes remaining <= 3 ayahs of final surah to complete it', () async {
+      final storage = MemoryStorageRegistry();
+      final quranModule = QuranModule(storageRegistry: storage);
+      quranModule.mountPackage(CanonicalQuranFixture.createValidTestPackage());
+
+      final memModule = MemorizationModule(
+        storageRegistry: storage,
+        quranStore: quranModule.store,
+      );
+      await memModule.initialize();
+
+      // Surah 113 has 5 ayahs, Surah 114 has 6 ayahs
+      final plan = MemorizationPlan(
+        id: 'test_plan_falaq_nas',
+        title: 'خطة الفلق والناس',
+        targetSurahs: const [113, 114],
+        startAyah: const AyahKey(surahNumber: 113, ayahNumber: 1),
+        endAyah: const AyahKey(surahNumber: 114, ayahNumber: 6),
+        dailyNewAyahs: 5,
+        createdAt: now,
+      );
+
+      // Case 1: Target = 3 ayahs. 2 remain in Surah 113 (<= 3).
+      // Auto-inclusion triggers -> Returns 5 ayahs (completes Surah 113).
+      final wird3 = await memModule.getTodayWirdAyahs(plan, customTargetAyahs: 3);
+      expect(wird3.isSuccess, isTrue);
+      expect(wird3.valueOrNull!.length, equals(5));
+      expect(wird3.valueOrNull!.every((a) => a.surahNumber == 113), isTrue);
+
+      // Case 2: Target = 6 ayahs. Takes 5 from Surah 113 + 1 from Surah 114.
+      // 5 remain in Surah 114 (> 3). Auto-inclusion does NOT trigger -> Returns 6 ayahs.
+      final wird6 = await memModule.getTodayWirdAyahs(plan, customTargetAyahs: 6);
+      expect(wird6.isSuccess, isTrue);
+      expect(wird6.valueOrNull!.length, equals(6));
+      expect(wird6.valueOrNull!.where((a) => a.surahNumber == 113).length, equals(5));
+      expect(wird6.valueOrNull!.where((a) => a.surahNumber == 114).length, equals(1));
+
+      // Case 3: Target = 8 ayahs. Takes 5 from Surah 113 + 3 from Surah 114.
+      // 3 remain in Surah 114 (<= 3). Auto-inclusion triggers -> Returns 11 ayahs (completes both surahs).
+      final wird8 = await memModule.getTodayWirdAyahs(plan, customTargetAyahs: 8);
+      expect(wird8.isSuccess, isTrue);
+      expect(wird8.valueOrNull!.length, equals(11));
     });
   });
 }
