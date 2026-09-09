@@ -3,6 +3,7 @@ import '../../core/errors/app_failure.dart';
 import '../../core/errors/result.dart';
 import '../../core/i18n/app_strings.dart';
 import '../../core/storage/memory_storage.dart';
+import '../../core/storage/persistent_storage.dart';
 import '../../modules/adhkar/adhkar_module.dart';
 import '../../modules/adhkar/domain/dhikr_occasion.dart';
 import '../../modules/ai/ai_module.dart';
@@ -288,7 +289,7 @@ class AppRouter {
 
     // Handle Memorization deep links like /memorization/session, /memorization/plan, /memorization/progress, /memorization/item/{surah}:{ayah} (§18, §19)
     if (name.startsWith('/memorization/')) {
-      final registry = MemoryStorageRegistry();
+      final registry = PersistentStorageRegistry.defaultInstance;
       final quranMod = defaultQuranModule ?? QuranModule(storageRegistry: registry);
       final memMod = defaultMemorizationModule ??
           MemorizationModule(
@@ -945,7 +946,7 @@ class AppRouter {
         );
       case memorizationSession:
         final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
-        final registry = MemoryStorageRegistry();
+        final registry = PersistentStorageRegistry.defaultInstance;
         final quranMod = defaultQuranModule ?? QuranModule(storageRegistry: registry);
         final memMod = args['module'] as MemorizationModule? ??
             defaultMemorizationModule ??
@@ -959,7 +960,7 @@ class AppRouter {
         );
       case memorizationPlan:
         final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
-        final registry = MemoryStorageRegistry();
+        final registry = PersistentStorageRegistry.defaultInstance;
         final quranMod = defaultQuranModule ?? QuranModule(storageRegistry: registry);
         final memMod = args['module'] as MemorizationModule? ??
             defaultMemorizationModule ??
@@ -975,7 +976,7 @@ class AppRouter {
         );
       case memorizationPastExam:
         final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
-        final registry = MemoryStorageRegistry();
+        final registry = PersistentStorageRegistry.defaultInstance;
         final quranMod = defaultQuranModule ?? QuranModule(storageRegistry: registry);
         final memMod = args['module'] as MemorizationModule? ??
             defaultMemorizationModule ??

@@ -1320,6 +1320,115 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     });
   }
 
+  void _showAyahCountSelectorDialog(int startAyah, int currentEndAyah, int totalSurahAyahs) {
+    int currentCount = currentEndAyah - startAyah + 1;
+    final maxAvailable = totalSurahAyahs - startAyah + 1;
+    final controller = TextEditingController(text: '$currentCount');
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final calculatedEnd = (startAyah + currentCount - 1).clamp(1, totalSurahAyahs);
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: Row(
+                children: [
+                  const Icon(Icons.edit_note_rounded, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'تحديد آيات التسميع (سورة ${_currentSurah?.nameArabic ?? ''})',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'النطاق: من الآية $startAyah إلى $calculatedEnd ($currentCount آية)',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline_rounded, size: 28),
+                        color: AppColors.primary,
+                        onPressed: () {
+                          if (currentCount > 1) {
+                            setDialogState(() {
+                              currentCount--;
+                              controller.text = '$currentCount';
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 70,
+                        height: 40,
+                        child: TextFormField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onChanged: (val) {
+                            final parsed = int.tryParse(val);
+                            if (parsed != null && parsed > 0) {
+                              setDialogState(() {
+                                currentCount = parsed.clamp(1, maxAvailable);
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline_rounded, size: 28),
+                        color: AppColors.primary,
+                        onPressed: () {
+                          if (currentCount < maxAvailable) {
+                            setDialogState(() {
+                              currentCount++;
+                              controller.text = '$currentCount';
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('آيات', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('إلغاء'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                  onPressed: () {
+                    Navigator.pop(dialogCtx);
+                    _updateMemorizationEndAyah(calculatedEnd);
+                  },
+                  child: const Text('تطبيق النطاق ✨'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildMemorizationHeaderCard(QuranTypographyConfig config, bool isDark) {
     final startAyah = _memorizationStartAyah;
     final endAyah = _memorizationEndAyah;
@@ -1327,7 +1436,6 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     final totalSurahAyahs = _allSurahAyahs.isNotEmpty
         ? _allSurahAyahs.length
         : (_currentSurah?.ayahCount ?? endAyah);
-    final canCompleteSurah = endAyah < totalSurahAyahs;
 
     if (_isMemorizationBarCollapsed) {
       return Container(
@@ -1494,21 +1602,19 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                   },
                 ),
               ),
-              if (canCompleteSurah) ...[
-                const SizedBox(width: 6),
-                FilledButton.tonal(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.goldAccent.withValues(alpha: 0.2),
-                    foregroundColor: isDark ? Colors.amber[200] : const Color(0xFF8B6508),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    minimumSize: const Size(0, 32),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onPressed: () => _updateMemorizationEndAyah(totalSurahAyahs),
-                  child: const Text('إكمال السورة ✨', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+              const SizedBox(width: 6),
+              FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.goldAccent.withValues(alpha: 0.2),
+                  foregroundColor: isDark ? Colors.amber[200] : const Color(0xFF8B6508),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  visualDensity: VisualDensity.compact,
                 ),
-              ],
+                onPressed: () => _showAyahCountSelectorDialog(startAyah, endAyah, totalSurahAyahs),
+                child: const Text('تعديل الآيات 🔢', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
             ],
           ),
         ],

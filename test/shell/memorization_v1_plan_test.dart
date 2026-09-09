@@ -54,7 +54,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final titleField = find.byType(TextField).first;
+      final titleField = find.byKey(const Key('plan_title_field'));
       await tester.enterText(titleField, 'خطة سورة الكهف');
       await tester.pumpAndSettle();
 

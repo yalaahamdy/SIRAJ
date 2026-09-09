@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/i18n/app_strings.dart';
-import '../core/storage/memory_storage.dart';
+import '../core/storage/persistent_storage.dart';
 import 'seed/content_seed_engine.dart';
 import '../core/storage/storage_contract.dart';
 import '../modules/adhkar/adhkar_module.dart';
@@ -84,7 +84,7 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    _storage = widget.storageRegistry ?? MemoryStorageRegistry();
+    _storage = widget.storageRegistry ?? PersistentStorageRegistry.defaultInstance;
     AppThemeController(storageRegistry: _storage);
     SirajFeedbackAudioService(storageRegistry: _storage);
 
@@ -130,6 +130,7 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
       storageRegistry: _storage,
       quranStore: _quranModule.store,
     );
+    AppRouter.defaultMemorizationModule = _memorizationModule;
     _adhkarModule = AdhkarModule(storageRegistry: _storage);
     _zakatModule = ZakatModule(storageRegistry: _storage);
     _fastingModule = FastingModule(

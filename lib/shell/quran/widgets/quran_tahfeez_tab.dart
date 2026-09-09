@@ -39,11 +39,19 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
   List<TahfeezSurahSummary> _surahsSummary = [];
   final Set<AyahKey> _memorizedKeys = {};
   bool _isLoading = true;
+  int? _customWirdCount;
+  final TextEditingController _customCountController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadTahfeezData();
+  }
+
+  @override
+  void dispose() {
+    _customCountController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTahfeezData() async {
@@ -63,10 +71,17 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
         .map((i) => i.ayahKey)
         .toSet();
 
+    final loadedWird = wirdRes.valueOrNull ?? [];
+    final fallbackCount = loadedWird.isNotEmpty ? loadedWird.length : (plan.dailyNewAyahs);
+    if (_customWirdCount == null || _customWirdCount! <= 0) {
+      _customWirdCount = fallbackCount;
+      _customCountController.text = '$_customWirdCount';
+    }
+
     if (mounted) {
       setState(() {
         _plan = plan;
-        _todayWirdAyahs = wirdRes.valueOrNull ?? [];
+        _todayWirdAyahs = loadedWird;
         _surahsSummary = summaryRes.valueOrNull ?? [];
         _memorizedKeys
           ..clear()
@@ -305,14 +320,14 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
     }
 
     final firstAyah = _todayWirdAyahs.first;
-    final lastAyah = _todayWirdAyahs.last;
     final surahNumber = firstAyah.surahNumber;
     final startAyah = firstAyah.ayahNumber;
-    final endAyah = lastAyah.ayahNumber;
-    final count = _todayWirdAyahs.length;
+    final baseCount = _todayWirdAyahs.length;
     final isWirdCompleted = _todayWirdAyahs.every((a) => _memorizedKeys.contains(a.key));
-    final totalAyahsInSurah = widget.quranModule.getSurah(surahNumber).valueOrNull?.ayahCount ?? endAyah;
-    final remainingInSurah = (totalAyahsInSurah - endAyah).clamp(0, totalAyahsInSurah);
+    final totalAyahsInSurah = widget.quranModule.getSurah(surahNumber).valueOrNull?.ayahCount ?? _todayWirdAyahs.last.ayahNumber;
+    final maxAvailableInSurah = (totalAyahsInSurah - startAyah + 1).clamp(1, totalAyahsInSurah);
+    final chosenCount = (_customWirdCount ?? baseCount).clamp(1, maxAvailableInSurah);
+    final effectiveEndAyah = (startAyah + chosenCount - 1).clamp(1, totalAyahsInSurah);
 
     return Card(
       elevation: 2,
@@ -371,7 +386,7 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    '$count آيات مقررة',
+                    '$chosenCount آيات مقررة',
                     style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -379,7 +394,7 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
             ),
             const SizedBox(height: 12),
             Text(
-              'سورة ${_getSurahName(surahNumber)} — من الآية $startAyah إلى الآية $endAyah',
+              'سورة ${_getSurahName(surahNumber)} — من الآية $startAyah إلى الآية $effectiveEndAyah',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
@@ -403,41 +418,103 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
               ),
             ),
             const SizedBox(height: 12),
-            if (remainingInSurah > 0 && !isWirdCompleted) ...[
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ActionChip(
-                    avatar: const Icon(Icons.stars_rounded, size: 16, color: AppColors.goldAccent),
-                    label: Text(
-                      'إكمال سورة ${_getSurahName(surahNumber)} اليوم ($totalAyahsInSurah آية) 🌟',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                    backgroundColor: AppColors.goldAccent.withValues(alpha: 0.12),
-                    side: BorderSide(color: AppColors.goldAccent.withValues(alpha: 0.4)),
-                    onPressed: () => _openReaderForMemorization(surahNumber, startAyah, totalAyahsInSurah, isReview: false),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      const Text(
+                        'حدد عدد آيات اليوم بحرية:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'من الآية $startAyah إلى $effectiveEndAyah ($chosenCount آية)',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
+                    ],
                   ),
-                  if (remainingInSurah >= 1 && endAyah + 1 <= totalAyahsInSurah)
-                    ActionChip(
-                      avatar: const Icon(Icons.add_rounded, size: 14, color: AppColors.primary),
-                      label: const Text('+1 آية', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                      backgroundColor: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
-                      side: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300),
-                      onPressed: () => _openReaderForMemorization(surahNumber, startAyah, endAyah + 1, isReview: false),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline_rounded, size: 24),
+                            color: AppColors.primary,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'إنقاص آية',
+                            onPressed: () {
+                              if (chosenCount > 1) {
+                                setState(() {
+                                  _customWirdCount = chosenCount - 1;
+                                  _customCountController.text = '$_customWirdCount';
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 60,
+                            height: 36,
+                            child: TextFormField(
+                              controller: _customCountController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                              ),
+                              onChanged: (val) {
+                                final parsed = int.tryParse(val);
+                                if (parsed != null && parsed > 0) {
+                                  setState(() {
+                                    _customWirdCount = parsed;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline_rounded, size: 24),
+                            color: AppColors.primary,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'زيادة آية',
+                            onPressed: () {
+                              if (chosenCount < maxAvailableInSurah) {
+                                setState(() {
+                                  _customWirdCount = chosenCount + 1;
+                                  _customCountController.text = '$_customWirdCount';
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('آيات', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                        ],
+                      ),
                     ),
-                  if (remainingInSurah >= 5 && endAyah + 5 <= totalAyahsInSurah)
-                    ActionChip(
-                      avatar: const Icon(Icons.add_rounded, size: 14, color: AppColors.primary),
-                      label: const Text('+5 آيات', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                      backgroundColor: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
-                      side: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300),
-                      onPressed: () => _openReaderForMemorization(surahNumber, startAyah, endAyah + 5, isReview: false),
-                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 10),
-            ],
+            ),
+            const SizedBox(height: 12),
             FilledButton.icon(
               style: FilledButton.styleFrom(
                 backgroundColor: isWirdCompleted ? const Color(0xFF2E7D32) : AppColors.primary,
@@ -452,7 +529,7 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
                     : 'ابدأ الحفظ والتسميع في المصحف 📖🎙️',
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
-              onPressed: () => _openReaderForMemorization(surahNumber, startAyah, endAyah, isReview: false),
+              onPressed: () => _openReaderForMemorization(surahNumber, startAyah, effectiveEndAyah, isReview: false),
             ),
           ],
         ),

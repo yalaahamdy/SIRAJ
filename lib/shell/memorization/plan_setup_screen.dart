@@ -353,6 +353,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
 
                   // 5. Plan Title TextField
                   TextField(
+                    key: const Key('plan_title_field'),
                     controller: _titleController,
                     decoration: InputDecoration(
                       labelText: 'مسمى الخطة المباركة',
@@ -703,101 +704,99 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            Row(
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: targets.map((t) {
                 final isSel = _dailyNew == t;
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: isSel ? AppColors.primary : Colors.transparent,
-                        foregroundColor: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                        side: BorderSide(color: isSel ? AppColors.primary : Colors.grey.shade300),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _dailyNew = t;
-                          _dailyNewController.text = '$t';
-                        });
-                      },
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('$t آيات', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ),
+                return ChoiceChip(
+                  label: Text('$t آيات', style: TextStyle(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                  selected: isSel,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                  backgroundColor: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
+                  side: BorderSide(color: isSel ? AppColors.primary : (isDark ? Colors.white12 : Colors.grey.shade300)),
+                  onSelected: (_) {
+                    setState(() {
+                      _dailyNew = t;
+                      _dailyNewController.text = '$t';
+                    });
+                  },
                 );
               }).toList(),
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('أو اكتب عدداً مخصصاً:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 22),
-                    color: AppColors.primary,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'إنقاص آية',
-                    onPressed: () {
-                      if (_dailyNew > 1) {
-                        setState(() {
-                          _dailyNew--;
-                          _dailyNewController.text = '$_dailyNew';
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 54,
-                    height: 36,
-                    child: TextFormField(
-                      controller: _dailyNewController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                  const Text('أو حدد عدداً مخصصاً لليوم:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline_rounded, size: 26),
+                        color: AppColors.primary,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'إنقاص آية',
+                        onPressed: () {
+                          if (_dailyNew > 1) {
+                            setState(() {
+                              _dailyNew--;
+                              _dailyNewController.text = '$_dailyNew';
+                            });
+                          }
+                        },
                       ),
-                      onChanged: (val) {
-                        final parsed = int.tryParse(val);
-                        if (parsed != null && parsed > 0) {
+                      const SizedBox(width: 14),
+                      SizedBox(
+                        width: 64,
+                        height: 38,
+                        child: TextFormField(
+                          controller: _dailyNewController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          onChanged: (val) {
+                            final parsed = int.tryParse(val);
+                            if (parsed != null && parsed > 0) {
+                              setState(() {
+                                _dailyNew = parsed;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline_rounded, size: 26),
+                        color: AppColors.primary,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'زيادة آية',
+                        onPressed: () {
                           setState(() {
-                            _dailyNew = parsed;
+                            _dailyNew++;
+                            _dailyNewController.text = '$_dailyNew';
                           });
-                        }
-                      },
-                    ),
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('آية / يومياً', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline_rounded, size: 22),
-                    color: AppColors.primary,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'زيادة آية',
-                    onPressed: () {
-                      setState(() {
-                        _dailyNew++;
-                        _dailyNewController.text = '$_dailyNew';
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 6),
-                  const Text('آية / يوم', style: TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
               ),
             ),
@@ -818,39 +817,73 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.goldAccent.withValues(alpha: 0.3)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
         children: [
-          _buildStatItem('إجمالي الآيات', '$totalAyahs آية', Icons.format_list_numbered_rounded),
-          Container(width: 1, height: 32, color: Colors.grey.shade300),
-          _buildStatItem('مدة الختم المقدرة', '$totalDays يوم ($months شهر)', Icons.timelapse_rounded),
-          Container(width: 1, height: 32, color: Colors.grey.shade300),
-          _buildStatItem('تاريخ الإتمام', dateStr, Icons.event_available_rounded),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatRow(
+                  label: 'إجمالي الآيات',
+                  value: '$totalAyahs آية',
+                  icon: Icons.format_list_numbered_rounded,
+                ),
+              ),
+              Container(width: 1, height: 32, color: Colors.grey.withValues(alpha: 0.3)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildStatRow(
+                  label: 'تاريخ الإتمام',
+                  value: dateStr,
+                  icon: Icons.event_available_rounded,
+                ),
+              ),
+            ],
+          ),
+          Divider(height: 16, color: Colors.grey.withValues(alpha: 0.2)),
+          _buildStatRow(
+            label: 'مدة الختم المقدرة',
+            value: '$totalDays يوم (قرابة $months شهر)',
+            icon: Icons.timelapse_rounded,
+            highlight: true,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, size: 16, color: AppColors.goldAccent),
-          const SizedBox(height: 3),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+  Widget _buildStatRow({
+    required String label,
+    required String value,
+    required IconData icon,
+    bool highlight = false,
+  }) {
+    return Row(
+      mainAxisAlignment: highlight ? MainAxisAlignment.center : MainAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: AppColors.goldAccent),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: highlight ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: highlight ? 13 : 12,
+                  fontWeight: FontWeight.bold,
+                  color: highlight ? AppColors.goldAccent : null,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
