@@ -1,21 +1,21 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../../modules/memorization/domain/mastery_snapshot.dart';
 import '../../../../modules/memorization/domain/memorization_plan.dart';
-import '../../../../modules/memorization/domain/review_session.dart';
+import '../../../../modules/memorization/domain/tahfeez_surah_summary.dart';
 import '../../../../modules/memorization/memorization_module.dart';
-import '../../../../modules/memorization/services/past_memorization_engine.dart';
+import '../../../../modules/quran/domain/ayah.dart';
 import '../../../../modules/quran/domain/ayah_key.dart';
 import '../../../../modules/quran/quran_module.dart';
+import '../../../../modules/quran/services/quran_audio_service.dart';
 import '../../memorization/past_memorization_exam_screen.dart';
 import '../../memorization/plan_setup_screen.dart';
-import '../../memorization/study_session_screen.dart';
-import '../../memorization/widgets/mastery_stat_card.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/state_views.dart';
 
-/// Comprehensive Quran Memorization & Review Hub Tab (تبويبة تحفيظ القرآن الكريم والمراجعة).
-/// Replaces the legacy static Juzs tab with a rich, interactive learning experience (§38, §50..§55).
+/// Clean, professional, visual Quran Memorization & Review Hub Tab.
+/// Rebuilt from scratch to directly render daily Quran verses, audio repetitions,
+/// instant memorization checkmarks, and plan surah progress with zero screen overflow.
 class QuranTahfeezTab extends StatefulWidget {
   final QuranModule quranModule;
   final MemorizationModule memorizationModule;
@@ -33,36 +33,144 @@ class QuranTahfeezTab extends StatefulWidget {
 }
 
 class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
-  MasterySnapshot? _snapshot;
   MemorizationPlan? _plan;
-  ReviewSession? _session;
-  PastMasteryStats? _pastStats;
+  List<Ayah> _todayWirdAyahs = [];
+  List<TahfeezSurahSummary> _surahsSummary = [];
+  final Set<AyahKey> _memorizedKeys = {};
+  final Set<AyahKey> _hiddenAyahKeys = {};
+
   bool _isLoading = true;
+  int? _playingSurah;
+  int? _playingAyah;
+  int _repeatTimes = 1; // 1, 3, 5, 10
+  int _currentRepeatIndex = 1;
+  StreamSubscription<AudioPlaybackReport>? _audioSub;
 
   @override
   void initState() {
     super.initState();
     _loadTahfeezData();
+    _listenToAudioPlayback();
+  }
+
+  @override
+  void dispose() {
+    _audioSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenToAudioPlayback() {
+    _audioSub = widget.quranModule.audioService.reportStream.listen((report) {
+      if (mounted) {
+        setState(() {
+          if (report.status == AudioPlaybackStatus.playing) {
+            _playingSurah = report.surahNumber;
+            _playingAyah = report.ayahNumber;
+          } else if (report.status == AudioPlaybackStatus.stopped ||
+              report.status == AudioPlaybackStatus.idle ||
+              report.status == AudioPlaybackStatus.error) {
+            if (_playingSurah != null && _playingAyah != null && _currentRepeatIndex < _repeatTimes) {
+              _currentRepeatIndex++;
+              widget.quranModule.audioService.playAyah(_playingSurah!, _playingAyah!);
+            } else {
+              _playingSurah = null;
+              _playingAyah = null;
+              _currentRepeatIndex = 1;
+            }
+          }
+        });
+      }
+    });
   }
 
   Future<void> _loadTahfeezData() async {
     setState(() => _isLoading = true);
 
     await widget.memorizationModule.initialize();
-    final snapRes = await widget.memorizationModule.getMasterySnapshot();
     final planRes = await widget.memorizationModule.getPlan();
-    final sessionRes = await widget.memorizationModule.getOrCreateTodaySession();
-    final pastRes = await widget.memorizationModule.getPastMasteryStats();
+    final plan = planRes.valueOrNull ??
+        MemorizationPlan.createDefaultJuzAmma(widget.memorizationModule.clock.nowUtc());
+
+    final wirdRes = await widget.memorizationModule.getTodayWirdAyahs(plan);
+    final summaryRes = await widget.memorizationModule.getPlanSurahsSummary(plan);
+    final itemsRes = await widget.memorizationModule.getAllItems();
+
+    final memorized = (itemsRes.valueOrNull ?? [])
+        .where((i) => i.masteryScore >= 80.0)
+        .map((i) => i.ayahKey)
+        .toSet();
 
     if (mounted) {
       setState(() {
-        _snapshot = snapRes.valueOrNull;
-        _plan = planRes.valueOrNull;
-        _session = sessionRes.valueOrNull;
-        _pastStats = pastRes.valueOrNull;
+        _plan = plan;
+        _todayWirdAyahs = wirdRes.valueOrNull ?? [];
+        _surahsSummary = summaryRes.valueOrNull ?? [];
+        _memorizedKeys
+          ..clear()
+          ..addAll(memorized);
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _toggleAyahMemorized(Ayah ayah) async {
+    final isCurrentlyMem = _memorizedKeys.contains(ayah.key);
+    final nextState = !isCurrentlyMem;
+
+    setState(() {
+      if (nextState) {
+        _memorizedKeys.add(ayah.key);
+      } else {
+        _memorizedKeys.remove(ayah.key);
+      }
+    });
+
+    await widget.memorizationModule.setAyahMemorizedStatus(ayah.key, nextState);
+    final summaryRes = await widget.memorizationModule.getPlanSurahsSummary(_plan!);
+    if (mounted && summaryRes.isSuccess) {
+      setState(() {
+        _surahsSummary = summaryRes.valueOrNull ?? [];
+      });
+    }
+  }
+
+  void _toggleHideAyah(AyahKey key) {
+    setState(() {
+      if (_hiddenAyahKeys.contains(key)) {
+        _hiddenAyahKeys.remove(key);
+      } else {
+        _hiddenAyahKeys.add(key);
+      }
+    });
+  }
+
+  void _playAyahAudio(Ayah ayah) {
+    if (_playingSurah == ayah.surahNumber && _playingAyah == ayah.ayahNumber) {
+      widget.quranModule.audioService.stop();
+      setState(() {
+        _playingSurah = null;
+        _playingAyah = null;
+        _currentRepeatIndex = 1;
+      });
+    } else {
+      _currentRepeatIndex = 1;
+      widget.quranModule.audioService.playAyah(ayah.surahNumber, ayah.ayahNumber);
+    }
+  }
+
+  void _cycleRepeatMode() {
+    setState(() {
+      if (_repeatTimes == 1) {
+        _repeatTimes = 3;
+      } else if (_repeatTimes == 3) {
+        _repeatTimes = 5;
+      } else if (_repeatTimes == 5) {
+        _repeatTimes = 10;
+      } else {
+        _repeatTimes = 1;
+      }
+      _currentRepeatIndex = 1;
+    });
   }
 
   void _openPlanSetup() {
@@ -80,22 +188,7 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
     );
   }
 
-  void _startStudySession() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (ctx) => StudySessionScreen(
-          memorizationModule: widget.memorizationModule,
-          onFinish: () {
-            Navigator.pop(context);
-            _loadTahfeezData();
-          },
-        ),
-      ),
-    );
-  }
-
-  void _startPastExam() {
+  void _openPastQuiz() {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -119,60 +212,40 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
       return const LoadingStateView();
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadTahfeezData,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Streak & Header Banner
-                _buildHeaderBanner(context, isDark),
-                const SizedBox(height: AppSpacing.s),
+    final totalAyahsCount = _surahsSummary.fold<int>(0, (sum, s) => sum + s.totalAyahsInPlan);
+    final memorizedCount = _surahsSummary.fold<int>(0, (sum, s) => sum + s.memorizedAyahsCount);
+    final overallProgress = totalAyahsCount > 0 ? (memorizedCount / totalAyahsCount) * 100 : 0.0;
 
-                // 2. Metrics Grid (4 Stat Cards)
-                _buildMetricsGrid(context, isDark),
-                const SizedBox(height: AppSpacing.m),
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+      child: RefreshIndicator(
+        onRefresh: _loadTahfeezData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 750),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Top Plan Summary & Hero Card
+                  _buildPlanHeroCard(isDark, memorizedCount, totalAyahsCount, overallProgress),
+                  const SizedBox(height: AppSpacing.m),
 
-                // 3. Active Plan Card
-                _buildPlanCard(context, isDark),
-                const SizedBox(height: AppSpacing.m),
+                  // 2. Today's Memorization Workspace Section (الآيات تظهر مباشرة بنصها العثماني)
+                  _buildTodayWirdSection(isDark),
+                  const SizedBox(height: AppSpacing.m),
 
-                // 4. Dedicated Past Memorization Confirmation Card
-                _buildPastMemorizationMasteryCard(context, isDark),
-                const SizedBox(height: AppSpacing.m),
+                  // 3. Plan Surahs Progress List (سور الخطة المقررة)
+                  _buildPlanSurahsList(isDark),
+                  const SizedBox(height: AppSpacing.m),
 
-                // 5. Today's Three-Tier Wird Card
-                _buildDailyWirdCard(context, isDark),
-                const SizedBox(height: AppSpacing.m),
-
-                // 6. Start Full Session Button
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
-                    elevation: 2,
-                  ),
-                  onPressed: _startStudySession,
-                  icon: const Icon(Icons.play_circle_fill_rounded, size: 28),
-                  label: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      _session != null && _session!.results.isNotEmpty && !_session!.isCompleted
-                          ? 'استئناف جلسة اليوم (${_session!.completedCount}/${_session!.totalItemsCount})'
-                          : 'بدء جلسة الحفظ والمراجعة اليومية',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-              ],
+                  // 4. Past Memorization Testing Card
+                  _buildPastQuizCard(isDark),
+                  const SizedBox(height: AppSpacing.l),
+                ],
+              ),
             ),
           ),
         ),
@@ -180,340 +253,505 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
     );
   }
 
-  Widget _buildHeaderBanner(BuildContext context, bool isDark) {
-    final streak = _snapshot?.currentStreakDays ?? 0;
-    return Card(
-      elevation: 0,
-      color: isDark ? AppColors.surfaceDark : AppColors.primaryLight.withValues(alpha: 0.12),
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.m),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.s),
-              decoration: BoxDecoration(
-                color: AppColors.goldAccent.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.local_fire_department_rounded, color: AppColors.goldAccent, size: 30),
-            ),
-            const SizedBox(width: AppSpacing.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'برنامج تحفيظ وتثبيت القرآن الكريم',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    streak > 0 ? '$streak أيام متتالية من الالتزام والمراجعة المباركة' : 'ابدأ جلستك اليوم لبناء عادة حفظ يومية مستمرة',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricsGrid(BuildContext context, bool isDark) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.s,
-      crossAxisSpacing: AppSpacing.s,
-      childAspectRatio: screenWidth < 400 ? 1.35 : (screenWidth < 600 ? 1.45 : 1.7),
-      children: [
-        MasteryStatCard(
-          title: 'ورد جديد اليوم',
-          value: '${_session?.newAyahs.length ?? 0} آيات',
-          icon: Icons.fiber_new_rounded,
-          color: AppColors.primaryLight,
-        ),
-        MasteryStatCard(
-          title: 'مستحق للمراجعة',
-          value: '${_session?.reviewAyahs.length ?? 0} آيات',
-          icon: Icons.schedule_rounded,
-          color: AppColors.warning,
-        ),
-        MasteryStatCard(
-          title: 'المحفوظ والمتقن',
-          value: '${_snapshot?.totalCompletedAyahs ?? 0} آية',
-          icon: Icons.verified_rounded,
-          color: Colors.green,
-        ),
-        MasteryStatCard(
-          title: 'تمكين حفظ الماضي',
-          value: '${_pastStats?.masteryPercentage.toStringAsFixed(0) ?? 100}%',
-          icon: Icons.workspace_premium_rounded,
-          color: AppColors.goldAccent,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPlanCard(BuildContext context, bool isDark) {
-    final plan = _plan;
-    final completion = _snapshot?.completionRate ?? 0.0;
+  Widget _buildPlanHeroCard(bool isDark, int memorized, int total, double progress) {
+    final planTitle = _plan?.title ?? 'خطة جزء عمّ';
+    final remaining = (total - memorized).clamp(0, total);
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: AppSpacing.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'خطة التحفيظ المستهدفة',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.edit_note_rounded, size: 18),
-                  label: const Text('تخصيص الخطة'),
-                  onPressed: _openPlanSetup,
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              plan?.title ?? 'حفظ جزء عم (خطة افتراضية)',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: isDark ? AppColors.goldAccent : AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.s),
-            ClipRRect(
-              borderRadius: AppRadius.radiusSmall,
-              child: LinearProgressIndicator(
-                value: (completion / 100).clamp(0.0, 1.0),
-                minHeight: 8,
-                backgroundColor: isDark ? Colors.white10 : Colors.black12,
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('نسبة الإنجاز: ${completion.toStringAsFixed(1)}%', style: Theme.of(context).textTheme.bodySmall),
-                Text('المستهدف اليومي: ${plan?.dailyNewAyahs ?? 5} آيات', style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPastMemorizationMasteryCard(BuildContext context, bool isDark) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.radiusMedium,
-        side: BorderSide(color: AppColors.goldAccent.withValues(alpha: 0.5), width: 1.5),
-      ),
-      color: isDark ? AppColors.surfaceDark : Colors.amber.withValues(alpha: 0.07),
-      child: Padding(
-        padding: AppSpacing.paddingCard,
+        padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.goldAccent.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.verified_rounded, color: AppColors.goldAccent, size: 22),
-                ),
-                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      const Text(
-                        'نظام تسميع واختبار (الماضي) — لتأكيد الحفظ',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.stars_rounded, color: AppColors.primary, size: 20),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'امتحن استحضار محفوظك السابق غيباً لمنع التفلت وتأكيد التمكين',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          planTitle,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.m),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? AppColors.goldAccent : AppColors.primary,
-                      foregroundColor: isDark ? Colors.black : Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
-                    ),
-                    icon: const Icon(Icons.record_voice_over_rounded),
-                    label: const FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'بدء اختبار وتسميع الماضي الآن 🌟',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    onPressed: _startPastExam,
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
+                  icon: const Icon(Icons.tune_rounded, size: 16),
+                  label: const Text('تغيير الخطة', style: TextStyle(fontSize: 12)),
+                  onPressed: _openPlanSetup,
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDailyWirdCard(BuildContext context, bool isDark) {
-    final session = _session;
-    final newAyahs = session?.newAyahs ?? [];
-    final reviewAyahs = session?.reviewAyahs ?? [];
-    final weakAyahs = session?.weakAyahs ?? [];
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
-      child: Padding(
-        padding: AppSpacing.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'أوراد الحفظ والمراجعة لليوم',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.s),
-            _buildWirdSection(
-              title: '1. ورد الحفظ الجديد (السبق)',
-              subtitle: newAyahs.isNotEmpty
-                  ? '${newAyahs.length} آيات مقررة للتعلم والحفظ غيباً اليوم'
-                  : 'تم إنجاز آيات الحفظ الجديد لليوم بحمد الله',
-              ayahKeys: newAyahs,
-              badgeColor: Colors.green,
-              isDark: isDark,
-            ),
-            const Divider(height: 24),
-            _buildWirdSection(
-              title: '2. ورد المراجعة الصغرى (مراجعة القريب)',
-              subtitle: reviewAyahs.isNotEmpty
-                  ? '${reviewAyahs.length} آيات مستحقة للتثبيت والمراجعة'
-                  : 'لا توجد آيات مستحقة للمراجعة حالياً',
-              ayahKeys: reviewAyahs,
-              badgeColor: AppColors.primary,
-              isDark: isDark,
-            ),
-            if (weakAyahs.isNotEmpty) ...[
-              const Divider(height: 24),
-              _buildWirdSection(
-                title: '3. ورد تثبيت المتشابهات والمواضع المتعثرة',
-                subtitle: '${weakAyahs.length} آيات تحتاج إلى تركيز وتكرار إضافي',
-                ayahKeys: weakAyahs,
-                badgeColor: AppColors.warning,
-                isDark: isDark,
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: (progress / 100).clamp(0.0, 1.0),
+                minHeight: 9,
+                backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
               ),
-            ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildHeroStat('المحفوظ', '$memorized آية', Colors.green),
+                Container(width: 1, height: 20, color: Colors.grey.shade300),
+                _buildHeroStat('المتبقي', '$remaining آية', AppColors.primary),
+                Container(width: 1, height: 20, color: Colors.grey.shade300),
+                _buildHeroStat('نسبة الإنجاز', '${progress.toStringAsFixed(1)}%', AppColors.goldAccent),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildWirdSection({
-    required String title,
-    required String subtitle,
-    required List<AyahKey> ayahKeys,
-    required Color badgeColor,
-    required bool isDark,
-  }) {
-    AyahKey? firstKey = ayahKeys.isNotEmpty ? ayahKeys.first : null;
-    final surahRes = firstKey != null ? widget.memorizationModule.quranStore.getSurah(firstKey.surahNumber) : null;
-    final surahName = surahRes?.isSuccess == true ? surahRes!.valueOrNull?.nameArabic : '';
+  Widget _buildHeroStat(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+
+  Widget _buildTodayWirdSection(bool isDark) {
+    final dailyTarget = _plan?.dailyNewAyahs ?? 5;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                overflow: TextOverflow.ellipsis,
+              child: Row(
+                children: [
+                  const Icon(Icons.local_fire_department_rounded, color: AppColors.goldAccent, size: 18),
+                  const SizedBox(width: 4),
+                  const Flexible(
+                    child: Text(
+                      'ورد الحفظ لليوم',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${_todayWirdAyahs.length}/$dailyTarget',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (firstKey != null) ...[
-              const SizedBox(width: 8),
-              TextButton.icon(
-                style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero),
-                icon: const Icon(Icons.arrow_forward_ios_rounded, size: 12),
-                label: const Text('فتح في المصحف', style: TextStyle(fontSize: 12)),
-                onPressed: () {
-                  widget.onOpenSurah(firstKey.surahNumber, targetAyah: firstKey.ayahNumber);
-                },
+            const SizedBox(width: 4),
+            InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: _cycleRepeatMode,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.repeat_rounded, size: 13, color: AppColors.primary),
+                    const SizedBox(width: 3),
+                    Text(
+                      '$_repeatTimes×',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ],
         ),
-        Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        if (firstKey != null && surahName != null) ...[
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: badgeColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(
-                'سورة $surahName — الآيات: ${ayahKeys.first.ayahNumber} إلى ${ayahKeys.last.ayahNumber}',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: badgeColor),
+        const SizedBox(height: 8),
+        if (_todayWirdAyahs.isEmpty)
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            child: const Padding(
+              padding: EdgeInsets.all(AppSpacing.l),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.check_circle_outline_rounded, color: Colors.green, size: 40),
+                    SizedBox(height: 8),
+                    Text(
+                      'أتممت جميع آيات الخطة بحمد الله وتوفيقه!',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'يمكنك مراجعة الماضي أو اختيار خطة جديدة للبدء في جزء آخر.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
             ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _todayWirdAyahs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final ayah = _todayWirdAyahs[index];
+              return _buildAyahCard(ayah, isDark);
+            },
           ),
-        ],
       ],
+    );
+  }
+
+  Widget _buildAyahCard(Ayah ayah, bool isDark) {
+    final surahRes = widget.memorizationModule.quranStore.getSurah(ayah.surahNumber);
+    final surahName = surahRes.valueOrNull?.nameArabic ?? 'سورة ${ayah.surahNumber}';
+    final isMemorized = _memorizedKeys.contains(ayah.key);
+    final isHidden = _hiddenAyahKeys.contains(ayah.key);
+    final isPlaying = _playingSurah == ayah.surahNumber && _playingAyah == ayah.ayahNumber;
+
+    return Card(
+      elevation: isPlaying ? 3 : 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: isPlaying
+              ? AppColors.primary
+              : (isMemorized ? Colors.green.withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.2)),
+          width: isPlaying ? 1.5 : 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top Ayah Bar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.surfaceDark : AppColors.primaryLight.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'سورة $surahName — آية ${ayah.ayahNumber}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.primary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text('ص ${ayah.pageNumber}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => widget.onOpenSurah(ayah.surahNumber, targetPage: ayah.pageNumber, targetAyah: ayah.ayahNumber),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('المصحف', style: TextStyle(fontSize: 11, color: AppColors.primary)),
+                        SizedBox(width: 2),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppColors.primary),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Quranic Text (Uthmani) or Hidden placeholder
+            GestureDetector(
+              onTap: () => _toggleHideAyah(ayah.key),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                child: isHidden
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                        ),
+                        child: const Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.visibility_off_rounded, color: Colors.grey, size: 24),
+                              SizedBox(height: 4),
+                              Text(
+                                'الآية مخفية للتسميع الغيبي — اضغط هنا لإظهارها والتحقق',
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Text(
+                        ayah.textUthmani,
+                        textAlign: TextAlign.center,
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                          fontFamily: 'Amiri',
+                          fontSize: 20,
+                          height: 2.1,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Bottom Action Bar: [Play/Repeat] + [Hide/Show] + [Memorized Button]
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => _playAyahAudio(ayah),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isPlaying ? AppColors.primary : (isDark ? AppColors.surfaceDark : Colors.grey.shade100),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: isPlaying ? AppColors.primary : Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(isPlaying ? Icons.stop_rounded : Icons.volume_up_rounded, size: 15, color: isPlaying ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                            const SizedBox(width: 4),
+                            Text(
+                              isPlaying ? '$_currentRepeatIndex/$_repeatTimes' : 'استماع',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isPlaying ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      tooltip: isHidden ? 'إظهار الآية' : 'إخفاء للتسميع الغيبي',
+                      icon: Icon(isHidden ? Icons.visibility_rounded : Icons.visibility_off_outlined, size: 18),
+                      onPressed: () => _toggleHideAyah(ayah.key),
+                    ),
+                  ],
+                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _toggleAyahMemorized(ayah),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isMemorized ? Colors.green : (isDark ? Colors.white10 : Colors.grey.shade100),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: isMemorized ? Colors.green : Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(isMemorized ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, size: 15, color: isMemorized ? Colors.white : Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          isMemorized ? 'تم حفظها ✅' : 'حفظ الآية',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMemorized ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlanSurahsList(bool isDark) {
+    if (_surahsSummary.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.format_list_bulleted_rounded, color: AppColors.primary, size: 20),
+            SizedBox(width: 6),
+            Text('سور الخطة المقررة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _surahsSummary.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final surah = _surahsSummary[index];
+              return ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                leading: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: surah.isCompleted ? Colors.green.withValues(alpha: 0.15) : AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: surah.isCompleted
+                        ? const Icon(Icons.check_rounded, color: Colors.green, size: 18)
+                        : Text(
+                            '${surah.surahNumber}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                          ),
+                  ),
+                ),
+                title: Text(
+                  'سورة ${surah.surahNameArabic}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                subtitle: Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: (surah.progressPercent / 100).clamp(0.0, 1.0),
+                          minHeight: 5,
+                          backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
+                          valueColor: AlwaysStoppedAnimation<Color>(surah.isCompleted ? Colors.green : AppColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${surah.memorizedAyahsCount}/${surah.totalAyahsInPlan}',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
+                onTap: () => widget.onOpenSurah(surah.surahNumber),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPastQuizCard(bool isDark) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: AppColors.goldAccent.withValues(alpha: 0.4)),
+      ),
+      color: isDark ? AppColors.surfaceDark : Colors.amber.withValues(alpha: 0.05),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.m),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.goldAccent.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.psychology_rounded, color: AppColors.goldAccent, size: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'تسميع واختبار الماضي (لتثبيت المحفوظ)',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'امتحن استحضارك للآيات المحفوظة لمنع التفلت وتأكيد التمكين',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.goldAccent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: _openPastQuiz,
+              child: const Text('بدء التسميع', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

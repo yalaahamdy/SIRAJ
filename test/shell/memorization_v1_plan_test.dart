@@ -10,7 +10,7 @@ import 'package:siraj/shell/memorization/plan_setup_screen.dart';
 import '../fixtures/quran/canonical_quran_fixture.dart';
 
 void main() {
-  group('SIRAJ v1.0 — Sprint 4: Memorization Plan Setup & Range Selection Suite (§22..§25, §100)', () {
+  group('SIRAJ v1.0 — Memorization Plan Setup Clean Suite', () {
     late MemoryStorageRegistry storage;
     late QuranModule quranModule;
     late MemorizationModule memorizationModule;
@@ -58,7 +58,7 @@ void main() {
       await tester.enterText(titleField, 'خطة سورة الكهف');
       await tester.pumpAndSettle();
 
-      final saveBtn = find.text('حفظ وتطبيق خطة الحفظ');
+      final saveBtn = find.textContaining('حفظ الخطة وتفعيلها');
       await tester.ensureVisible(saveBtn);
       await tester.pumpAndSettle();
       await tester.tap(saveBtn);
@@ -69,7 +69,7 @@ void main() {
       expect(planRes.valueOrNull?.title, equals('خطة سورة الكهف'));
     });
 
-    testWidgets('Plan 2: Selecting By Pages and applying Juz populates memorization items', (tester) async {
+    testWidgets('Plan 2: Selecting By Juz populates memorization items', (tester) async {
       bool saved = false;
 
       await tester.pumpWidget(
@@ -82,12 +82,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Switch to By Pages mode
-      await tester.tap(find.text('بالصفحات والأجزاء'));
+      // Tap By Juz tab
+      await tester.tap(find.text('بالأجزاء'));
       await tester.pumpAndSettle();
 
       // Save plan
-      final saveBtn = find.text('حفظ وتطبيق خطة الحفظ');
+      final saveBtn = find.textContaining('حفظ الخطة وتفعيلها');
       await tester.ensureVisible(saveBtn);
       await tester.pumpAndSettle();
       await tester.tap(saveBtn);
@@ -98,7 +98,7 @@ void main() {
       expect(itemsRes.valueOrNull!.isNotEmpty, isTrue);
     });
 
-    testWidgets('Plan 3: Passing initialTargetAyahKey links Ayah to plan', (tester) async {
+    testWidgets('Plan 3: Passing initialTargetAyahKey sets surah mode', (tester) async {
       const target = AyahKey(surahNumber: 1, ayahNumber: 7);
 
       await tester.pumpWidget(
@@ -112,7 +112,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('تم ربط الآية 7'), findsOneWidget);
+      expect(find.textContaining('الفاتحة'), findsWidgets);
     });
 
     testWidgets('Plan 4: Smart Khatma Estimator displays calculations', (tester) async {
@@ -126,9 +126,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('الحاسبة الذكية للختم والإنجاز'), findsOneWidget);
       expect(find.text('إجمالي الآيات'), findsOneWidget);
-      expect(find.text('المدة المقدرة'), findsOneWidget);
+      expect(find.text('مدة الختم المقدرة'), findsOneWidget);
+      expect(find.text('تاريخ الإتمام'), findsOneWidget);
     });
   });
 }

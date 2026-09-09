@@ -2,11 +2,13 @@ import '../../core/errors/app_failure.dart';
 import '../../core/errors/result.dart';
 import '../../core/storage/storage_contract.dart';
 import '../../core/time/clock.dart';
+import '../quran/domain/ayah.dart';
 import '../quran/domain/ayah_key.dart';
 import '../quran/store/canonical_quran_store.dart';
 import 'domain/mastery_snapshot.dart';
 import 'domain/memorization_item.dart';
 import 'domain/memorization_plan.dart';
+import 'domain/tahfeez_surah_summary.dart';
 import 'domain/memorization_state.dart';
 import 'domain/mistake_record.dart';
 import 'domain/review_quality.dart';
@@ -204,4 +206,135 @@ class MemorizationModule {
 
   /// Executes safe reset of all user memorization data (§27).
   Future<Result<bool, Failure>> resetAllData() => dataStore.resetAllData();
+
+  /// Sets or toggles memorized status for an Ayah directly.
+  Future<Result<bool, Failure>> setAyahMemorizedStatus(AyahKey key, bool isMemorized) async {
+    final itemsRes = await dataStore.getItems();
+    if (itemsRes.isFailure) return Result.err(itemsRes.failureOrNull!);
+
+    final itemsList = List<MemorizationItem>.from(itemsRes.valueOrNull ?? []);
+    final idx = itemsList.indexWhere((i) => i.ayahKey == key);
+    final now = clock.nowUtc();
+
+    if (idx != -1) {
+      final old = itemsList[idx];
+      itemsList[idx] = old.copyWith(
+        state: isMemorized ? MemorizationState.mastered : MemorizationState.notStarted,
+        masteryScore: isMemorized ? 100.0 : 0.0,
+        repetitions: isMemorized ? (old.repetitions + 1) : old.repetitions,
+        lastReviewedAt: isMemorized ? now : old.lastReviewedAt,
+        updatedAt: now,
+      );
+    } else {
+      itemsList.add(MemorizationItem(
+        ayahKey: key,
+        state: isMemorized ? MemorizationState.mastered : MemorizationState.notStarted,
+        masteryScore: isMemorized ? 100.0 : 0.0,
+        repetitions: isMemorized ? 1 : 0,
+        lastReviewedAt: isMemorized ? now : null,
+        createdAt: now,
+        updatedAt: now,
+      ));
+    }
+
+    final saveRes = await dataStore.saveItems(itemsList);
+    if (saveRes.isFailure) return Result.err(saveRes.failureOrNull!);
+    await clearActiveSession();
+    return Result.ok(true);
+  }
+
+  /// Checks if an Ayah is memorized.
+  Future<bool> isAyahMemorized(AyahKey key) async {
+    final itemsRes = await dataStore.getItems();
+    if (itemsRes.isFailure) return false;
+    final item = itemsRes.valueOrNull?.where((i) => i.ayahKey == key).firstOrNull;
+    return item != null && item.state == MemorizationState.mastered;
+  }
+
+  /// Retrieves list of all Ayahs in the active plan.
+  Result<List<Ayah>, Failure> getPlanAyahs(MemorizationPlan plan) {
+    final result = <Ayah>[];
+    for (final sNum in plan.targetSurahs) {
+      final surahAyahsRes = quranStore.getSurahAyahs(sNum);
+      if (surahAyahsRes.isSuccess) {
+        for (final ayah in surahAyahsRes.valueOrNull!) {
+          if (_isBeforeKey(ayah.key, plan.startAyah) || _isAfterKey(ayah.key, plan.endAyah)) {
+            continue;
+          }
+          result.add(ayah);
+        }
+      }
+    }
+    return Result.ok(result);
+  }
+
+  /// Retrieves summary for each Surah in the active plan with progress stats.
+  Future<Result<List<TahfeezSurahSummary>, Failure>> getPlanSurahsSummary(MemorizationPlan plan) async {
+    final itemsRes = await dataStore.getItems();
+    final memorizedKeys = (itemsRes.valueOrNull ?? [])
+        .where((i) => i.state == MemorizationState.mastered)
+        .map((i) => i.ayahKey)
+        .toSet();
+
+    final summaries = <TahfeezSurahSummary>[];
+    for (final sNum in plan.targetSurahs) {
+      final surahRes = quranStore.getSurah(sNum);
+      final surahAyahsRes = quranStore.getSurahAyahs(sNum);
+      if (surahRes.isSuccess && surahAyahsRes.isSuccess) {
+        final allAyahs = surahAyahsRes.valueOrNull!;
+        final planAyahs = allAyahs.where((a) =>
+            !_isBeforeKey(a.key, plan.startAyah) && !_isAfterKey(a.key, plan.endAyah)).toList();
+
+        if (planAyahs.isNotEmpty) {
+          final memorizedCount = planAyahs.where((a) => memorizedKeys.contains(a.key)).length;
+          final percent = (memorizedCount / planAyahs.length) * 100.0;
+          summaries.add(TahfeezSurahSummary(
+            surahNumber: sNum,
+            surahNameArabic: surahRes.valueOrNull!.nameArabic,
+            totalAyahsInPlan: planAyahs.length,
+            memorizedAyahsCount: memorizedCount,
+            progressPercent: percent,
+          ));
+        }
+      }
+    }
+    return Result.ok(summaries);
+  }
+
+  /// Retrieves today's wird Ayahs for the active plan directly with full text.
+  Future<Result<List<Ayah>, Failure>> getTodayWirdAyahs(MemorizationPlan plan) async {
+    final allPlanAyahsRes = getPlanAyahs(plan);
+    if (allPlanAyahsRes.isFailure) return Result.err(allPlanAyahsRes.failureOrNull!);
+
+    final allPlanAyahs = allPlanAyahsRes.valueOrNull ?? [];
+    if (allPlanAyahs.isEmpty) return Result.ok(const []);
+
+    final itemsRes = await dataStore.getItems();
+    final memorizedKeys = (itemsRes.valueOrNull ?? [])
+        .where((i) => i.state == MemorizationState.mastered)
+        .map((i) => i.ayahKey)
+        .toSet();
+
+    // 1. Gather unmemorized ayahs up to daily target
+    final unmemorized = allPlanAyahs.where((a) => !memorizedKeys.contains(a.key)).take(plan.dailyNewAyahs).toList();
+    if (unmemorized.isNotEmpty) {
+      return Result.ok(unmemorized);
+    }
+
+    // 2. If all are memorized, take the first dailyTarget ayahs for revision
+    final revision = allPlanAyahs.take(plan.dailyNewAyahs).toList();
+    return Result.ok(revision);
+  }
+
+  static bool _isBeforeKey(AyahKey a, AyahKey start) {
+    if (a.surahNumber < start.surahNumber) return true;
+    if (a.surahNumber == start.surahNumber && a.ayahNumber < start.ayahNumber) return true;
+    return false;
+  }
+
+  static bool _isAfterKey(AyahKey a, AyahKey end) {
+    if (a.surahNumber > end.surahNumber) return true;
+    if (a.surahNumber == end.surahNumber && a.ayahNumber > end.ayahNumber) return true;
+    return false;
+  }
 }

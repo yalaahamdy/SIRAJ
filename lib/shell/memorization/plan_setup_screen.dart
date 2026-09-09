@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import '../../../modules/memorization/domain/memorization_plan.dart';
 import '../../../modules/memorization/memorization_module.dart';
 import '../../../modules/quran/domain/ayah_key.dart';
+import '../../../modules/quran/domain/surah.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/state_views.dart';
 
 enum PlanSelectionMode {
-  presets,
-  byPages,
-  bySurahs,
-  byAyahs,
+  byJuz,
+  bySurah,
+  customRange,
 }
 
-/// Screen allowing the user to configure learning pace, daily targets, add ranges/ayahs, and reset options (§15, §22..§25, §27).
+/// Screen allowing the user to select and configure a clean, structured Quran memorization plan.
 class PlanSetupScreen extends StatefulWidget {
   final MemorizationModule memorizationModule;
   final VoidCallback onSaved;
@@ -32,38 +32,27 @@ class PlanSetupScreen extends StatefulWidget {
 
 class _PlanSetupScreenState extends State<PlanSetupScreen> {
   final TextEditingController _titleController = TextEditingController();
-  PlanSelectionMode _selectionMode = PlanSelectionMode.presets;
+  PlanSelectionMode _selectionMode = PlanSelectionMode.byJuz;
 
+  int _selectedJuz = 30; // Default to Juz Amma
+  int _selectedSurah = 78; // Default An-Naba
   int _dailyNew = 5;
   int _dailyReview = 20;
+
+  // Custom range
+  int _startSurah = 78;
+  int _startAyah = 1;
+  int _endSurah = 114;
+  int _endAyah = 6;
+
   bool _isLoading = true;
   bool _isSaving = false;
-  MemorizationPlan? _currentPlan;
-
-  // Presets
-  String _selectedPresetId = 'plan_juz_amma';
-
-  // By Pages
-  int _startPage = 582; // Start of Juz Amma (Page 582..604)
-  int _endPage = 604;
-
-  // By Surah Range
-  int _startSurah = 78; // An-Naba
-  int _endSurah = 114; // An-Nas
-
-  // By Precise Ayahs
-  int _startAyahSurah = 78;
-  int _startAyahNum = 1;
-  int _endAyahSurah = 114;
-  int _endAyahNum = 6;
-
-  // Individual Single Surah Dropdown
-  int _singleSurahNumber = 114;
+  List<Surah> _allSurahs = [];
 
   @override
   void initState() {
     super.initState();
-    _loadPlan();
+    _loadInitialData();
   }
 
   @override
@@ -72,109 +61,91 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPlan() async {
+  Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
+
+    final surahsRes = widget.memorizationModule.quranStore.getAllSurahs();
+    _allSurahs = surahsRes.valueOrNull ?? [];
 
     final planRes = await widget.memorizationModule.getPlan();
     final plan = planRes.valueOrNull ??
         MemorizationPlan.createDefaultJuzAmma(widget.memorizationModule.clock.nowUtc());
 
+    _dailyNew = plan.dailyNewAyahs.clamp(1, 30);
+    _dailyReview = plan.dailyReviewTarget.clamp(5, 100);
+
     if (widget.initialTargetAyahKey != null) {
       final k = widget.initialTargetAyahKey!;
-      _selectionMode = PlanSelectionMode.byAyahs;
-      _startAyahSurah = k.surahNumber;
-      _startAyahNum = k.ayahNumber;
-      _endAyahSurah = k.surahNumber;
-      _endAyahNum = k.ayahNumber;
-      _singleSurahNumber = k.surahNumber;
+      _selectionMode = PlanSelectionMode.bySurah;
+      _selectedSurah = k.surahNumber;
+      _titleController.text = 'خطة حفظ سورة ${_getSurahName(k.surahNumber)}';
+    } else {
+      _titleController.text = plan.title;
     }
 
     if (mounted) {
-      setState(() {
-        _currentPlan = plan;
-        _titleController.text = plan.title;
-        _dailyNew = plan.dailyNewAyahs.clamp(1, 30);
-        _dailyReview = plan.dailyReviewTarget.clamp(5, 100);
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
-  List<AyahKey> _extractTargetAyahs() {
+  String _getSurahName(int sNum) {
+    final s = _allSurahs.where((e) => e.number == sNum).firstOrNull;
+    return s?.nameArabic ?? 'سورة $sNum';
+  }
+
+  int _getSurahAyahsCount(int sNum) {
+    final s = _allSurahs.where((e) => e.number == sNum).firstOrNull;
+    return s?.ayahCount ?? 7;
+  }
+
+  List<AyahKey> _calculateTargetAyahs() {
     final qStore = widget.memorizationModule.quranStore;
     final keys = <AyahKey>[];
 
     switch (_selectionMode) {
-      case PlanSelectionMode.presets:
-        if (_selectedPresetId == 'plan_juz_amma') {
-          for (int s = 78; s <= 114; s++) {
-            final aRes = qStore.getSurahAyahs(s);
-            if (aRes.isSuccess) keys.addAll(aRes.valueOrNull!.map((a) => a.key));
-          }
-        } else if (_selectedPresetId == 'plan_juz_tabarak') {
-          for (int s = 67; s <= 77; s++) {
-            final aRes = qStore.getSurahAyahs(s);
-            if (aRes.isSuccess) keys.addAll(aRes.valueOrNull!.map((a) => a.key));
-          }
-        } else if (_selectedPresetId == 'plan_baqarah') {
-          final aRes = qStore.getSurahAyahs(2);
-          if (aRes.isSuccess) keys.addAll(aRes.valueOrNull!.map((a) => a.key));
-        } else if (_selectedPresetId == 'plan_mufassal') {
-          for (int s = 50; s <= 114; s++) {
-            final aRes = qStore.getSurahAyahs(s);
-            if (aRes.isSuccess) keys.addAll(aRes.valueOrNull!.map((a) => a.key));
-          }
-        } else if (_selectedPresetId == 'plan_full_quran') {
+      case PlanSelectionMode.byJuz:
+        if (_selectedJuz == 0) {
+          // Whole Quran (1..114)
           for (int s = 1; s <= 114; s++) {
             final aRes = qStore.getSurahAyahs(s);
             if (aRes.isSuccess) keys.addAll(aRes.valueOrNull!.map((a) => a.key));
           }
-        } else if (_selectedPresetId == 'plan_single_surah') {
-          final aRes = qStore.getSurahAyahs(_singleSurahNumber);
-          if (aRes.isSuccess) keys.addAll(aRes.valueOrNull!.map((a) => a.key));
-        }
-        break;
-
-      case PlanSelectionMode.byPages:
-        final minP = _startPage < _endPage ? _startPage : _endPage;
-        final maxP = _startPage > _endPage ? _startPage : _endPage;
-        for (int p = minP; p <= maxP; p++) {
-          final pRes = qStore.getPageAyahs(p);
-          if (pRes.isSuccess) {
-            keys.addAll(pRes.valueOrNull!.map((a) => a.key));
+        } else {
+          final jRes = qStore.getAllJuzs();
+          if (jRes.isSuccess) {
+            final juzList = jRes.valueOrNull ?? [];
+            final juz = juzList.where((j) => j.number == _selectedJuz).firstOrNull;
+            if (juz != null) {
+              final nextJuz = juzList.where((j) => j.number == _selectedJuz + 1).firstOrNull;
+              final endPage = nextJuz != null ? nextJuz.startPage - 1 : 604;
+              for (int p = juz.startPage; p <= endPage; p++) {
+                final pRes = qStore.getPageAyahs(p);
+                if (pRes.isSuccess) keys.addAll(pRes.valueOrNull!.map((a) => a.key));
+              }
+            }
           }
         }
         break;
 
-      case PlanSelectionMode.bySurahs:
-        final minS = _startSurah < _endSurah ? _startSurah : _endSurah;
-        final maxS = _startSurah > _endSurah ? _startSurah : _endSurah;
+      case PlanSelectionMode.bySurah:
+        final aRes = qStore.getSurahAyahs(_selectedSurah);
+        if (aRes.isSuccess) {
+          keys.addAll(aRes.valueOrNull!.map((a) => a.key));
+        }
+        break;
+
+      case PlanSelectionMode.customRange:
+        final minS = _startSurah <= _endSurah ? _startSurah : _endSurah;
+        final maxS = _startSurah <= _endSurah ? _endSurah : _startSurah;
+        final startAyah = _startSurah <= _endSurah ? _startAyah : _endAyah;
+        final endAyah = _startSurah <= _endSurah ? _endAyah : _startAyah;
+
         for (int s = minS; s <= maxS; s++) {
           final aRes = qStore.getSurahAyahs(s);
           if (aRes.isSuccess) {
-            keys.addAll(aRes.valueOrNull!.map((a) => a.key));
-          }
-        }
-        break;
-
-      case PlanSelectionMode.byAyahs:
-        final startKey = AyahKey(surahNumber: _startAyahSurah, ayahNumber: _startAyahNum);
-        final endKey = AyahKey(surahNumber: _endAyahSurah, ayahNumber: _endAyahNum);
-        final isReverse = _startAyahSurah > _endAyahSurah ||
-            (_startAyahSurah == _endAyahSurah && _startAyahNum > _endAyahNum);
-        final actualStart = isReverse ? endKey : startKey;
-        final actualEnd = isReverse ? startKey : endKey;
-
-        for (int s = actualStart.surahNumber; s <= actualEnd.surahNumber; s++) {
-          final aRes = qStore.getSurahAyahs(s);
-          if (aRes.isSuccess) {
             for (final ayah in aRes.valueOrNull!) {
-              if (s == actualStart.surahNumber && ayah.ayahNumber < actualStart.ayahNumber) {
-                continue;
-              }
-              if (s == actualEnd.surahNumber && ayah.ayahNumber > actualEnd.ayahNumber) {
-                continue;
-              }
+              if (s == minS && ayah.ayahNumber < startAyah) continue;
+              if (s == maxS && ayah.ayahNumber > endAyah) continue;
               keys.add(ayah.key);
             }
           }
@@ -185,35 +156,12 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     return keys;
   }
 
-  void _applyPresetTemplate(String presetId, String title) {
-    setState(() {
-      _selectedPresetId = presetId;
-      _titleController.text = title;
-    });
-  }
-
-  void _applyJuzPages(int juzNumber) {
-    final jRes = widget.memorizationModule.quranStore.getAllJuzs();
-    if (jRes.isFailure) return;
-    final juzs = jRes.valueOrNull!;
-    final juz = juzs.firstWhere((j) => j.number == juzNumber, orElse: () => juzs.first);
-
-    final nextJuz = juzs.where((j) => j.number == juzNumber + 1).firstOrNull;
-    final endP = nextJuz != null ? nextJuz.startPage - 1 : 604;
-
-    setState(() {
-      _startPage = juz.startPage;
-      _endPage = endP;
-      _titleController.text = 'خطة حفظ الجزء $juzNumber (صفحة ${juz.startPage} إلى $endP)';
-    });
-  }
-
   Future<void> _savePlan() async {
-    final targetAyahs = _extractTargetAyahs();
+    final targetAyahs = _calculateTargetAyahs();
     if (targetAyahs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('الرجاء اختيار نطاق صالح يحتوي على آيات للحفظ'),
+          content: Text('الرجاء اختيار نطاق صالح يحتوي على آيات'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -230,13 +178,20 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     final totalDays = (targetAyahs.length / _dailyNew).ceil();
     final targetFinishDate = now.add(Duration(days: totalDays));
 
-    final planTitle = _titleController.text.trim().isNotEmpty
-        ? _titleController.text.trim()
-        : 'خطة حفظ (${targetAyahs.length} آية)';
+    String finalTitle = _titleController.text.trim();
+    if (finalTitle.isEmpty) {
+      if (_selectionMode == PlanSelectionMode.byJuz) {
+        finalTitle = _selectedJuz == 0 ? 'خطة حفظ القرآن الكريم كاملاً' : 'خطة حفظ الجزء $_selectedJuz';
+      } else if (_selectionMode == PlanSelectionMode.bySurah) {
+        finalTitle = 'خطة حفظ سورة ${_getSurahName(_selectedSurah)}';
+      } else {
+        finalTitle = 'خطة حفظ مخصصة (${targetAyahs.length} آية)';
+      }
+    }
 
-    final updatedPlan = MemorizationPlan(
-      id: _currentPlan?.id ?? 'plan_${now.millisecondsSinceEpoch}',
-      title: planTitle,
+    final newPlan = MemorizationPlan(
+      id: 'plan_${now.millisecondsSinceEpoch}',
+      title: finalTitle,
       targetSurahs: distinctSurahs,
       startAyah: firstKey,
       endAyah: lastKey,
@@ -244,11 +199,11 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
       dailyReviewTarget: _dailyReview,
       targetDate: targetFinishDate,
       isActive: true,
-      createdAt: _currentPlan?.createdAt ?? now,
+      createdAt: now,
     );
 
     final result = await widget.memorizationModule.applyPlanWithAyahs(
-      plan: updatedPlan,
+      plan: newPlan,
       ayahs: targetAyahs,
     );
 
@@ -257,11 +212,9 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
       if (result.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'تم حفظ وتطبيق الخطة بنجاح! تم إدراج ${targetAyahs.length} آية، والختم المقدر بعد $totalDays يوماً.',
-            ),
+            content: Text('تم تفعيل $finalTitle بنجاح (${targetAyahs.length} آية)'),
             backgroundColor: Colors.green.shade700,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 3),
           ),
         );
         widget.onSaved();
@@ -280,16 +233,16 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('تأكيد إعادة ضبط سجلات الحفظ'),
+        title: const Text('تصفير سجلات الحفظ'),
         content: const Text(
-          'سيؤدي هذا الإجراء إلى مسح سجلات الحفظ ونتائج المراجعات السابقة ودرجات الإتقان وإعادتها لحالتها الأولى. لن يتأثر النص القرآني أو الفواصل المرجعية.\n\nهل تريد المتابعة؟',
+          'هل تريد مسح سجلات الحفظ والبدء من جديد؟ لن تتأثر النصوص أو القراءات.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('تصفير البيانات'),
+            child: const Text('تصفير السجلات'),
           ),
         ],
       ),
@@ -299,10 +252,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
       await widget.memorizationModule.resetAllData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تمت إعادة ضبط بيانات الحفظ بنجاح'),
-            backgroundColor: AppColors.primary,
-          ),
+          const SnackBar(content: Text('تم تصفير سجلات الحفظ بنجاح')),
         );
         widget.onSaved();
       }
@@ -311,181 +261,102 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('إعدادات خطة الحفظ')),
+        appBar: AppBar(title: const Text('تخصيص خطة التحفيظ')),
         body: const LoadingStateView(),
       );
     }
 
-    final targetAyahs = _extractTargetAyahs();
-    final totalAyahsCount = targetAyahs.length;
-    final totalDaysEstimated = _dailyNew > 0 ? (totalAyahsCount / _dailyNew).ceil() : 0;
-    final estimatedFinish = DateTime.now().add(Duration(days: totalDaysEstimated));
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final targetAyahs = _calculateTargetAyahs();
+    final totalAyahs = targetAyahs.length;
+    final totalDays = (totalAyahs / _dailyNew).ceil();
+    final finishDate = DateTime.now().add(Duration(days: totalDays));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text('خطة الحفظ والمراجعة الذكية'),
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'تخصيص خطة التحفيظ',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: AppColors.warning),
+              tooltip: 'تصفير السجلات',
+              onPressed: _confirmReset,
+            ),
+          ],
         ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: AppSpacing.paddingScreen,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Info banner for incoming Ayah
-                if (widget.initialTargetAyahKey != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.primary),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'تم ربط الآية ${widget.initialTargetAyahKey!.ayahNumber} من سورة رقم ${widget.initialTargetAyahKey!.surahNumber} بالخطة',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Mode Selector Segmented Buttons
+                  _buildModeSelector(isDark),
                   const SizedBox(height: AppSpacing.m),
+
+                  // 2. Mode Content Pickers
+                  _buildScopePicker(isDark),
+                  const SizedBox(height: AppSpacing.m),
+
+                  // 3. Daily Target Picker
+                  _buildDailyTargetPicker(isDark),
+                  const SizedBox(height: AppSpacing.m),
+
+                  // 4. Estimation Summary Card
+                  _buildEstimationCard(totalAyahs, totalDays, finishDate, isDark),
+                  const SizedBox(height: AppSpacing.m),
+
+                  // 5. Plan Title TextField
+                  TextField(
+                    controller: _titleController,
+                    decoration: InputDecoration(
+                      labelText: 'مسمى الخطة المباركة',
+                      hintText: 'مثال: خطة جزء عم، أو حفظ سورة الكهف',
+                      prefixIcon: const Icon(Icons.bookmark_border_rounded, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: AppSpacing.l),
+
+                  // 6. Big Action Button (Save & Activate)
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 2,
+                    ),
+                    onPressed: _isSaving ? null : _savePlan,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check_circle_rounded, size: 22),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        _isSaving ? 'جارٍ الحفظ والتهيئة...' : 'حفظ الخطة وتفعيلها الآن 🌟',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
                 ],
-
-                // 1. Smart Real-Time Khatma Estimator Card
-                _buildKhatmaEstimatorCard(
-                  totalAyahs: totalAyahsCount,
-                  days: totalDaysEstimated,
-                  finishDate: estimatedFinish,
-                  isDark: isDark,
-                ),
-                const SizedBox(height: AppSpacing.m),
-
-                // 2. Selection Mode Selector
-                Text(
-                  'طريقة تحديد نطاق الحفظ',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      avatar: const Icon(Icons.star_rounded, size: 16),
-                      label: const Text('قوالب جاهزة'),
-                      selected: _selectionMode == PlanSelectionMode.presets,
-                      onSelected: (val) {
-                        if (val) setState(() => _selectionMode = PlanSelectionMode.presets);
-                      },
-                    ),
-                    ChoiceChip(
-                      avatar: const Icon(Icons.auto_stories_rounded, size: 16),
-                      label: const Text('بالصفحات والأجزاء'),
-                      selected: _selectionMode == PlanSelectionMode.byPages,
-                      onSelected: (val) {
-                        if (val) setState(() => _selectionMode = PlanSelectionMode.byPages);
-                      },
-                    ),
-                    ChoiceChip(
-                      avatar: const Icon(Icons.library_books_rounded, size: 16),
-                      label: const Text('بنطاق السور'),
-                      selected: _selectionMode == PlanSelectionMode.bySurahs,
-                      onSelected: (val) {
-                        if (val) setState(() => _selectionMode = PlanSelectionMode.bySurahs);
-                      },
-                    ),
-                    ChoiceChip(
-                      avatar: const Icon(Icons.format_list_numbered_rounded, size: 16),
-                      label: const Text('بالآيات بدقة'),
-                      selected: _selectionMode == PlanSelectionMode.byAyahs,
-                      onSelected: (val) {
-                        if (val) setState(() => _selectionMode = PlanSelectionMode.byAyahs);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.m),
-
-                // 3. Selection Mode Body
-                _buildModeBody(context, isDark),
-                const SizedBox(height: AppSpacing.l),
-
-                // 4. Plan Title
-                Text(
-                  'عنوان الخطة',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                TextField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    hintText: 'مثال: خطة جزء عم، خطة سورة البقرة، أول 5 صفحات...',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.l),
-
-                // 5. Daily Pace Settings
-                _buildPaceSliders(context),
-                const SizedBox(height: AppSpacing.xl),
-
-                // 6. Save Button
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
-                    shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
-                  ),
-                  onPressed: _isSaving ? null : _savePlan,
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_circle_rounded),
-                  label: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      _isSaving ? 'جارٍ حفظ وتطبيق الخطة...' : 'حفظ وتطبيق خطة الحفظ',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.l),
-
-                // 7. Reset Action
-                const Divider(),
-                const SizedBox(height: AppSpacing.m),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
-                  ),
-                  onPressed: _confirmReset,
-                  icon: const Icon(Icons.delete_forever_rounded),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('إعادة ضبط وسجل المحفوظات بالكامل'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -493,538 +364,352 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     );
   }
 
-  Widget _buildKhatmaEstimatorCard({
-    required int totalAyahs,
-    required int days,
-    required DateTime finishDate,
-    required bool isDark,
-  }) {
-    final estPages = (totalAyahs / 15).toStringAsFixed(1);
-    final dateStr = '${finishDate.day}/${finishDate.month}/${finishDate.year}';
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.radiusMedium,
-        side: BorderSide(color: AppColors.goldAccent.withValues(alpha: 0.4), width: 1.2),
+  Widget _buildModeSelector(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
       ),
-      color: isDark ? AppColors.surfaceDark : Colors.amber.withValues(alpha: 0.08),
-      child: Padding(
-        padding: AppSpacing.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.timer_outlined, color: AppColors.goldAccent, size: 22),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'الحاسبة الذكية للختم والإنجاز',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: isDark ? AppColors.goldAccent : Colors.brown.shade800,
-                    ),
-                  ),
-                ),
-              ],
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTabBtn(
+              label: 'بالأجزاء',
+              icon: Icons.menu_book_rounded,
+              mode: PlanSelectionMode.byJuz,
             ),
-            const SizedBox(height: AppSpacing.m),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildEstimatorStat('إجمالي الآيات', '$totalAyahs آية', Icons.format_quote_rounded, AppColors.primary),
-                ),
-                Expanded(
-                  child: _buildEstimatorStat('الصفحات المقدرة', '~$estPages صفحة', Icons.menu_book_rounded, Colors.teal),
-                ),
-                Expanded(
-                  child: _buildEstimatorStat('المدة المقدرة', '$days يوماً', Icons.calendar_today_rounded, Colors.green),
-                ),
-              ],
+          ),
+          Expanded(
+            child: _buildTabBtn(
+              label: 'بالسورة',
+              icon: Icons.auto_stories_rounded,
+              mode: PlanSelectionMode.bySurah,
             ),
-            const SizedBox(height: AppSpacing.s),
-            const Divider(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.event_available_rounded, size: 16, color: AppColors.goldAccent),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'تاريخ الختم المقدر: $dateStr (بوتيرة $_dailyNew آيات يومياً)',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
+          ),
+          Expanded(
+            child: _buildTabBtn(
+              label: 'نطاق مخصص',
+              icon: Icons.tune_rounded,
+              mode: PlanSelectionMode.customRange,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEstimatorStat(String label, String val, IconData icon, Color color) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
+  Widget _buildTabBtn({
+    required String label,
+    required IconData icon,
+    required PlanSelectionMode mode,
+  }) {
+    final isSelected = _selectionMode == mode;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectionMode = mode;
+          if (mode == PlanSelectionMode.byJuz) {
+            _titleController.text = _selectedJuz == 0 ? 'خطة القرآن كاملاً' : 'خطة حفظ جزء $_selectedJuz';
+          } else if (mode == PlanSelectionMode.bySurah) {
+            _titleController.text = 'خطة حفظ سورة ${_getSurahName(_selectedSurah)}';
+          } else {
+            _titleController.text = 'خطة حفظ مخصصة';
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 4),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  val,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: color),
+            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey),
+            const SizedBox(width: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87),
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 2),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildModeBody(BuildContext context, bool isDark) {
+  Widget _buildScopePicker(bool isDark) {
     switch (_selectionMode) {
-      case PlanSelectionMode.presets:
-        return _buildPresetsBody(context);
-      case PlanSelectionMode.byPages:
-        return _buildPagesBody(context);
-      case PlanSelectionMode.bySurahs:
-        return _buildSurahsBody(context);
-      case PlanSelectionMode.byAyahs:
-        return _buildAyahsBody(context);
+      case PlanSelectionMode.byJuz:
+        return Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.m),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('اختر الجزء المقرر للحفظ:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedJuz,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: 30, child: Text('جزء عمّ (الجزء 30 - 37 سورة)')),
+                    const DropdownMenuItem(value: 29, child: Text('جزء تبارك (الجزء 29 - 11 سورة)')),
+                    const DropdownMenuItem(value: 28, child: Text('جزء قد سمع (الجزء 28)')),
+                    const DropdownMenuItem(value: 0, child: Text('القرآن الكريم كاملاً (30 جزءاً)')),
+                    for (int j = 1; j <= 27; j++)
+                      DropdownMenuItem(value: j, child: Text('الجزء $j')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedJuz = val;
+                        _titleController.text = val == 0 ? 'خطة حفظ القرآن كاملاً' : 'خطة حفظ الجزء $val';
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case PlanSelectionMode.bySurah:
+        return Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.m),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('اختر السورة الكريمة للحفظ:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedSurah,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  items: _allSurahs.map((s) {
+                    return DropdownMenuItem<int>(
+                      value: s.number,
+                      child: Text('${s.number}. سورة ${s.nameArabic} (${s.ayahCount} آية)'),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedSurah = val;
+                        _titleController.text = 'خطة حفظ سورة ${_getSurahName(val)}';
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case PlanSelectionMode.customRange:
+        return Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.m),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('حدد نطاق البداية والنهاية:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: DropdownButtonFormField<int>(
+                        initialValue: _startSurah,
+                        decoration: InputDecoration(
+                          labelText: 'من سورة',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        items: _allSurahs.map((s) => DropdownMenuItem(value: s.number, child: Text(s.nameArabic, style: const TextStyle(fontSize: 12)))).toList(),
+                        onChanged: (v) {
+                          if (v != null) {
+                            setState(() {
+                              _startSurah = v;
+                              _startAyah = 1;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: TextFormField(
+                        initialValue: '$_startAyah',
+                        decoration: InputDecoration(
+                          labelText: 'آية',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => _startAyah = int.tryParse(v) ?? 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: DropdownButtonFormField<int>(
+                        initialValue: _endSurah,
+                        decoration: InputDecoration(
+                          labelText: 'إلى سورة',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        items: _allSurahs.map((s) => DropdownMenuItem(value: s.number, child: Text(s.nameArabic, style: const TextStyle(fontSize: 12)))).toList(),
+                        onChanged: (v) {
+                          if (v != null) {
+                            setState(() {
+                              _endSurah = v;
+                              _endAyah = _getSurahAyahsCount(v);
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: TextFormField(
+                        initialValue: '$_endAyah',
+                        decoration: InputDecoration(
+                          labelText: 'آية',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => _endAyah = int.tryParse(v) ?? 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
     }
   }
 
-  Widget _buildPresetsBody(BuildContext context) {
+  Widget _buildDailyTargetPicker(bool isDark) {
+    final targets = [3, 5, 7, 10, 15];
     return Card(
       elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
-        padding: AppSpacing.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('اختر قالباً معتمداً لبدء الحفظ:', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppSpacing.s),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ActionChip(
-                  avatar: const Icon(Icons.star_rounded, size: 16, color: AppColors.goldAccent),
-                  label: const Text('جزء عمّ (37 سورة)'),
-                  onPressed: () => _applyPresetTemplate('plan_juz_amma', 'حفظ جزء عم (37 سورة)'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.bookmark_added_rounded, size: 16, color: AppColors.primary),
-                  label: const Text('جزء تبارك (11 سورة)'),
-                  onPressed: () => _applyPresetTemplate('plan_juz_tabarak', 'حفظ جزء تبارك (11 سورة)'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.auto_stories_rounded, size: 16, color: Colors.green),
-                  label: const Text('سورة البقرة المباركة'),
-                  onPressed: () => _applyPresetTemplate('plan_baqarah', 'حفظ سورة البقرة المباركة'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.library_books_rounded, size: 16, color: Colors.teal),
-                  label: const Text('سور المفصّل (ق إلى الناس)'),
-                  onPressed: () => _applyPresetTemplate('plan_mufassal', 'حفظ سور المفصل (ق إلى الناس)'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.menu_book_rounded, size: 16, color: AppColors.goldAccent),
-                  label: const Text('القرآن كاملاً (30 جزءاً)'),
-                  onPressed: () => _applyPresetTemplate('plan_full_quran', 'حفظ القرآن الكريم كاملاً'),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Text('أو اختر سورة محددة بالكامل:', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _singleSurahNumber,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    items: List.generate(114, (idx) {
-                      final num = idx + 1;
-                      final sRes = widget.memorizationModule.quranStore.getSurah(num);
-                      final name = sRes.isSuccess ? sRes.valueOrNull!.nameArabic : '$num';
-                      return DropdownMenuItem(
-                        value: num,
-                        child: Text('$num. سورة $name', overflow: TextOverflow.ellipsis),
-                      );
-                    }),
-                    onChanged: (val) {
-                      if (val != null) {
-                        final sRes = widget.memorizationModule.quranStore.getSurah(val);
-                        final name = sRes.isSuccess ? sRes.valueOrNull!.nameArabic : '$val';
-                        setState(() {
-                          _singleSurahNumber = val;
-                          _selectedPresetId = 'plan_single_surah';
-                          _titleController.text = 'حفظ سورة $name';
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPagesBody(BuildContext context) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
-      child: Padding(
-        padding: AppSpacing.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('تحديد النطاق بصفحات مصحف المدينة (1 إلى 604):', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppSpacing.s),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('من صفحة:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<int>(
-                        initialValue: _startPage,
-                        isExpanded: true,
-                        decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-                        items: List.generate(604, (i) => i + 1).map((p) => DropdownMenuItem(value: p, child: Text('ص $p'))).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _startPage = val;
-                              if (_endPage < _startPage) _endPage = _startPage;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('إلى صفحة:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<int>(
-                        initialValue: _endPage,
-                        isExpanded: true,
-                        decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-                        items: List.generate(604, (i) => i + 1).map((p) => DropdownMenuItem(value: p, child: Text('ص $p'))).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _endPage = val;
-                              if (_startPage > _endPage) _startPage = _endPage;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.m),
-            Text('اختيار سريع بالأجزاء (30 جزءاً):', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: 30,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
-                itemBuilder: (ctx, idx) {
-                  final jNum = idx + 1;
-                  return OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    onPressed: () => _applyJuzPages(jNum),
-                    child: Text('جزء $jNum', style: const TextStyle(fontSize: 12)),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSurahsBody(BuildContext context) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
-      child: Padding(
-        padding: AppSpacing.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('تحديد النطاق من سورة إلى سورة:', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppSpacing.s),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('من سورة:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<int>(
-                        initialValue: _startSurah,
-                        isExpanded: true,
-                        decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-                        items: List.generate(114, (i) {
-                          final sNum = i + 1;
-                          final sRes = widget.memorizationModule.quranStore.getSurah(sNum);
-                          final name = sRes.isSuccess ? sRes.valueOrNull!.nameArabic : '$sNum';
-                          return DropdownMenuItem(value: sNum, child: Text('$sNum. $name', overflow: TextOverflow.ellipsis));
-                        }),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _startSurah = val;
-                              if (_endSurah < _startSurah) _endSurah = _startSurah;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('إلى سورة:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<int>(
-                        initialValue: _endSurah,
-                        isExpanded: true,
-                        decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-                        items: List.generate(114, (i) {
-                          final sNum = i + 1;
-                          final sRes = widget.memorizationModule.quranStore.getSurah(sNum);
-                          final name = sRes.isSuccess ? sRes.valueOrNull!.nameArabic : '$sNum';
-                          return DropdownMenuItem(value: sNum, child: Text('$sNum. $name', overflow: TextOverflow.ellipsis));
-                        }),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _endSurah = val;
-                              if (_startSurah > _endSurah) _startSurah = _endSurah;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAyahsBody(BuildContext context) {
-    final startSurahAyahCount = widget.memorizationModule.quranStore.getSurah(_startAyahSurah).valueOrNull?.ayahCount ?? 1;
-    final endSurahAyahCount = widget.memorizationModule.quranStore.getSurah(_endAyahSurah).valueOrNull?.ayahCount ?? 1;
-
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
-      child: Padding(
-        padding: AppSpacing.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('تحديد النطاق بالآيات الدقيقة:', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppSpacing.s),
-            // Start Ayah
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _startAyahSurah,
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'من سورة', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-                    items: List.generate(114, (i) {
-                      final sNum = i + 1;
-                      final sRes = widget.memorizationModule.quranStore.getSurah(sNum);
-                      final name = sRes.isSuccess ? sRes.valueOrNull!.nameArabic : '$sNum';
-                      return DropdownMenuItem(value: sNum, child: Text('$sNum. $name', overflow: TextOverflow.ellipsis));
-                    }),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          _startAyahSurah = val;
-                          _startAyahNum = 1;
-                        });
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _startAyahNum.clamp(1, startSurahAyahCount),
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'آية رقم', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-                    items: List.generate(startSurahAyahCount, (i) => i + 1).map((a) => DropdownMenuItem(value: a, child: Text('$a'))).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _startAyahNum = val);
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.m),
-            // End Ayah
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _endAyahSurah,
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'إلى سورة', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-                    items: List.generate(114, (i) {
-                      final sNum = i + 1;
-                      final sRes = widget.memorizationModule.quranStore.getSurah(sNum);
-                      final name = sRes.isSuccess ? sRes.valueOrNull!.nameArabic : '$sNum';
-                      return DropdownMenuItem(value: sNum, child: Text('$sNum. $name', overflow: TextOverflow.ellipsis));
-                    }),
-                    onChanged: (val) {
-                      if (val != null) {
-                        final count = widget.memorizationModule.quranStore.getSurah(val).valueOrNull?.ayahCount ?? 1;
-                        setState(() {
-                          _endAyahSurah = val;
-                          _endAyahNum = count;
-                        });
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _endAyahNum.clamp(1, endSurahAyahCount),
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'آية رقم', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-                    items: List.generate(endSurahAyahCount, (i) => i + 1).map((a) => DropdownMenuItem(value: a, child: Text('$a'))).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _endAyahNum = val);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaceSliders(BuildContext context) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
-      child: Padding(
-        padding: AppSpacing.paddingCard,
+        padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('الجديد اليومي المستهدف', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                Text('$_dailyNew آيات / يوم', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                const Text('المستهدف اليومي للحفظ:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('$_dailyNew آيات / يومياً', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13)),
               ],
             ),
-            Slider(
-              value: _dailyNew.toDouble(),
-              min: 1,
-              max: 30,
-              divisions: 29,
-              label: '$_dailyNew',
-              onChanged: (val) => setState(() => _dailyNew = val.round()),
-            ),
-            Wrap(
-              spacing: 6,
-              children: [1, 3, 5, 7, 10, 15, 20].map((n) {
-                return ChoiceChip(
-                  label: Text('$n آيات'),
-                  selected: _dailyNew == n,
-                  onSelected: (val) {
-                    if (val) setState(() => _dailyNew = n);
-                  },
-                );
-              }).toList(),
-            ),
-            const Divider(height: 24),
+            const SizedBox(height: 10),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('الحد الأقصى للمراجعات اليومية', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                Text('$_dailyReview آية / يوم', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-              ],
-            ),
-            Slider(
-              value: _dailyReview.toDouble(),
-              min: 5,
-              max: 100,
-              divisions: 19,
-              label: '$_dailyReview',
-              onChanged: (val) => setState(() => _dailyReview = val.round()),
-            ),
-            Wrap(
-              spacing: 6,
-              children: [10, 20, 30, 50, 70, 100].map((n) {
-                return ChoiceChip(
-                  label: Text('$n آية'),
-                  selected: _dailyReview == n,
-                  onSelected: (val) {
-                    if (val) setState(() => _dailyReview = n);
-                  },
+              children: targets.map((t) {
+                final isSel = _dailyNew == t;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: isSel ? AppColors.primary : Colors.transparent,
+                        foregroundColor: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                        side: BorderSide(color: isSel ? AppColors.primary : Colors.grey.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () => setState(() => _dailyNew = t),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('$t آيات', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ),
                 );
               }).toList(),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEstimationCard(int totalAyahs, int totalDays, DateTime finishDate, bool isDark) {
+    final months = (totalDays / 30).toStringAsFixed(1);
+    final dateStr = '${finishDate.year}/${finishDate.month.toString().padLeft(2, '0')}/${finishDate.day.toString().padLeft(2, '0')}';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.goldAccent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.goldAccent.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem('إجمالي الآيات', '$totalAyahs آية', Icons.format_list_numbered_rounded),
+          Container(width: 1, height: 32, color: Colors.grey.shade300),
+          _buildStatItem('مدة الختم المقدرة', '$totalDays يوم ($months شهر)', Icons.timelapse_rounded),
+          Container(width: 1, height: 32, color: Colors.grey.shade300),
+          _buildStatItem('تاريخ الإتمام', dateStr, Icons.event_available_rounded),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 16, color: AppColors.goldAccent),
+          const SizedBox(height: 3),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }
