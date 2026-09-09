@@ -708,6 +708,7 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
       // 2. Quran Core Reader
       SurahListScreen(
         quranModule: _quranModule,
+        memorizationModule: _memorizationModule,
         onOpenSurah: (surahNum, {targetPage, targetAyah}) {
           Navigator.pushNamed(
             context,

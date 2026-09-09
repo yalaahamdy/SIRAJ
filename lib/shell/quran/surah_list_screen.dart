@@ -7,16 +7,20 @@ import '../../../modules/quran/search/quran_search_engine.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/state_views.dart';
+import '../../../modules/memorization/memorization_module.dart';
 import 'widgets/quran_settings_tab.dart';
+import 'widgets/quran_tahfeez_tab.dart';
 
-/// Screen displaying the 114 Surahs, 30 Juzs, Quran settings & audio studio, and search (§3..§10, §20..§35, §50..§55).
+/// Screen displaying the 114 Surahs, 30 Juzs, Quran memorization & review hub, settings & audio studio, and search (§3..§10, §20..§35, §50..§55).
 class SurahListScreen extends StatefulWidget {
   final QuranModule quranModule;
+  final MemorizationModule? memorizationModule;
   final Function(int surahNumber, {int? targetPage, int? targetAyah}) onOpenSurah;
 
   const SurahListScreen({
     super.key,
     required this.quranModule,
+    this.memorizationModule,
     required this.onOpenSurah,
   });
 
@@ -26,6 +30,7 @@ class SurahListScreen extends StatefulWidget {
 
 class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late final MemorizationModule _memorizationModule;
   final TextEditingController _searchController = TextEditingController();
 
   List<Surah> _surahs = [];
@@ -35,10 +40,16 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
 
   bool _isLoading = true;
   bool _isSearching = false;
+  bool _showJuzsInSurahTab = false;
 
   @override
   void initState() {
     super.initState();
+    _memorizationModule = widget.memorizationModule ??
+        MemorizationModule(
+          storageRegistry: widget.quranModule.storageRegistry,
+          quranStore: widget.quranModule.store,
+        );
     _tabController = TabController(length: 3, vsync: this);
     _loadAllData();
   }
@@ -100,7 +111,7 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
               indicatorColor: AppColors.goldAccent,
               tabs: const [
                 Tab(text: 'السور'),
-                Tab(text: 'الأجزاء'),
+                Tab(text: 'التحفيظ والمراجعة'),
                 Tab(text: 'الإعدادات'),
               ],
             ),
@@ -147,7 +158,11 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
                       controller: _tabController,
                       children: [
                         _buildSurahsTab(context, isDark),
-                        _buildJuzsTab(context, isDark),
+                        QuranTahfeezTab(
+                          quranModule: widget.quranModule,
+                          memorizationModule: _memorizationModule,
+                          onOpenSurah: widget.onOpenSurah,
+                        ),
                         QuranSettingsTab(
                           quranModule: widget.quranModule,
                           onOpenSurah: widget.onOpenSurah,
@@ -162,6 +177,44 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
   }
 
   Widget _buildSurahsTab(BuildContext context, bool isDark) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('عرض السور (114)'),
+                  icon: Icon(Icons.format_list_bulleted_rounded, size: 18),
+                ),
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('عرض الأجزاء (30)'),
+                  icon: Icon(Icons.grid_view_rounded, size: 18),
+                ),
+              ],
+              selected: {_showJuzsInSurahTab},
+              onSelectionChanged: (newSelection) {
+                setState(() {
+                  _showJuzsInSurahTab = newSelection.first;
+                });
+              },
+            ),
+          ),
+        ),
+        Expanded(
+          child: _showJuzsInSurahTab
+              ? _buildJuzsTab(context, isDark)
+              : _buildSurahsList(context, isDark),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSurahsList(BuildContext context, bool isDark) {
     return RefreshIndicator(
       onRefresh: _loadAllData,
       child: ListView.builder(

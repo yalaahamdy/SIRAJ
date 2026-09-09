@@ -41,6 +41,58 @@ class MemorizationPlan extends Equatable {
     );
   }
 
+  static MemorizationPlan createDefaultJuzTabarak(DateTime now) {
+    return MemorizationPlan(
+      id: 'plan_juz_tabarak',
+      title: 'حفظ جزء تبارك (من سورة الملك إلى سورة المرسلات)',
+      targetSurahs: List.generate(11, (i) => 67 + i), // 67..77
+      startAyah: const AyahKey(surahNumber: 67, ayahNumber: 1),
+      endAyah: const AyahKey(surahNumber: 77, ayahNumber: 50),
+      dailyNewAyahs: 5,
+      dailyReviewTarget: 20,
+      createdAt: now,
+    );
+  }
+
+  static MemorizationPlan createDefaultBaqarah(DateTime now) {
+    return MemorizationPlan(
+      id: 'plan_baqarah',
+      title: 'حفظ سورة البقرة المباركة',
+      targetSurahs: const [2],
+      startAyah: const AyahKey(surahNumber: 2, ayahNumber: 1),
+      endAyah: const AyahKey(surahNumber: 2, ayahNumber: 286),
+      dailyNewAyahs: 5,
+      dailyReviewTarget: 25,
+      createdAt: now,
+    );
+  }
+
+  static MemorizationPlan createDefaultMufassal(DateTime now) {
+    return MemorizationPlan(
+      id: 'plan_mufassal',
+      title: 'حفظ قصار وسور المفصّل (من سورة ق إلى سورة الناس)',
+      targetSurahs: List.generate(65, (i) => 50 + i), // 50..114
+      startAyah: const AyahKey(surahNumber: 50, ayahNumber: 1),
+      endAyah: const AyahKey(surahNumber: 114, ayahNumber: 6),
+      dailyNewAyahs: 5,
+      dailyReviewTarget: 30,
+      createdAt: now,
+    );
+  }
+
+  static MemorizationPlan createDefaultFullQuran(DateTime now) {
+    return MemorizationPlan(
+      id: 'plan_full_quran',
+      title: 'خطة حفظ القرآن الكريم كاملاً (30 جزءاً)',
+      targetSurahs: List.generate(114, (i) => 1 + i), // 1..114
+      startAyah: const AyahKey(surahNumber: 1, ayahNumber: 1),
+      endAyah: const AyahKey(surahNumber: 114, ayahNumber: 6),
+      dailyNewAyahs: 5,
+      dailyReviewTarget: 40,
+      createdAt: now,
+    );
+  }
+
   MemorizationPlan copyWith({
     String? title,
     List<int>? targetSurahs,

@@ -93,7 +93,7 @@ void main() {
 
       // Check the 3 reading tabs exist
       expect(find.text('السور'), findsOneWidget);
-      expect(find.text('الأجزاء'), findsOneWidget);
+      expect(find.text('التحفيظ والمراجعة'), findsOneWidget);
       expect(find.text('الإعدادات'), findsOneWidget);
 
       // Switch to Settings tab

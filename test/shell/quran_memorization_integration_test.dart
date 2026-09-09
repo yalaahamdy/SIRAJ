@@ -46,9 +46,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap on first Ayah to open contextual action sheet
+      // Switch to Translation mode to render AyahView
+      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('الترجمة'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+
+      // Long press on first Ayah to open contextual action sheet
       final firstAyahView = find.byType(AyahView).first;
-      await tester.tap(firstAyahView);
+      await tester.longPress(firstAyahView);
       await tester.pumpAndSettle();
 
       // Bottom sheet appears with memorization action

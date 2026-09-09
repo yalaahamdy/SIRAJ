@@ -17,6 +17,8 @@ import 'services/daily_session_engine.dart';
 import 'services/memorization_progress_service.dart';
 import 'store/memorization_user_data_store.dart';
 
+import 'services/past_memorization_engine.dart';
+
 /// Unified Module Facade for the Quran Memorization Subsystem (L2).
 /// Encapsulates storage, scheduling, session workflows, and mastery tracking.
 class MemorizationModule {
@@ -24,6 +26,7 @@ class MemorizationModule {
   final ReviewSchedulerStrategy scheduler;
   final DailySessionEngine sessionEngine;
   final MemorizationProgressService progressService;
+  final PastMemorizationEngine pastMemorizationEngine;
   final ReadOnlyCanonicalQuranStore quranStore;
   final Clock clock;
 
@@ -54,6 +57,11 @@ class MemorizationModule {
           clock: clock,
         ),
         progressService = MemorizationProgressService(
+          store: dataStore,
+          quranStore: quranStore,
+          clock: clock,
+        ),
+        pastMemorizationEngine = PastMemorizationEngine(
           store: dataStore,
           quranStore: quranStore,
           clock: clock,
@@ -156,6 +164,20 @@ class MemorizationModule {
 
     return Result.ok(addedCount);
   }
+
+  /// Retrieves past memorization mastery statistics (§38).
+  Future<Result<PastMasteryStats, Failure>> getPastMasteryStats() => pastMemorizationEngine.getPastMasteryStats();
+
+  /// Generates a random past memorization exam challenge question (§38, §50).
+  Future<Result<PastExamQuestion, Failure>> generatePastExamQuestion({int requestedPassageLength = 3}) =>
+      pastMemorizationEngine.generatePastExamQuestion(requestedPassageLength: requestedPassageLength);
+
+  /// Submits the confirmation result for past memorization testing.
+  Future<Result<bool, Failure>> submitPastExamResult({
+    required PastExamQuestion question,
+    required bool isMastered,
+  }) =>
+      pastMemorizationEngine.submitPastExamResult(question: question, isMastered: isMastered);
 
   /// Executes safe reset of all user memorization data (§27).
   Future<Result<bool, Failure>> resetAllData() => dataStore.resetAllData();

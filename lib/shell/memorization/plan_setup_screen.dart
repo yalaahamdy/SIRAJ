@@ -89,6 +89,22 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     }
   }
 
+  void _applyPreset(MemorizationPlan preset) {
+    setState(() {
+      _currentPlan = preset;
+      _titleController.text = preset.title;
+      _dailyNew = preset.dailyNewAyahs;
+      _dailyReview = preset.dailyReviewTarget;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('تم تطبيق قالب: ${preset.title}'),
+        backgroundColor: AppColors.primary,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _savePlan() async {
     if (_currentPlan == null) return;
 
@@ -189,6 +205,68 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
                   ),
                   const SizedBox(height: AppSpacing.m),
                 ],
+
+                // Ready-Made Plan Templates
+                Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
+                  child: Padding(
+                    padding: AppSpacing.paddingCard,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.workspace_premium_rounded, color: AppColors.goldAccent, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'قوالب خطط الحفظ المعتمدة',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        const Text(
+                          'اختر قالباً جاهزاً بلمسة واحدة لبدء رحلة الحفظ المباركة:',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        const SizedBox(height: AppSpacing.s),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ActionChip(
+                              avatar: const Icon(Icons.star_rounded, size: 16, color: AppColors.goldAccent),
+                              label: const Text('جزء عمّ (37 سورة)'),
+                              onPressed: () => _applyPreset(MemorizationPlan.createDefaultJuzAmma(widget.memorizationModule.clock.nowUtc())),
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.bookmark_added_rounded, size: 16, color: AppColors.primary),
+                              label: const Text('جزء تبارك (11 سورة)'),
+                              onPressed: () => _applyPreset(MemorizationPlan.createDefaultJuzTabarak(widget.memorizationModule.clock.nowUtc())),
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.auto_stories_rounded, size: 16, color: Colors.green),
+                              label: const Text('سورة البقرة'),
+                              onPressed: () => _applyPreset(MemorizationPlan.createDefaultBaqarah(widget.memorizationModule.clock.nowUtc())),
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.library_books_rounded, size: 16, color: Colors.teal),
+                              label: const Text('سور المفصّل (ق إلى الناس)'),
+                              onPressed: () => _applyPreset(MemorizationPlan.createDefaultMufassal(widget.memorizationModule.clock.nowUtc())),
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.menu_book_rounded, size: 16, color: AppColors.goldAccent),
+                              label: const Text('القرآن كاملاً (30 جزءاً)'),
+                              onPressed: () => _applyPreset(MemorizationPlan.createDefaultFullQuran(widget.memorizationModule.clock.nowUtc())),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.m),
 
                 // Plan Name
                 Text('عنوان الخطة', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),

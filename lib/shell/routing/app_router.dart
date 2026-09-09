@@ -53,6 +53,7 @@ import '../learning/learning_path_screen.dart';
 import '../learning/lesson_screen.dart';
 import '../learning/quiz_screen.dart';
 import '../memorization/memorization_dashboard_screen.dart';
+import '../memorization/past_memorization_exam_screen.dart';
 import '../memorization/plan_setup_screen.dart';
 import '../memorization/study_session_screen.dart';
 import '../prayer/prayer_screen.dart';
@@ -90,6 +91,7 @@ class AppRouter {
   static const String memorization = '/memorization';
   static const String memorizationSession = '/memorization/session';
   static const String memorizationPlan = '/memorization/plan';
+  static const String memorizationPastExam = '/memorization/past-exam';
   static const String adhkar = '/adhkar';
   static const String zakat = '/zakat';
   static const String zakatAssets = '/zakat/assets';
@@ -958,6 +960,21 @@ class AppRouter {
             memorizationModule: memMod,
             initialTargetAyahKey: targetKey,
             onSaved: () => Navigator.pop(ctx),
+          ),
+          settings: routeSettings,
+        );
+      case memorizationPastExam:
+        final args = routeSettings.arguments as Map<String, dynamic>? ?? {};
+        final registry = MemoryStorageRegistry();
+        final quranMod = defaultQuranModule ?? QuranModule(storageRegistry: registry);
+        final memMod = args['module'] as MemorizationModule? ??
+            defaultMemorizationModule ??
+            MemorizationModule(storageRegistry: registry, quranStore: quranMod.store);
+        return MaterialPageRoute(
+          builder: (ctx) => PastMemorizationExamScreen(
+            memorizationModule: memMod,
+            quranModule: quranMod,
+            onFinished: () => Navigator.pop(ctx),
           ),
           settings: routeSettings,
         );
