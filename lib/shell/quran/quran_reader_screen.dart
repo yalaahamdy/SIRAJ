@@ -80,6 +80,9 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
   List<Ayah> _ayahs = [];
   List<Ayah> _allSurahAyahs = [];
   bool _filterToMemorizationTarget = true;
+  late int _memorizationStartAyah;
+  late int _memorizationEndAyah;
+  bool _isMemorizationBarCollapsed = false;
   Set<int> _bookmarkedAyahs = {};
   bool _isLoading = true;
   String? _errorMessage;
@@ -138,6 +141,8 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     super.initState();
     _currentSurahNumber = widget.initialSurahNumber;
     _targetAyahNumber = widget.initialAyahNumber;
+    _memorizationStartAyah = widget.memorizationStartAyah ?? 1;
+    _memorizationEndAyah = widget.memorizationEndAyah ?? 7;
 
     _recitationRecorder = widget.recorder ?? QuranRecitationRecorder();
     _recitationGateway = widget.recognitionGateway ?? FastConformerQuranRecognitionGateway();
@@ -281,15 +286,15 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         .toSet();
 
     _allSurahAyahs = allAyahs;
+    if (widget.memorizationEndAyah == null && allAyahs.isNotEmpty) {
+      _memorizationEndAyah = allAyahs.last.ayahNumber;
+    }
     List<Ayah> displayed = allAyahs;
-    if (widget.isMemorizationMode &&
-        _filterToMemorizationTarget &&
-        widget.memorizationStartAyah != null &&
-        widget.memorizationEndAyah != null) {
+    if (widget.isMemorizationMode && _filterToMemorizationTarget) {
       displayed = allAyahs
           .where((a) =>
-              a.ayahNumber >= widget.memorizationStartAyah! &&
-              a.ayahNumber <= widget.memorizationEndAyah!)
+              a.ayahNumber >= _memorizationStartAyah &&
+              a.ayahNumber <= _memorizationEndAyah)
           .toList();
     }
 
@@ -1302,70 +1307,117 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     }
   }
 
+  void _updateMemorizationEndAyah(int newEndAyah) {
+    setState(() {
+      _memorizationEndAyah = newEndAyah;
+      if (_filterToMemorizationTarget && _allSurahAyahs.isNotEmpty) {
+        _ayahs = _allSurahAyahs
+            .where((a) =>
+                a.ayahNumber >= _memorizationStartAyah &&
+                a.ayahNumber <= _memorizationEndAyah)
+            .toList();
+      }
+    });
+  }
+
   Widget _buildMemorizationHeaderCard(QuranTypographyConfig config, bool isDark) {
-    final startAyah = widget.memorizationStartAyah ?? 1;
-    final endAyah = widget.memorizationEndAyah ?? (_ayahs.isNotEmpty ? _ayahs.last.ayahNumber : 1);
+    final startAyah = _memorizationStartAyah;
+    final endAyah = _memorizationEndAyah;
     final count = (endAyah - startAyah + 1).clamp(1, 999);
+    final totalSurahAyahs = _allSurahAyahs.isNotEmpty
+        ? _allSurahAyahs.length
+        : (_currentSurah?.ayahCount ?? endAyah);
+    final canCompleteSurah = endAyah < totalSurahAyahs;
+
+    if (_isMemorizationBarCollapsed) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E232A) : AppColors.goldAccent.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.goldAccent.withValues(alpha: 0.4), width: 1),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.star_rounded, color: AppColors.goldAccent, size: 16),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'ورد ${widget.isReviewMode ? 'المراجعة' : 'الحفظ'}: سورة ${_currentSurah?.nameArabic ?? ''} ($startAyah - $endAyah)',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            InkWell(
+              onTap: () => setState(() => _isMemorizationBarCollapsed = false),
+              borderRadius: BorderRadius.circular(4),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('إظهار الشريط', style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                    Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.primary),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: isDark
             ? const Color(0xFF1E232A)
             : AppColors.goldAccent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: AppColors.goldAccent.withValues(alpha: 0.5),
-          width: 1.2,
+          color: AppColors.goldAccent.withValues(alpha: 0.45),
+          width: 1.1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.goldAccent.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  widget.isReviewMode ? Icons.history_edu_rounded : Icons.star_rounded,
-                  color: AppColors.goldAccent,
-                  size: 20,
-                ),
+              Icon(
+                widget.isReviewMode ? Icons.history_edu_rounded : Icons.star_rounded,
+                color: AppColors.goldAccent,
+                size: 18,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.isReviewMode ? 'ورد مراجعة وتثبيت الماضي' : 'ورد الحفظ المقرر لليوم',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'سورة ${_currentSurah?.nameArabic ?? ''} — الآيات ($startAyah إلى $endAyah) • $count آيات',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                child: Text(
+                  '${widget.isReviewMode ? 'مراجعة' : 'ورد'}: سورة ${_currentSurah?.nameArabic ?? ''} ($startAyah-$endAyah) • $count آيات',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // Filter toggle
               if (_allSurahAyahs.isNotEmpty)
-                TextButton(
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  icon: Icon(
+                    _filterToMemorizationTarget ? Icons.filter_alt_rounded : Icons.filter_alt_off_rounded,
+                    size: 16,
+                    color: _filterToMemorizationTarget ? AppColors.primary : Colors.grey,
                   ),
+                  tooltip: _filterToMemorizationTarget ? 'عرض السورة كاملة' : 'عزل الورد فقط',
                   onPressed: () {
                     setState(() {
                       _filterToMemorizationTarget = !_filterToMemorizationTarget;
@@ -1378,25 +1430,33 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                       }
                     });
                   },
-                  child: Text(
-                    _filterToMemorizationTarget ? 'عرض السورة كاملة' : 'عزل الورد فقط',
-                    style: const TextStyle(fontSize: 11, color: AppColors.primary),
-                  ),
                 ),
+              // Collapse icon
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 18, color: Colors.grey),
+                tooltip: 'طي الشريط',
+                onPressed: () => setState(() => _isMemorizationBarCollapsed = true),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Row(
             children: [
+              // Play range
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: AppColors.primary.withValues(alpha: 0.6)),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                    minimumSize: const Size(0, 32),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    visualDensity: VisualDensity.compact,
                   ),
-                  icon: const Icon(Icons.headphones_rounded, size: 16),
-                  label: const Text('استماع وترديد 🎧', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.headphones_rounded, size: 14),
+                  label: const Text('استماع 🎧', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   onPressed: () {
                     widget.quranModule.audioService.playRange(
                       _currentSurahNumber,
@@ -1407,17 +1467,20 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
+              // Start Tasmee
               Expanded(
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF2E7D32),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                    minimumSize: const Size(0, 32),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    visualDensity: VisualDensity.compact,
                   ),
-                  icon: const Icon(Icons.mic_rounded, size: 16),
-                  label: const Text('بدء التسميع الآلي 🎙️', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.mic_rounded, size: 14),
+                  label: const Text('تسميع 🎙️', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   onPressed: () {
                     _startInPlaceRecitation(
                       QuranRecitationTarget(
@@ -1431,6 +1494,21 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                   },
                 ),
               ),
+              if (canCompleteSurah) ...[
+                const SizedBox(width: 6),
+                FilledButton.tonal(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.goldAccent.withValues(alpha: 0.2),
+                    foregroundColor: isDark ? Colors.amber[200] : const Color(0xFF8B6508),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: const Size(0, 32),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => _updateMemorizationEndAyah(totalSurahAyahs),
+                  child: const Text('إكمال السورة ✨', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ],
           ),
         ],

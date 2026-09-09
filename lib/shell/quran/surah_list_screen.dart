@@ -111,7 +111,7 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
               indicatorColor: AppColors.goldAccent,
               tabs: const [
                 Tab(text: 'السور'),
-                Tab(text: 'التحفيظ والمراجعة'),
+                Tab(text: 'التحفيظ'),
                 Tab(text: 'الإعدادات'),
               ],
             ),

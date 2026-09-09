@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:siraj/core/storage/memory_storage.dart';
 import 'package:siraj/modules/memorization/domain/memorization_plan.dart';
 import 'package:siraj/modules/memorization/memorization_module.dart';
+import 'package:siraj/modules/quran/domain/ayah_key.dart';
 import 'package:siraj/modules/quran/quran_module.dart';
 import 'package:siraj/shell/quran/widgets/quran_tahfeez_tab.dart';
 import '../fixtures/quran/canonical_quran_fixture.dart';
@@ -87,10 +88,42 @@ void main() {
       await tester.tap(startBtn);
       await tester.pumpAndSettle();
 
-      // In reader in memorization mode: header card should be visible
-      expect(find.textContaining('ورد الحفظ المقرر لليوم'), findsOneWidget);
-      expect(find.text('بدء التسميع الآلي 🎙️'), findsOneWidget);
-      expect(find.text('استماع وترديد 🎧'), findsOneWidget);
+      // In reader in memorization mode: slim compact bar should be visible
+      expect(find.textContaining('ورد:'), findsOneWidget);
+      expect(find.text('تسميع 🎙️'), findsOneWidget);
+      expect(find.text('استماع 🎧'), findsOneWidget);
+    });
+
+    test('Tahfeez Reverse Order: Plan from Surah 114 down to Surah 112 starts reciting with An-Nas', () async {
+      final now = DateTime.utc(2026, 9, 9);
+      final reverseSurahs = [114, 113, 112];
+      final reversePlan = MemorizationPlan(
+        id: 'test_reverse_plan',
+        title: 'خطة حفظ تنازلية',
+        targetSurahs: reverseSurahs,
+        startAyah: const AyahKey(surahNumber: 114, ayahNumber: 1),
+        endAyah: const AyahKey(surahNumber: 112, ayahNumber: 4),
+        dailyNewAyahs: 5,
+        dailyReviewTarget: 20,
+        createdAt: now,
+      );
+
+      final planAyahsRes = memorizationModule.getPlanAyahs(reversePlan);
+      expect(planAyahsRes.isSuccess, isTrue);
+      final planAyahs = planAyahsRes.valueOrNull!;
+      expect(planAyahs.isNotEmpty, isTrue);
+
+      // Must start with Surah 114 (An-Nas) and end with Surah 112 (Al-Ikhlas)
+      expect(planAyahs.first.surahNumber, equals(114));
+      expect(planAyahs.first.ayahNumber, equals(1));
+      expect(planAyahs.last.surahNumber, equals(112));
+
+      // Today's wird must also start from Surah 114
+      final todayWirdRes = await memorizationModule.getTodayWirdAyahs(reversePlan);
+      expect(todayWirdRes.isSuccess, isTrue);
+      final todayWird = todayWirdRes.valueOrNull!;
+      expect(todayWird.first.surahNumber, equals(114));
+      expect(todayWird.length, equals(5));
     });
   });
 }

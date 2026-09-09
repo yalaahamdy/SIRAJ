@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../../core/errors/app_failure.dart';
 import '../../core/errors/result.dart';
 import '../../core/storage/storage_contract.dart';
@@ -251,17 +252,16 @@ class MemorizationModule {
     return item != null && item.state == MemorizationState.mastered;
   }
 
-  /// Retrieves list of all Ayahs in the active plan.
+  /// Retrieves list of all Ayahs in the active plan, preserving targetSurahs ordering.
   Result<List<Ayah>, Failure> getPlanAyahs(MemorizationPlan plan) {
     final result = <Ayah>[];
     for (final sNum in plan.targetSurahs) {
       final surahAyahsRes = quranStore.getSurahAyahs(sNum);
       if (surahAyahsRes.isSuccess) {
         for (final ayah in surahAyahsRes.valueOrNull!) {
-          if (_isBeforeKey(ayah.key, plan.startAyah) || _isAfterKey(ayah.key, plan.endAyah)) {
-            continue;
+          if (_isAyahInPlan(ayah.key, plan)) {
+            result.add(ayah);
           }
-          result.add(ayah);
         }
       }
     }
@@ -282,8 +282,7 @@ class MemorizationModule {
       final surahAyahsRes = quranStore.getSurahAyahs(sNum);
       if (surahRes.isSuccess && surahAyahsRes.isSuccess) {
         final allAyahs = surahAyahsRes.valueOrNull!;
-        final planAyahs = allAyahs.where((a) =>
-            !_isBeforeKey(a.key, plan.startAyah) && !_isAfterKey(a.key, plan.endAyah)).toList();
+        final planAyahs = allAyahs.where((a) => _isAyahInPlan(a.key, plan)).toList();
 
         if (planAyahs.isNotEmpty) {
           final memorizedCount = planAyahs.where((a) => memorizedKeys.contains(a.key)).length;
@@ -326,15 +325,29 @@ class MemorizationModule {
     return Result.ok(revision);
   }
 
-  static bool _isBeforeKey(AyahKey a, AyahKey start) {
-    if (a.surahNumber < start.surahNumber) return true;
-    if (a.surahNumber == start.surahNumber && a.ayahNumber < start.ayahNumber) return true;
-    return false;
-  }
+  /// Evaluates whether an Ayah belongs to the given plan, correctly supporting
+  /// both traditional ascending order and descending order (e.g. 114 down to 78).
+  static bool _isAyahInPlan(AyahKey key, MemorizationPlan plan) {
+    if (!plan.targetSurahs.contains(key.surahNumber)) return false;
 
-  static bool _isAfterKey(AyahKey a, AyahKey end) {
-    if (a.surahNumber > end.surahNumber) return true;
-    if (a.surahNumber == end.surahNumber && a.ayahNumber > end.ayahNumber) return true;
-    return false;
+    final isStartSurah = key.surahNumber == plan.startAyah.surahNumber;
+    final isEndSurah = key.surahNumber == plan.endAyah.surahNumber;
+
+    if (isStartSurah && isEndSurah) {
+      final minA = math.min(plan.startAyah.ayahNumber, plan.endAyah.ayahNumber);
+      final maxA = math.max(plan.startAyah.ayahNumber, plan.endAyah.ayahNumber);
+      return key.ayahNumber >= minA && key.ayahNumber <= maxA;
+    }
+
+    if (isStartSurah) {
+      return key.ayahNumber >= plan.startAyah.ayahNumber;
+    }
+
+    if (isEndSurah) {
+      return key.ayahNumber <= plan.endAyah.ayahNumber;
+    }
+
+    // Any intermediate surah included in the plan has all its ayahs included
+    return true;
   }
 }

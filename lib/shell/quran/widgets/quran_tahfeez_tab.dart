@@ -311,6 +311,8 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
     final endAyah = lastAyah.ayahNumber;
     final count = _todayWirdAyahs.length;
     final isWirdCompleted = _todayWirdAyahs.every((a) => _memorizedKeys.contains(a.key));
+    final totalAyahsInSurah = widget.quranModule.getSurah(surahNumber).valueOrNull?.ayahCount ?? endAyah;
+    final remainingInSurah = (totalAyahsInSurah - endAyah).clamp(0, totalAyahsInSurah);
 
     return Card(
       elevation: 2,
@@ -401,6 +403,41 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
               ),
             ),
             const SizedBox(height: 12),
+            if (remainingInSurah > 0 && !isWirdCompleted) ...[
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.stars_rounded, size: 16, color: AppColors.goldAccent),
+                    label: Text(
+                      'إكمال سورة ${_getSurahName(surahNumber)} اليوم ($totalAyahsInSurah آية) 🌟',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: AppColors.goldAccent.withValues(alpha: 0.12),
+                    side: BorderSide(color: AppColors.goldAccent.withValues(alpha: 0.4)),
+                    onPressed: () => _openReaderForMemorization(surahNumber, startAyah, totalAyahsInSurah, isReview: false),
+                  ),
+                  if (remainingInSurah >= 1 && endAyah + 1 <= totalAyahsInSurah)
+                    ActionChip(
+                      avatar: const Icon(Icons.add_rounded, size: 14, color: AppColors.primary),
+                      label: const Text('+1 آية', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      backgroundColor: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
+                      side: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300),
+                      onPressed: () => _openReaderForMemorization(surahNumber, startAyah, endAyah + 1, isReview: false),
+                    ),
+                  if (remainingInSurah >= 5 && endAyah + 5 <= totalAyahsInSurah)
+                    ActionChip(
+                      avatar: const Icon(Icons.add_rounded, size: 14, color: AppColors.primary),
+                      label: const Text('+5 آيات', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      backgroundColor: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
+                      side: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300),
+                      onPressed: () => _openReaderForMemorization(surahNumber, startAyah, endAyah + 5, isReview: false),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
             FilledButton.icon(
               style: FilledButton.styleFrom(
                 backgroundColor: isWirdCompleted ? const Color(0xFF2E7D32) : AppColors.primary,

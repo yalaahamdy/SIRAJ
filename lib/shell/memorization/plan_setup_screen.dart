@@ -33,6 +33,8 @@ class PlanSetupScreen extends StatefulWidget {
 class _PlanSetupScreenState extends State<PlanSetupScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _dailyNewController = TextEditingController();
+  final TextEditingController _startAyahController = TextEditingController();
+  final TextEditingController _endAyahController = TextEditingController();
   PlanSelectionMode _selectionMode = PlanSelectionMode.byJuz;
 
   int _selectedJuz = 30; // Default to Juz Amma
@@ -53,6 +55,8 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
   @override
   void initState() {
     super.initState();
+    _startAyahController.text = '$_startAyah';
+    _endAyahController.text = '$_endAyah';
     _loadInitialData();
   }
 
@@ -60,6 +64,8 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
   void dispose() {
     _titleController.dispose();
     _dailyNewController.dispose();
+    _startAyahController.dispose();
+    _endAyahController.dispose();
     super.dispose();
   }
 
@@ -138,18 +144,36 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
         break;
 
       case PlanSelectionMode.customRange:
-        final minS = _startSurah <= _endSurah ? _startSurah : _endSurah;
-        final maxS = _startSurah <= _endSurah ? _endSurah : _startSurah;
-        final startAyah = _startSurah <= _endSurah ? _startAyah : _endAyah;
-        final endAyah = _startSurah <= _endSurah ? _endAyah : _startAyah;
-
-        for (int s = minS; s <= maxS; s++) {
-          final aRes = qStore.getSurahAyahs(s);
-          if (aRes.isSuccess) {
-            for (final ayah in aRes.valueOrNull!) {
-              if (s == minS && ayah.ayahNumber < startAyah) continue;
-              if (s == maxS && ayah.ayahNumber > endAyah) continue;
-              keys.add(ayah.key);
+        final isReverse = _startSurah > _endSurah;
+        if (!isReverse) {
+          for (int s = _startSurah; s <= _endSurah; s++) {
+            final aRes = qStore.getSurahAyahs(s);
+            if (aRes.isSuccess) {
+              final ayahs = aRes.valueOrNull!;
+              final maxAyah = _getSurahAyahsCount(s);
+              final fromA = s == _startSurah ? _startAyah.clamp(1, maxAyah) : 1;
+              final toA = s == _endSurah ? _endAyah.clamp(1, maxAyah) : maxAyah;
+              for (final ayah in ayahs) {
+                if (ayah.ayahNumber >= fromA && ayah.ayahNumber <= toA) {
+                  keys.add(ayah.key);
+                }
+              }
+            }
+          }
+        } else {
+          // Descending / Reverse order (e.g. Surah 114 down to Surah 78)
+          for (int s = _startSurah; s >= _endSurah; s--) {
+            final aRes = qStore.getSurahAyahs(s);
+            if (aRes.isSuccess) {
+              final ayahs = aRes.valueOrNull!;
+              final maxAyah = _getSurahAyahsCount(s);
+              final fromA = s == _startSurah ? _startAyah.clamp(1, maxAyah) : 1;
+              final toA = s == _endSurah ? _endAyah.clamp(1, maxAyah) : maxAyah;
+              for (final ayah in ayahs) {
+                if (ayah.ayahNumber >= fromA && ayah.ayahNumber <= toA) {
+                  keys.add(ayah.key);
+                }
+              }
             }
           }
         }
@@ -176,7 +200,13 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     final now = widget.memorizationModule.clock.nowUtc();
     final firstKey = targetAyahs.first;
     final lastKey = targetAyahs.last;
-    final distinctSurahs = targetAyahs.map((k) => k.surahNumber).toSet().toList()..sort();
+    // Preserve the user-selected order (whether ascending or descending 114 -> 78)
+    final distinctSurahs = <int>[];
+    for (final k in targetAyahs) {
+      if (!distinctSurahs.contains(k.surahNumber)) {
+        distinctSurahs.add(k.surahNumber);
+      }
+    }
 
     final totalDays = (targetAyahs.length / _dailyNew).ceil();
     final targetFinishDate = now.add(Duration(days: totalDays));
@@ -188,7 +218,10 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
       } else if (_selectionMode == PlanSelectionMode.bySurah) {
         finalTitle = 'خطة حفظ سورة ${_getSurahName(_selectedSurah)}';
       } else {
-        finalTitle = 'خطة حفظ مخصصة (${targetAyahs.length} آية)';
+        final isReverse = _startSurah > _endSurah;
+        finalTitle = isReverse
+            ? 'خطة حفظ من سورة ${_getSurahName(_startSurah)} إلى ${_getSurahName(_endSurah)}'
+            : 'خطة حفظ من سورة ${_getSurahName(_startSurah)} إلى ${_getSurahName(_endSurah)}';
       }
     }
 
@@ -528,6 +561,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
         );
 
       case PlanSelectionMode.customRange:
+        final isReverseOrder = _startSurah > _endSurah;
         return Card(
           elevation: 1,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -538,23 +572,49 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
               children: [
                 const Text('حدد نطاق البداية والنهاية:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 8),
+                if (isReverseOrder) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.goldAccent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.goldAccent.withValues(alpha: 0.35)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.swap_vert_rounded, size: 16, color: AppColors.goldAccent),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'نظام حفظ تنازلي مبارك (من سورة لاحقة إلى سابقة كما في الكتاتيب)',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.goldAccent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 Row(
                   children: [
                     Expanded(
                       flex: 3,
                       child: DropdownButtonFormField<int>(
                         initialValue: _startSurah,
+                        isExpanded: true,
+                        isDense: true,
                         decoration: InputDecoration(
                           labelText: 'من سورة',
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        items: _allSurahs.map((s) => DropdownMenuItem(value: s.number, child: Text(s.nameArabic, style: const TextStyle(fontSize: 12)))).toList(),
+                        items: _allSurahs.map((s) => DropdownMenuItem(value: s.number, child: Text(s.nameArabic, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))).toList(),
                         onChanged: (v) {
                           if (v != null) {
                             setState(() {
                               _startSurah = v;
                               _startAyah = 1;
+                              _startAyahController.text = '1';
                             });
                           }
                         },
@@ -564,7 +624,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
                     Expanded(
                       flex: 2,
                       child: TextFormField(
-                        initialValue: '$_startAyah',
+                        controller: _startAyahController,
                         decoration: InputDecoration(
                           labelText: 'آية',
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -583,17 +643,20 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
                       flex: 3,
                       child: DropdownButtonFormField<int>(
                         initialValue: _endSurah,
+                        isExpanded: true,
+                        isDense: true,
                         decoration: InputDecoration(
                           labelText: 'إلى سورة',
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        items: _allSurahs.map((s) => DropdownMenuItem(value: s.number, child: Text(s.nameArabic, style: const TextStyle(fontSize: 12)))).toList(),
+                        items: _allSurahs.map((s) => DropdownMenuItem(value: s.number, child: Text(s.nameArabic, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))).toList(),
                         onChanged: (v) {
                           if (v != null) {
                             setState(() {
                               _endSurah = v;
                               _endAyah = _getSurahAyahsCount(v);
+                              _endAyahController.text = '$_endAyah';
                             });
                           }
                         },
@@ -603,7 +666,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
                     Expanded(
                       flex: 2,
                       child: TextFormField(
-                        initialValue: '$_endAyah',
+                        controller: _endAyahController,
                         decoration: InputDecoration(
                           labelText: 'آية',
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
