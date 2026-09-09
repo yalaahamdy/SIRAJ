@@ -161,11 +161,14 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
                   ),
                   onPressed: _startStudySession,
                   icon: const Icon(Icons.play_circle_fill_rounded, size: 28),
-                  label: Text(
-                    _session != null && _session!.results.isNotEmpty && !_session!.isCompleted
-                        ? 'استئناف جلسة اليوم (${_session!.completedCount}/${_session!.totalItemsCount})'
-                        : 'بدء جلسة الحفظ والمراجعة اليومية',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _session != null && _session!.results.isNotEmpty && !_session!.isCompleted
+                          ? 'استئناف جلسة اليوم (${_session!.completedCount}/${_session!.totalItemsCount})'
+                          : 'بدء جلسة الحفظ والمراجعة اليومية',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -219,13 +222,14 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
   }
 
   Widget _buildMetricsGrid(BuildContext context, bool isDark) {
+    final screenWidth = MediaQuery.of(context).size.width;
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: AppSpacing.s,
       crossAxisSpacing: AppSpacing.s,
-      childAspectRatio: MediaQuery.of(context).textScaler.scale(1) > 1.2 ? 1.4 : 1.8,
+      childAspectRatio: screenWidth < 400 ? 1.35 : (screenWidth < 600 ? 1.45 : 1.7),
       children: [
         MasteryStatCard(
           title: 'ورد جديد اليوم',
@@ -374,9 +378,12 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
                       shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
                     ),
                     icon: const Icon(Icons.record_voice_over_rounded),
-                    label: const Text(
-                      'بدء اختبار وتسميع الماضي الآن 🌟',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    label: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'بدء اختبار وتسميع الماضي الآن 🌟',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                     onPressed: _startPastExam,
                   ),
@@ -466,8 +473,15 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            if (firstKey != null)
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (firstKey != null) ...[
+              const SizedBox(width: 8),
               TextButton.icon(
                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero),
                 icon: const Icon(Icons.arrow_forward_ios_rounded, size: 12),
@@ -476,6 +490,7 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
                   widget.onOpenSurah(firstKey.surahNumber, targetAyah: firstKey.ayahNumber);
                 },
               ),
+            ],
           ],
         ),
         Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
@@ -488,9 +503,13 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
               borderRadius: BorderRadius.circular(6),
               border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
             ),
-            child: Text(
-              'سورة $surahName — الآيات: ${ayahKeys.first.ayahNumber} إلى ${ayahKeys.last.ayahNumber}',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: badgeColor),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                'سورة $surahName — الآيات: ${ayahKeys.first.ayahNumber} إلى ${ayahKeys.last.ayahNumber}',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: badgeColor),
+              ),
             ),
           ),
         ],

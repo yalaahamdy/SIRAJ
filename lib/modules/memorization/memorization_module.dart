@@ -179,6 +179,29 @@ class MemorizationModule {
   }) =>
       pastMemorizationEngine.submitPastExamResult(question: question, isMastered: isMastered);
 
+  /// Clears the active/cached session for today so a fresh session can be prepared.
+  Future<Result<bool, Failure>> clearActiveSession() => sessionEngine.clearActiveSession();
+
+  /// Applies a memorization plan, registers targeted Ayahs, clears old session cache,
+  /// and primes today's session immediately.
+  Future<Result<bool, Failure>> applyPlanWithAyahs({
+    required MemorizationPlan plan,
+    required List<AyahKey> ayahs,
+  }) async {
+    final planRes = await savePlan(plan);
+    if (planRes.isFailure) return planRes;
+
+    if (ayahs.isNotEmpty) {
+      final addRes = await addAyahsToPlan(ayahs);
+      if (addRes.isFailure) return Result.err(addRes.failureOrNull!);
+    }
+
+    await clearActiveSession();
+    await getOrCreateTodaySession();
+
+    return Result.ok(true);
+  }
+
   /// Executes safe reset of all user memorization data (§27).
   Future<Result<bool, Failure>> resetAllData() => dataStore.resetAllData();
 }

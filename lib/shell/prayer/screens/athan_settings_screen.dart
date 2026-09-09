@@ -6,6 +6,7 @@ import '../../../modules/prayer/domain/prayer_type.dart';
 import '../../../modules/prayer/prayer_module.dart';
 import '../../../core/notifications/siraj_notification_manager.dart';
 import '../../../core/notifications/siraj_native_overlay_bridge.dart';
+import '../../../core/notifications/siraj_auto_scheduler_service.dart';
 import '../widgets/athan_preview_card.dart';
 import 'siraj_athan_full_screen_view.dart';
 
@@ -28,6 +29,8 @@ class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
   late PrayerNotificationSettings _settings;
   bool _notificationsGranted = true;
   bool _overlayGranted = true;
+  bool _batteryOptIgnored = true;
+  bool _isRescheduling = false;
 
   @override
   void initState() {
@@ -39,10 +42,12 @@ class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
   Future<void> _checkSystemPermissions() async {
     final notifs = await SirajNotificationManager.instance.areNotificationsEnabled();
     final overlay = await SirajNativeOverlayBridge.checkOverlayPermission();
+    final battery = await SirajNativeOverlayBridge.isIgnoringBatteryOptimizations();
     if (mounted) {
       setState(() {
         _notificationsGranted = notifs;
         _overlayGranted = overlay;
+        _batteryOptIgnored = battery;
       });
     }
   }
@@ -466,12 +471,137 @@ class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
                       child: const Text('التحقق', style: TextStyle(fontSize: 12, color: AppColors.primary)),
                     ),
                   ),
+                  const Divider(),
+
+                  // 4. Battery Saver Exemption (Ignore Battery Optimization)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      _batteryOptIgnored ? Icons.battery_charging_full_rounded : Icons.battery_alert_rounded,
+                      color: _batteryOptIgnored ? Colors.green : Colors.orange,
+                      size: 28,
+                    ),
+                    title: const Text('استثناء موفر البطارية (وضع السكون)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text(
+                      _batteryOptIgnored
+                          ? 'مستثنى بنجاح • ينطلق الأذان بالثانية دون تأخير حتى في السكون العميق'
+                          : 'مقيّد • يُنصح بإلغاء قيود البطارية لضمان دقة مواقيت الأذان والمنبه',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _batteryOptIgnored ? Colors.green : Colors.orange.shade700,
+                      ),
+                    ),
+                    trailing: OutlinedButton(
+                      onPressed: () async {
+                        await SirajNativeOverlayBridge.requestIgnoreBatteryOptimizations();
+                        await _checkSystemPermissions();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: _batteryOptIgnored ? Colors.grey : Colors.orange),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      ),
+                      child: Text(
+                        _batteryOptIgnored ? 'فحص' : 'إلغاء التقييد',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _batteryOptIgnored ? Colors.grey : Colors.orange,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 5. Proactive 14-Day Rolling Auto-Scheduler Status Card
+          _buildSectionHeader('منظومة الإشعارات الخارجية الاستباقية (14 يوماً)'),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle_outline_rounded, color: Colors.green, size: 24),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          SirajAutoSchedulerService.instance.lastScheduledCount > 0
+                              ? 'تمت جدولة ${SirajAutoSchedulerService.instance.lastScheduledCount} تنبيهاً لـ 14 يوماً مسبقاً'
+                              : 'الجدولة الاستباقية لـ 14 يوماً مسبقاً مفعلة ومستمرة',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'تعمل جميع التنبيهات (الصلوات الخمس، الأذكار، السنن، والأوراد) خارج التطبيق بالكامل وبدقة متناهية دون الحاجة لفتح التطبيق أو إبقاء الهاتف مشغلاً.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isRescheduling
+                          ? null
+                          : () async {
+                              setState(() => _isRescheduling = true);
+                              final messenger = ScaffoldMessenger.of(context);
+                              try {
+                                final count = await SirajAutoSchedulerService.instance.scheduleRolling14Days(
+                                  prayerModule: widget.prayerModule,
+                                  daysCount: 14,
+                                );
+                                if (mounted) {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text('تم تحديث جدولة $count تنبيهاً لـ 14 يوماً مسبقاً بنجاح 🔔'),
+                                      backgroundColor: Colors.green.shade800,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) setState(() => _isRescheduling = false);
+                              }
+                            },
+                      icon: _isRescheduling
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.sync_rounded, size: 18),
+                      label: Text(_isRescheduling ? 'جارٍ تحديث الجدولة...' : 'تحديث وإعادة جدولة الـ 14 يوماً الآن'),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, top: 4),
+      child: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
       ),
     );
   }

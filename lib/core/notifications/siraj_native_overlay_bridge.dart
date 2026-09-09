@@ -77,4 +77,28 @@ class SirajNativeOverlayBridge {
       return false;
     }
   }
+
+  /// يفحص ما إذا كان التطبيق مستثنى من قيود توفير الطاقة والبطارية
+  static Future<bool> isIgnoringBatteryOptimizations() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+    try {
+      final res = await _channel.invokeMethod<bool>('isIgnoringBatteryOptimizations');
+      return res ?? true;
+    } catch (e) {
+      debugPrint('Error checking battery optimization status: $e');
+      return false;
+    }
+  }
+
+  /// يطلب من النظام استثناء التطبيق من قيود توفير الطاقة لضمان عمل منبه الأذان في الخلفية
+  static Future<bool> requestIgnoreBatteryOptimizations() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+    try {
+      final res = await _channel.invokeMethod<bool>('requestIgnoreBatteryOptimizations');
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error requesting ignore battery optimization: $e');
+      return false;
+    }
+  }
 }

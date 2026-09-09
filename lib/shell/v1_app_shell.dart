@@ -27,9 +27,7 @@ import '../core/location/location_models.dart';
 import '../core/location/sensor_compass_service.dart';
 import '../modules/prayer/domain/calculation_parameters.dart';
 import '../modules/prayer/domain/prayer_adjustments.dart';
-import '../modules/prayer/domain/prayer_notification_settings.dart';
 import '../modules/prayer/domain/prayer_type.dart';
-import '../modules/prayer/domain/athan_sound_option.dart';
 import '../modules/quran/domain/cairo_radio_station.dart';
 import 'adhkar/adhkar_home_screen.dart';
 import 'audio/siraj_audio_hub_screen.dart';
@@ -43,7 +41,7 @@ import '../core/audio/siraj_feedback_audio_service.dart';
 import '../core/notifications/siraj_notification_manager.dart';
 import '../core/notifications/siraj_media_notification_service.dart';
 import 'prayer/screens/siraj_athan_full_screen_view.dart';
-import 'prayer/widgets/siraj_athan_overlay_banner.dart';
+import '../core/notifications/siraj_auto_scheduler_service.dart';
 import 'v1_more_screen.dart';
 import 'widgets/state_views.dart';
 
@@ -81,8 +79,6 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   late final CompanionModule _companionModule;
   late final LocationEngine _locationEngine;
   late final SensorCompassService _compassService;
-  Timer? _prayerTimeCheckerTimer;
-  String? _lastTriggeredPrayerKey;
 
   @override
   void initState() {
@@ -194,7 +190,6 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestUnifiedPermissions();
       _checkAthanAppLaunch();
-      _startGlobalPrayerTimeWatcher();
     });
   }
 
@@ -202,13 +197,12 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _quranModule.radioService.checkSleepTimer();
-      _checkIfPrayerTimeArrived();
+      _scheduleBackgroundPrayerAlarms();
     }
   }
 
   @override
   void dispose() {
-    _prayerTimeCheckerTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -281,90 +275,6 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
     }
   }
 
-  void _startGlobalPrayerTimeWatcher() {
-    _prayerTimeCheckerTimer?.cancel();
-    _prayerTimeCheckerTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      _checkIfPrayerTimeArrived();
-    });
-  }
-
-  Future<void> _checkIfPrayerTimeArrived() async {
-    if (!mounted) return;
-    try {
-      if (Platform.environment.containsKey('FLUTTER_TEST')) return;
-    } catch (_) {}
-
-    try {
-      final loc = _locationEngine.currentEffectiveLocation;
-      final now = _prayerModule.clock.nowLocal();
-      final scheduleRes = await _prayerModule.getSchedule(
-        date: now,
-        location: loc,
-        parameters: CalculationParameters.egyptian,
-      );
-      if (!scheduleRes.isSuccess || scheduleRes.valueOrNull == null) return;
-      final schedule = scheduleRes.valueOrNull!;
-      final settings = _prayerModule.notificationService.settings;
-
-      for (final entry in schedule.obligatoryPrayers) {
-        final diff = now.difference(entry.time);
-        // If current time is within [0, 90] seconds of prayer time
-        if (diff.inSeconds >= 0 && diff.inSeconds <= 90) {
-          final key = '${schedule.date.year}_${schedule.date.month}_${schedule.date.day}_${entry.type.name}';
-          if (_lastTriggeredPrayerKey == key) continue;
-          _lastTriggeredPrayerKey = key;
-
-          final perPrayer = settings.getSettingFor(entry.type);
-          if (perPrayer.mode == PrayerNotificationMode.disabled) continue;
-
-          final shouldPlayAudio = perPrayer.mode == PrayerNotificationMode.fullAthan ||
-              perPrayer.mode == PrayerNotificationMode.takbeerOnly;
-
-          // 1. Play authentic Athan audio
-          if (shouldPlayAudio && !_prayerModule.athanAudioService.isPlaying) {
-            _prayerModule.athanAudioService.playAthan(
-              soundOption: AthanSoundOption.abdulbasit,
-              volume: settings.masterVolume,
-            );
-          }
-
-          // 2. Show native system notification with Athan sound
-          SirajNotificationManager.instance.showPrayerNotification(
-            id: entry.type.index,
-            title: 'حان الآن موعد أذان ${entry.type.nameArabic}',
-            body: 'حي على الصلاة، حي على الفلاح — ${loc.cityName ?? "موقعك الحالي"}',
-            playAthanSound: shouldPlayAudio,
-            payload: 'siraj_athan_${entry.type.name}',
-          );
-
-          // 3. Pop up Fullscreen Athan view or overlay banner
-          if (mounted) {
-            SirajAthanFullScreenView.show(
-              context,
-              prayerType: entry.type,
-              prayerTime: entry.time,
-              locationName: loc.cityName ?? 'موقعك الحالي',
-              audioService: _prayerModule.athanAudioService,
-              onSnooze: () {
-                final snoozeTime = DateTime.now().add(const Duration(minutes: 5));
-                SirajNotificationManager.instance.schedulePrayerNotification(
-                  id: 88899,
-                  title: 'تنبيه الأذان المؤجل (بعد 5 دقائق)',
-                  body: 'حان موعد أداء الصلاة المفروضة',
-                  scheduledTime: snoozeTime,
-                  playAthanSound: true,
-                );
-              },
-              onOpenQiblah: () => setState(() => _currentIndex = 1),
-              onOpenAdhkar: () => setState(() => _currentIndex = 4),
-            );
-          }
-          break;
-        }
-      }
-    } catch (_) {}
-  }
-
   void _initNotificationListeners() {
     // 1. Athan stop action from notification button
     SirajNotificationManager.instance.onAthanStopRequested = () {
@@ -434,30 +344,6 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
         setState(() => _currentIndex = 1);
       }
     };
-
-    // 4. In-App Floating Overlay Banner when Athan starts playing while user is browsing app
-    _prayerModule.athanAudioService.isPlayingStream.listen((isPlaying) {
-      if (isPlaying && mounted) {
-        final now = _prayerModule.clock.nowLocal();
-        SirajAthanOverlayBanner.show(
-          context,
-          prayerType: PrayerType.dhuhr,
-          prayerTime: now,
-          locationName: _locationEngine.currentEffectiveLocation.cityName ?? 'موقعك الحالي',
-          audioService: _prayerModule.athanAudioService,
-          onSnooze: () {
-            final snoozeTime = DateTime.now().add(const Duration(minutes: 5));
-            SirajNotificationManager.instance.schedulePrayerNotification(
-              id: 88899,
-              title: 'تنبيه الأذان المؤجل (بعد 5 دقائق)',
-              body: 'حان موعد أداء الصلاة المفروضة',
-              scheduledTime: snoozeTime,
-              playAthanSound: true,
-            );
-          },
-        );
-      }
-    });
   }
 
   void _initMediaNotificationSync() {
@@ -651,38 +537,17 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   Future<void> _scheduleBackgroundPrayerAlarms({GeoCoordinates? location}) async {
     try {
       final loc = location ?? _locationEngine.currentEffectiveLocation;
-      final now = _prayerModule.clock.nowLocal();
-      final tomorrow = now.add(const Duration(days: 1));
-
       final adjRes = await _prayerModule.calibrationService.getAdjustments();
       final adjustments = adjRes.valueOrNull ?? PrayerAdjustments.zero;
       const params = CalculationParameters.egyptian;
 
-      final todayRes = await _prayerModule.getSchedule(
-        date: now,
+      await SirajAutoSchedulerService.instance.scheduleRolling14Days(
+        prayerModule: _prayerModule,
         location: loc,
         parameters: params,
         adjustments: adjustments,
+        daysCount: 14,
       );
-      if (todayRes.isSuccess && todayRes.valueOrNull != null) {
-        _prayerModule.notificationService.scheduleDailyPrayers(
-          schedule: todayRes.valueOrNull!,
-          clearPrevious: true,
-        );
-      }
-
-      final tomorrowRes = await _prayerModule.getSchedule(
-        date: tomorrow,
-        location: loc,
-        parameters: params,
-        adjustments: adjustments,
-      );
-      if (tomorrowRes.isSuccess && tomorrowRes.valueOrNull != null) {
-        _prayerModule.notificationService.scheduleDailyPrayers(
-          schedule: tomorrowRes.valueOrNull!,
-          clearPrevious: false,
-        );
-      }
     } catch (_) {}
   }
 

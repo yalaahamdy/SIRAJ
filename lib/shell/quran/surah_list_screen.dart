@@ -183,25 +183,28 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
           child: SizedBox(
             width: double.infinity,
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment<bool>(
-                  value: false,
-                  label: Text('عرض السور (114)'),
-                  icon: Icon(Icons.format_list_bulleted_rounded, size: 18),
-                ),
-                ButtonSegment<bool>(
-                  value: true,
-                  label: Text('عرض الأجزاء (30)'),
-                  icon: Icon(Icons.grid_view_rounded, size: 18),
-                ),
-              ],
-              selected: {_showJuzsInSurahTab},
-              onSelectionChanged: (newSelection) {
-                setState(() {
-                  _showJuzsInSurahTab = newSelection.first;
-                });
-              },
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.15,
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment<bool>(
+                    value: false,
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('عرض السور (114)')),
+                    icon: Icon(Icons.format_list_bulleted_rounded, size: 18),
+                  ),
+                  ButtonSegment<bool>(
+                    value: true,
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('عرض الأجزاء (30)')),
+                    icon: Icon(Icons.grid_view_rounded, size: 18),
+                  ),
+                ],
+                selected: {_showJuzsInSurahTab},
+                onSelectionChanged: (newSelection) {
+                  setState(() {
+                    _showJuzsInSurahTab = newSelection.first;
+                  });
+                },
+              ),
             ),
           ),
         ),
@@ -287,6 +290,8 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
         leading: const Icon(Icons.auto_stories_rounded, color: AppColors.goldAccentLight, size: 32),
         title: Text(
           'متابعة القراءة: سورة ${p.surahNameArabic}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: isDark ? AppColors.textPrimaryDark : Colors.white,
             fontWeight: FontWeight.bold,
@@ -294,6 +299,8 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
         ),
         subtitle: Text(
           'الآية ${p.lastReadAyah} • صفحة ${p.lastReadPage}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(color: isDark ? AppColors.textSecondaryDark : Colors.white70),
         ),
         trailing: ElevatedButton(

@@ -79,6 +79,9 @@ class DailySessionEngine {
         if (surahAyahsRes.isSuccess) {
           for (final ayah in surahAyahsRes.valueOrNull!) {
             final key = ayah.key;
+            if (_isBeforeKey(key, plan.startAyah) || _isAfterKey(key, plan.endAyah)) {
+              continue;
+            }
             final existing = allItemsMap[key];
             if (existing == null || existing.state == MemorizationState.notStarted) {
               newKeys.add(key);
@@ -180,5 +183,22 @@ class DailySessionEngine {
     }
 
     return Result.ok(updatedSession);
+  }
+
+  /// Clears the active/cached session for today so a fresh session can be prepared.
+  Future<Result<bool, Failure>> clearActiveSession() async {
+    return _store.saveActiveSession(null);
+  }
+
+  bool _isBeforeKey(AyahKey a, AyahKey start) {
+    if (a.surahNumber < start.surahNumber) return true;
+    if (a.surahNumber == start.surahNumber && a.ayahNumber < start.ayahNumber) return true;
+    return false;
+  }
+
+  bool _isAfterKey(AyahKey a, AyahKey end) {
+    if (a.surahNumber > end.surahNumber) return true;
+    if (a.surahNumber == end.surahNumber && a.ayahNumber > end.ayahNumber) return true;
+    return false;
   }
 }

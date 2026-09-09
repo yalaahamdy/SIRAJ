@@ -167,13 +167,13 @@ class _PastMemorizationExamScreenState extends State<PastMemorizationExamScreen>
       shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
       color: isDark ? AppColors.surfaceDark : AppColors.primaryLight.withValues(alpha: 0.12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildStatItem('درجة تمكين الماضي', '${stats?.masteryPercentage.toStringAsFixed(0) ?? 100}%', Icons.verified_rounded, Colors.green),
-            _buildStatItem('مقاطع متقنة', '${stats?.totalMasteredAyahs ?? 0}', Icons.star_rounded, AppColors.goldAccent),
-            _buildStatItem('تحتاج لتثبيت', '${stats?.totalWeakAyahs ?? 0}', Icons.history_rounded, AppColors.warning),
+            Expanded(child: _buildStatItem('درجة تمكين الماضي', '${stats?.masteryPercentage.toStringAsFixed(0) ?? 100}%', Icons.verified_rounded, Colors.green)),
+            Expanded(child: _buildStatItem('مقاطع متقنة', '${stats?.totalMasteredAyahs ?? 0}', Icons.star_rounded, AppColors.goldAccent)),
+            Expanded(child: _buildStatItem('تحتاج لتثبيت', '${stats?.totalWeakAyahs ?? 0}', Icons.history_rounded, AppColors.warning)),
           ],
         ),
       ),
@@ -182,17 +182,26 @@ class _PastMemorizationExamScreenState extends State<PastMemorizationExamScreen>
 
   Widget _buildStatItem(String label, String val, IconData icon, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: color),
+            Icon(icon, size: 15, color: color),
             const SizedBox(width: 4),
-            Text(val, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color)),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(val, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color)),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        ),
       ],
     );
   }
@@ -404,11 +413,16 @@ class _PastMemorizationExamScreenState extends State<PastMemorizationExamScreen>
                 size: 20,
               ),
               const SizedBox(width: 8),
-              Text(
-                isMastered ? 'تم تسجيل المقطع كمتقن ومثبت 🌟' : 'تمت جدولة المقطع للمراجعة القادمة ⚠️',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isMastered ? Colors.green.shade800 : AppColors.warning,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    isMastered ? 'تم تسجيل المقطع كمتقن ومثبت 🌟' : 'تمت جدولة المقطع للمراجعة القادمة ⚠️',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isMastered ? Colors.green.shade800 : AppColors.warning,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -423,7 +437,10 @@ class _PastMemorizationExamScreenState extends State<PastMemorizationExamScreen>
             shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
           ),
           icon: const Icon(Icons.arrow_forward_rounded),
-          label: const Text('السؤال التالي من الماضي', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          label: const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text('السؤال التالي من الماضي', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          ),
           onPressed: _loadExamData,
         ),
       ],

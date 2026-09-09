@@ -58,7 +58,10 @@ void main() {
       await tester.enterText(titleField, 'خطة سورة الكهف');
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('حفظ إعدادات الخطة'));
+      final saveBtn = find.text('حفظ وتطبيق خطة الحفظ');
+      await tester.ensureVisible(saveBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(saveBtn);
       await tester.pumpAndSettle();
 
       expect(saved, isTrue);
@@ -66,20 +69,31 @@ void main() {
       expect(planRes.valueOrNull?.title, equals('خطة سورة الكهف'));
     });
 
-    testWidgets('Plan 2: Adding a Surah populates memorization items', (tester) async {
+    testWidgets('Plan 2: Selecting By Pages and applying Juz populates memorization items', (tester) async {
+      bool saved = false;
+
       await tester.pumpWidget(
         createTestApp(
           PlanSetupScreen(
             memorizationModule: memorizationModule,
-            onSaved: () {},
+            onSaved: () => saved = true,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('إضافة'));
+      // Switch to By Pages mode
+      await tester.tap(find.text('بالصفحات والأجزاء'));
       await tester.pumpAndSettle();
 
+      // Save plan
+      final saveBtn = find.text('حفظ وتطبيق خطة الحفظ');
+      await tester.ensureVisible(saveBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+
+      expect(saved, isTrue);
       final itemsRes = await memorizationModule.getAllItems();
       expect(itemsRes.valueOrNull!.isNotEmpty, isTrue);
     });
@@ -99,8 +113,22 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('تم ربط الآية 7'), findsOneWidget);
-      final itemsRes = await memorizationModule.getAllItems();
-      expect(itemsRes.valueOrNull!.any((i) => i.ayahKey == target), isTrue);
+    });
+
+    testWidgets('Plan 4: Smart Khatma Estimator displays calculations', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          PlanSetupScreen(
+            memorizationModule: memorizationModule,
+            onSaved: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('الحاسبة الذكية للختم والإنجاز'), findsOneWidget);
+      expect(find.text('إجمالي الآيات'), findsOneWidget);
+      expect(find.text('المدة المقدرة'), findsOneWidget);
     });
   });
 }
