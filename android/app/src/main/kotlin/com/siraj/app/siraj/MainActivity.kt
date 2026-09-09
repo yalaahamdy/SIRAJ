@@ -3,6 +3,7 @@ package com.siraj.app.siraj
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import android.media.audiofx.Equalizer
 import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import android.os.Build
@@ -18,7 +19,9 @@ class MainActivity : FlutterActivity() {
     private val AUDIO_BOOSTER_CHANNEL = "com.siraj.app/audio_booster"
 
     private var loudnessEnhancer: LoudnessEnhancer? = null
+    private var equalizer: Equalizer? = null
     private var currentBoostLevel: Double = 1.0
+    private var isDeNoiseEnabled: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,16 +89,27 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // 2. Hardware/Software Audio Volume Booster (LoudnessEnhancer up to 200%)
+        // 2. Hardware/Software Audio Volume Booster (LoudnessEnhancer up to 200% + Vocal De-Noising Equalizer)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AUDIO_BOOSTER_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "setBoostLevel" -> {
                     val level = call.argument<Double>("level") ?: 1.0
-                    applyBoost(level)
+                    val deNoise = call.argument<Boolean>("deNoise") ?: isDeNoiseEnabled
+                    isDeNoiseEnabled = deNoise
+                    applyBoost(level, deNoise)
+                    result.success(true)
+                }
+                "setDeNoise" -> {
+                    val deNoise = call.argument<Boolean>("enabled") ?: true
+                    isDeNoiseEnabled = deNoise
+                    applyBoost(currentBoostLevel, deNoise)
                     result.success(true)
                 }
                 "getBoostLevel" -> {
                     result.success(currentBoostLevel)
+                }
+                "isDeNoiseEnabled" -> {
+                    result.success(isDeNoiseEnabled)
                 }
                 "isSupported" -> {
                     result.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
@@ -105,24 +119,85 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun applyBoost(level: Double) {
+    private fun applyBoost(level: Double, deNoise: Boolean = isDeNoiseEnabled) {
         try {
             currentBoostLevel = level
-            if (level <= 1.0) {
+            isDeNoiseEnabled = deNoise
+
+            // 1. Loudness Enhancer for clean overall gain up to +16 dB
+            if (level <= 1.0 && !deNoise) {
                 loudnessEnhancer?.enabled = false
                 loudnessEnhancer?.release()
                 loudnessEnhancer = null
+
+                equalizer?.enabled = false
+                equalizer?.release()
+                equalizer = null
             } else {
-                if (loudnessEnhancer == null) {
-                    loudnessEnhancer = LoudnessEnhancer(0)
+                if (level > 1.0) {
+                    if (loudnessEnhancer == null) {
+                        loudnessEnhancer = LoudnessEnhancer(0)
+                    }
+                    val gainMb = ((level - 1.0) * 1600).toInt().coerceIn(0, 2000)
+                    loudnessEnhancer?.setTargetGain(gainMb)
+                    loudnessEnhancer?.enabled = true
+                } else {
+                    loudnessEnhancer?.enabled = false
                 }
-                // Convert boost 1.0..2.0 to millibels (0..1600 mB = 0..16 dB)
-                val gainMb = ((level - 1.0) * 1600).toInt().coerceIn(0, 2000)
-                loudnessEnhancer?.setTargetGain(gainMb)
-                loudnessEnhancer?.enabled = true
+
+                // 2. Equalizer Notch Filtering for De-Noising & Vocal Intelligibility
+                if (deNoise) {
+                    applyEqualizerDeNoise(true)
+                } else {
+                    equalizer?.enabled = false
+                }
             }
         } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Error applying loudness boost: ${e.message}")
+            android.util.Log.e("MainActivity", "Error applying audio boost and de-noise: ${e.message}")
+        }
+    }
+
+    private fun applyEqualizerDeNoise(enable: Boolean) {
+        try {
+            if (!enable) {
+                equalizer?.enabled = false
+                return
+            }
+            if (equalizer == null) {
+                equalizer = Equalizer(0, 0)
+            }
+            val eq = equalizer ?: return
+            eq.enabled = true
+            val numBands = eq.numberOfBands.toInt()
+            val minEqLevel = eq.bandLevelRange[0] // e.g. -1500 mB (-15 dB)
+            val maxEqLevel = eq.bandLevelRange[1] // e.g. +1500 mB (+15 dB)
+
+            for (band in 0 until numBands) {
+                val centerFreqHz = eq.getCenterFreq(band.toShort()) / 1000 // In Hz
+                when {
+                    // Cut low-frequency rumble & mains power hum (< 200 Hz)
+                    centerFreqHz < 200 -> {
+                        val level = (minEqLevel * 0.8).toInt().toShort()
+                        eq.setBandLevel(band.toShort(), level)
+                    }
+                    // Speech body resonance (200 Hz - 600 Hz) - slight warm stabilization
+                    centerFreqHz in 200..600 -> {
+                        eq.setBandLevel(band.toShort(), 0.toShort())
+                    }
+                    // Speech clarity, consonants & Tajweed presence (800 Hz - 4000 Hz)
+                    centerFreqHz in 601..4500 -> {
+                        val level = (maxEqLevel * 0.45).toInt().toShort()
+                        eq.setBandLevel(band.toShort(), level)
+                    }
+                    // Cut high tape hiss, static, white noise (> 5000 Hz)
+                    else -> {
+                        val level = (minEqLevel * 0.75).toInt().toShort()
+                        eq.setBandLevel(band.toShort(), level)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error applying equalizer de-noise: ${e.message}")
         }
     }
 

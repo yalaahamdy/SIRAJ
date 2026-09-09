@@ -225,6 +225,7 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
     }
 
     try {
+      await SirajNotificationManager.instance.init();
       await [
         Permission.notification,
         Permission.location,

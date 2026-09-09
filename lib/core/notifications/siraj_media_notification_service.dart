@@ -245,6 +245,7 @@ class SirajMediaNotificationService {
       colorized: true,
       category: AndroidNotificationCategory.transport,
       visibility: NotificationVisibility.public,
+      icon: 'ic_notification',
       largeIcon: largeIconBitmap,
       showProgress: hasValidDuration,
       maxProgress: hasValidDuration ? duration.inSeconds : 0,

@@ -68,5 +68,20 @@ void main() {
       expect(boostService.boostLevel, equals(1.0));
       expect(boostService.isBoosted, isFalse);
     });
+
+    test('Initializes with de-noise enabled and toggles cleanly', () async {
+      expect(boostService.isDeNoiseEnabled, isTrue);
+
+      int notifyCount = 0;
+      boostService.addListener(() => notifyCount++);
+
+      await boostService.setDeNoise(false);
+      expect(boostService.isDeNoiseEnabled, isFalse);
+      expect(notifyCount, equals(1));
+
+      await boostService.toggleDeNoise();
+      expect(boostService.isDeNoiseEnabled, isTrue);
+      expect(notifyCount, equals(2));
+    });
   });
 }

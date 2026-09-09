@@ -35,10 +35,12 @@ class SirajAudioBoostService extends ChangeNotifier {
 
   double _boostLevel = 1.0;
   bool _isSupported = true;
+  bool _isDeNoiseEnabled = true;
 
   double get boostLevel => _boostLevel;
   bool get isBoosted => _boostLevel > 1.0;
   bool get isSupported => _isSupported;
+  bool get isDeNoiseEnabled => _isDeNoiseEnabled;
   AudioBoostPreset get currentPreset => AudioBoostPreset.fromMultiplier(_boostLevel);
   int get gainMilliBels => ((_boostLevel - 1.0) * 1600).toInt().clamp(0, 2000);
   List<double> get presetLevels => AudioBoostPreset.values.map((p) => p.multiplier).toList();
@@ -79,11 +81,34 @@ class SirajAudioBoostService extends ChangeNotifier {
     } catch (_) {}
 
     try {
-      await _channel.invokeMethod('setBoostLevel', {'level': clamped});
+      await _channel.invokeMethod('setBoostLevel', {
+        'level': clamped,
+        'deNoise': _isDeNoiseEnabled,
+      });
     } catch (e) {
       debugPrint('Error applying native audio boost: $e');
     }
   }
+
+  /// Sets whether vocal de-noise notch filter is active.
+  Future<void> setDeNoise(bool enabled) async {
+    _isDeNoiseEnabled = enabled;
+    notifyListeners();
+
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+    } catch (_) {}
+
+    try {
+      await _channel.invokeMethod('setDeNoise', {'enabled': enabled});
+    } catch (e) {
+      debugPrint('Error toggling native de-noise: $e');
+    }
+  }
+
+  /// Toggles vocal de-noising on/off.
+  Future<void> toggleDeNoise() => setDeNoise(!_isDeNoiseEnabled);
 
   /// Sets boost by preset.
   Future<void> setPreset(AudioBoostPreset preset) => setBoostLevel(preset.multiplier);

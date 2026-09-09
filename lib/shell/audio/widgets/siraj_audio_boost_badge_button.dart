@@ -60,6 +60,14 @@ class SirajAudioBoostBadgeButton extends StatelessWidget {
                           : (isDark ? Colors.white70 : Colors.black87),
                     ),
                   ),
+                  if (boostService.isDeNoiseEnabled) ...[
+                    const SizedBox(width: 3),
+                    Icon(
+                      Icons.tune_rounded,
+                      size: compact ? 11 : 13,
+                      color: isBoosted ? AppColors.goldAccent : (isDark ? Colors.white54 : Colors.black45),
+                    ),
+                  ],
                 ],
               ),
             ),

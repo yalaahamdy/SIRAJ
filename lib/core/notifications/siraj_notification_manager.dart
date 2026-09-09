@@ -81,7 +81,7 @@ class SirajNotificationManager {
       }
     } catch (_) {}
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('ic_notification');
     const darwinSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -329,7 +329,7 @@ class SirajNotificationManager {
       audioAttributesUsage: AudioAttributesUsage.alarm,
       category: AndroidNotificationCategory.alarm,
       visibility: NotificationVisibility.public,
-      icon: '@mipmap/ic_launcher',
+      icon: 'ic_notification',
       fullScreenIntent: true,
       ticker: title,
       actions: _buildAthanActions(playAthanSound),
@@ -405,7 +405,7 @@ class SirajNotificationManager {
         audioAttributesUsage: AudioAttributesUsage.alarm,
         category: AndroidNotificationCategory.alarm,
         visibility: NotificationVisibility.public,
-        icon: '@mipmap/ic_launcher',
+        icon: 'ic_notification',
         fullScreenIntent: true,
         ticker: title,
         actions: _buildAthanActions(playAthanSound),
@@ -538,7 +538,7 @@ class SirajNotificationManager {
         channelDescription: adhkarChannelDescription,
         importance: Importance.high,
         priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
+        icon: 'ic_notification',
       );
       await _notifications.zonedSchedule(
         id: id,
@@ -571,7 +571,7 @@ class SirajNotificationManager {
         channelDescription: qiyamChannelDescription,
         importance: Importance.high,
         priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
+        icon: 'ic_notification',
       );
       await _notifications.zonedSchedule(
         id: id,
@@ -604,7 +604,7 @@ class SirajNotificationManager {
         channelDescription: duhaChannelDescription,
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
-        icon: '@mipmap/ic_launcher',
+        icon: 'ic_notification',
       );
       await _notifications.zonedSchedule(
         id: id,
@@ -637,7 +637,7 @@ class SirajNotificationManager {
         channelDescription: fridayFastingChannelDescription,
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
-        icon: '@mipmap/ic_launcher',
+        icon: 'ic_notification',
       );
       await _notifications.zonedSchedule(
         id: id,

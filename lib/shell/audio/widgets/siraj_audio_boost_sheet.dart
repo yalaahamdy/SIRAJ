@@ -167,6 +167,95 @@ class SirajAudioBoostSheet extends StatelessWidget {
                 }).toList(),
               ),
 
+              const SizedBox(height: 18),
+
+              // Smart Vocal De-Noising & Noise Gate Card
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: boostService.isDeNoiseEnabled
+                        ? AppColors.goldAccent.withValues(alpha: 0.6)
+                        : (isDark ? Colors.white12 : Colors.black12),
+                    width: boostService.isDeNoiseEnabled ? 1.4 : 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            boostService.isDeNoiseEnabled
+                                ? Icons.record_voice_over_rounded
+                                : Icons.graphic_eq_rounded,
+                            size: 22,
+                            color: boostService.isDeNoiseEnabled
+                                ? AppColors.goldAccent
+                                : (isDark ? Colors.white54 : Colors.black54),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'تنقية الصوت وعزل الضوضاء',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.goldAccent.withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'ذكي',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.goldAccent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  boostService.isDeNoiseEnabled
+                                      ? 'مفعّل • يعزل صفير الأشرطة القديمة وهسيس الراديو ويركز على التلاوة'
+                                      : 'معطّل • تضخيم النطاق الصوتي بالكامل دون تصفية',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.white60 : Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch.adaptive(
+                      value: boostService.isDeNoiseEnabled,
+                      activeTrackColor: AppColors.goldAccent,
+                      onChanged: (val) {
+                        boostService.setDeNoise(val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 20),
 
               // Reset / Close
