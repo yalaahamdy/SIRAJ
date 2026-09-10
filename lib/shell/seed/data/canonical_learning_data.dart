@@ -14,10 +14,14 @@ import 'learning/learning_hajj_data.dart';
 import 'learning/learning_salah_data.dart';
 import 'learning/learning_taharah_data.dart';
 import 'learning/learning_zakah_data.dart';
+import 'learning/quran_sciences/learning_quran_sciences_data.dart';
+import 'learning/quran_sciences/learning_quran_tafsir_mufassal_data.dart';
+import 'learning/quran_sciences/learning_quran_tafsir_rules_data.dart';
+import 'learning/quran_sciences/learning_quran_tajweed_data.dart';
 
-/// Comprehensive canonical learning and curriculum dataset (Phase 1 & Phase 2)
-/// Covers 2 major tracks: Fiqh of Worship & Islamic Creed (Aqidah)
-/// Includes 12 learning paths, 10 advanced courses, 20 modules, 61 in-depth lessons, and 32 quizzes (§31..§35).
+/// Comprehensive canonical learning and curriculum dataset (Phase 1, 2, and 3)
+/// Covers 3 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), and Quranic Sciences & Tafsir
+/// Includes 17 learning paths, 14 advanced courses, 28 modules, 87 in-depth lessons, and 44 quizzes (§31..§35).
 class CanonicalLearningData {
   static CanonicalLearningPackage getPackage() {
     // -------------------------------------------------------------------------
@@ -158,9 +162,66 @@ class CanonicalLearningData {
       estimatedHours: 5,
     );
 
+    // --- C. مسارات علوم القرآن والتفسير وأحكام التجويد التأصيلي ---
+    final pathQuranComprehensive = lp.LearningPath.create(
+      pathId: 'path_quran_sciences_comprehensive',
+      title: 'مسار علوم القرآن والتفسير وأحكام التجويد التأصيلي',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي علوم كتاب الله العزيز: أحكام التجويد ومخارج الحروف، علوم القرآن وتاريخ نزوله وجمعه وإعجازه، أصول وقواعد التفسير ومناهج المفسرين، وتفسير جزء عم وقصار المفصل.',
+      category: 'علوم القرآن والتفسير',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [
+        LearningQuranTajweedData.courseId,
+        LearningQuranSciencesData.courseId,
+        LearningQuranTafsirRulesData.courseId,
+        LearningQuranTafsirMufassalData.courseId,
+      ],
+      estimatedHours: 20,
+    );
+
+    final pathQuranTajweed = lp.LearningPath.create(
+      pathId: 'path_quran_tajweed',
+      title: 'مسار أحكام التلاوة والتجويد العملي',
+      description: 'دراسة تأصيلية تطبيقية لأحكام النون والتنوين والميم الساكنة، وأحكام المدود، ومخارج وصفات الحروف، والتفخيم والترقيق.',
+      category: 'علوم القرآن والتفسير',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningQuranTajweedData.courseId],
+      estimatedHours: 6,
+    );
+
+    final pathQuranSciences = lp.LearningPath.create(
+      pathId: 'path_quran_sciences',
+      title: 'مسار مباحث علوم القرآن وتاريخ النزول والجمع',
+      description: 'دراسة في كيفية نزول الوحي، وضوابط المكي والمدني، وتاريخ جمع وتدوين القرآن، ووجوه الإعجاز والقراءات المتواترة.',
+      category: 'علوم القرآن والتفسير',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningQuranSciencesData.courseId],
+      estimatedHours: 5,
+    );
+
+    final pathQuranTafsirRules = lp.LearningPath.create(
+      pathId: 'path_quran_tafsir_rules',
+      title: 'مسار أصول التفسير وقواعد الترجيح وأسباب النزول',
+      description: 'دراسة في مصادر التفسير ومراتبه الأربعة، وقواعد الترجيح عند السلف، وأسباب النزول، والناسخ والمنسوخ والمحكم والمتشابه.',
+      category: 'علوم القرآن والتفسير',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningQuranTafsirRulesData.courseId],
+      estimatedHours: 5,
+    );
+
+    final pathQuranTafsirMufassal = lp.LearningPath.create(
+      pathId: 'path_quran_tafsir_mufassal',
+      title: 'مسار التفسير المنهجي لسورة الفاتحة وقصار المفصل',
+      description: 'دراسة تفسيرية وتدبرية شاملة لأم الكتاب سورة الفاتحة وسور جزء عم وقصار المفصل مع مقاصدها العقدية والتربوية.',
+      category: 'علوم القرآن والتفسير',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningQuranTafsirMufassalData.courseId],
+      estimatedHours: 5,
+    );
+
     final paths = [
       pathFiqhComprehensive,
       pathAqidahComprehensive,
+      pathQuranComprehensive,
       pathTaharah,
       pathSalah,
       pathZakah,
@@ -171,46 +232,60 @@ class CanonicalLearningData {
       pathAqidahAfterlife,
       pathAqidahQadar,
       pathAqidahSunnah,
+      pathQuranTajweed,
+      pathQuranSciences,
+      pathQuranTafsirRules,
+      pathQuranTafsirMufassal,
     ];
 
     // -------------------------------------------------------------------------
-    // 2. Courses (10 Advanced Courses)
+    // 2. Courses (14 Advanced Courses)
     // -------------------------------------------------------------------------
     final List<Course> courses = [
-      // Fiqh of Worship Courses
+      // Fiqh of Worship Courses (5)
       LearningTaharahData.getCourse(),
       LearningSalahData.getCourse(),
       LearningZakahData.getCourse(),
       LearningFastingData.getCourse(),
       LearningHajjData.getCourse(),
-      // Islamic Creed (Aqidah) Courses
+      // Islamic Creed (Aqidah) Courses (5)
       LearningAqidahTawheedData.getCourse(),
       LearningAqidahMessengersData.getCourse(),
       LearningAqidahAfterlifeData.getCourse(),
       LearningAqidahQadarData.getCourse(),
       LearningAqidahSunnahData.getCourse(),
+      // Quranic Sciences & Tafsir Courses (4)
+      LearningQuranTajweedData.getCourse(),
+      LearningQuranSciencesData.getCourse(),
+      LearningQuranTafsirRulesData.getCourse(),
+      LearningQuranTafsirMufassalData.getCourse(),
     ];
 
     // -------------------------------------------------------------------------
-    // 3. Modules (20 Core Modules)
+    // 3. Modules (28 Core Modules)
     // -------------------------------------------------------------------------
     final List<CourseModule> modules = [
-      // Fiqh of Worship Modules
+      // Fiqh of Worship Modules (10)
       ...LearningTaharahData.getModules(),
       ...LearningSalahData.getModules(),
       ...LearningZakahData.getModules(),
       ...LearningFastingData.getModules(),
       ...LearningHajjData.getModules(),
-      // Islamic Creed (Aqidah) Modules
+      // Islamic Creed (Aqidah) Modules (10)
       ...LearningAqidahTawheedData.getModules(),
       ...LearningAqidahMessengersData.getModules(),
       ...LearningAqidahAfterlifeData.getModules(),
       ...LearningAqidahQadarData.getModules(),
       ...LearningAqidahSunnahData.getModules(),
+      // Quranic Sciences & Tafsir Modules (8)
+      ...LearningQuranTajweedData.getModules(),
+      ...LearningQuranSciencesData.getModules(),
+      ...LearningQuranTafsirRulesData.getModules(),
+      ...LearningQuranTafsirMufassalData.getModules(),
     ];
 
     // -------------------------------------------------------------------------
-    // 4. Lessons (61 In-Depth Canonical Lessons)
+    // 4. Lessons (87 In-Depth Canonical Lessons)
     // -------------------------------------------------------------------------
     final List<Lesson> lessons = [
       // Fiqh of Worship Lessons (32)
@@ -225,10 +300,15 @@ class CanonicalLearningData {
       ...LearningAqidahAfterlifeData.getLessons(),
       ...LearningAqidahQadarData.getLessons(),
       ...LearningAqidahSunnahData.getLessons(),
+      // Quranic Sciences & Tafsir Lessons (26)
+      ...LearningQuranTajweedData.getLessons(),
+      ...LearningQuranSciencesData.getLessons(),
+      ...LearningQuranTafsirRulesData.getLessons(),
+      ...LearningQuranTafsirMufassalData.getLessons(),
     ];
 
     // -------------------------------------------------------------------------
-    // 5. Quizzes (32 Formative Assessment Quizzes)
+    // 5. Quizzes (44 Formative Assessment Quizzes)
     // -------------------------------------------------------------------------
     final List<Quiz> quizzes = [
       // Fiqh of Worship Quizzes (17)
@@ -243,17 +323,22 @@ class CanonicalLearningData {
       ...LearningAqidahAfterlifeData.getQuizzes(),
       ...LearningAqidahQadarData.getQuizzes(),
       ...LearningAqidahSunnahData.getQuizzes(),
+      // Quranic Sciences & Tafsir Quizzes (12)
+      ...LearningQuranTajweedData.getQuizzes(),
+      ...LearningQuranSciencesData.getQuizzes(),
+      ...LearningQuranTafsirRulesData.getQuizzes(),
+      ...LearningQuranTafsirMufassalData.getQuizzes(),
     ];
 
     return CanonicalLearningPackage.create(
-      packageId: 'pkg_learning_canonical_seed_v4',
+      packageId: 'pkg_learning_canonical_seed_v5',
       paths: paths,
       courses: courses,
       modules: modules,
       lessons: lessons,
       quizzes: quizzes,
       signerIdentity: 'siraj.learning.curriculum.board',
-      signature: 'sig_canonical_learning_v4_fiqh_aqidah_verified',
+      signature: 'sig_canonical_learning_v5_fiqh_aqidah_quran_verified',
       publishedAt: DateTime.utc(2026, 9, 10),
     );
   }
