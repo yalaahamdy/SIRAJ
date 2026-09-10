@@ -41,10 +41,14 @@ import 'learning/medical_and_environment/learning_medical_surgeries_transplants_
 import 'learning/medical_and_environment/learning_genetics_assisted_reproduction_data.dart';
 import 'learning/medical_and_environment/learning_epidemics_public_health_dispensations_data.dart';
 import 'learning/medical_and_environment/learning_environment_earth_stewardship_data.dart';
+import 'learning/madhahib_and_history/learning_four_madhahib_history_data.dart';
+import 'learning/madhahib_and_history/learning_ikhtilaf_causes_adab_data.dart';
+import 'learning/madhahib_and_history/learning_imams_biographies_data.dart';
+import 'learning/madhahib_and_history/learning_fiqh_codification_encyclopedias_data.dart';
 
-/// Comprehensive canonical learning and curriculum dataset (Phases 1 through 9)
-/// Covers 9 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, Hadith Sciences, Seerah & Islamic History, Contemporary Financial Fiqh & Usul al-Fiqh, Family Fiqh & Ethics, Judiciary & Governance, and Contemporary Medical Fiqh, Bioethics & Environmental Stewardship
-/// Includes 46 learning paths, 37 advanced courses, 74 modules, 230 in-depth lessons, and 94 quizzes (§31..§35).
+/// Comprehensive canonical learning and curriculum dataset (Phases 1 through 10)
+/// Covers 10 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, Hadith Sciences, Seerah & Islamic History, Contemporary Financial Fiqh & Usul al-Fiqh, Family Fiqh & Ethics, Judiciary & Governance, Contemporary Medical Fiqh, Bioethics & Environmental Stewardship, and Major Jurisprudential Schools (Madhahib), Causes of Disagreement, Biographies of Imams & Codification of Fiqh
+/// Includes 51 learning paths, 41 advanced courses, 82 modules, 254 in-depth lessons, and 102 quizzes (§31..§35).
 class CanonicalLearningData {
   static CanonicalLearningPackage getPackage() {
     // -------------------------------------------------------------------------
@@ -569,6 +573,62 @@ class CanonicalLearningData {
       estimatedHours: 8,
     );
 
+    // --- J. مسارات تاريخ المذاهب الفقهية الكبرى وأصول الاجتهاد وأسباب الاختلاف وتراجم الأئمة ---
+    final pathMadhahibHistoryComprehensive = lp.LearningPath.create(
+      pathId: 'path_madhahib_history_ijtihad_imams_comprehensive',
+      title: 'مسار تاريخ المذاهب الفقهية الكبرى وأصول الاجتهاد وأسباب الاختلاف وتراجم الأئمة',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي أصول وتاريخ المذاهب الفقهية الأربعة المتبوعة ومعالم مناهجها، أسباب اختلاف الفقهاء وقواعد الإنصاف والاتساع للخلاف، تراجم أئمة الهدى وأعلام الاجتهاد والتجديد، وتاريخ تدوين الفقه وتقنينه والموسوعات الفقهية والمجامع المعاصرة.',
+      category: 'تاريخ الفقه والمذاهب والاجتهاد',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [
+        LearningFourMadhahibHistoryData.courseId,
+        LearningIkhtilafCausesAdabData.courseId,
+        LearningImamsBiographiesData.courseId,
+        LearningFiqhCodificationEncyclopediasData.courseId,
+      ],
+      estimatedHours: 32,
+    );
+
+    final pathFourMadhahibHistory = lp.LearningPath.create(
+      pathId: 'path_four_madhahib_history',
+      title: 'مسار أصول وتاريخ المذاهب الفقهية الأربعة المتبوعة',
+      description: 'دراسة تأصيلية تاريخية لنشأة وتطور المذاهب الفقهية الأربعة المتبوعة (الحنفي، المالكي، الشافعي، الحنبلي)، مناهج الاستنباط وقواعد أصول الفقه لدى كل مذهب، والكتب المعتمدة وأسباب استقرار المذاهب.',
+      category: 'تاريخ الفقه والمذاهب والاجتهاد',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningFourMadhahibHistoryData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathIkhtilafCausesAdab = lp.LearningPath.create(
+      pathId: 'path_ikhtilaf_causes_adab',
+      title: 'مسار أسباب اختلاف الفقهاء وأدب الخلاف الفقهي والإنصاف',
+      description: 'دراسة تأصيلية لأسباب الخلاف اللغوية والأصولية والحديثية، مدارسة «رفع الملام»، ضوابط الخلاف السائغ والمردود، أدب الخلاف عند السلف، وقواعد الترجيح الفقهي والتيسير.',
+      category: 'تاريخ الفقه والمذاهب والاجتهاد',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningIkhtilafCausesAdabData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathImamsBiographies = lp.LearningPath.create(
+      pathId: 'path_imams_biographies',
+      title: 'مسار تراجم أئمة الهدى وأعلام الاجتهاد والتجديد في الإسلام',
+      description: 'دراسة تأصيلية لسير ومناهج أئمة الفقه والحديث الكبار: الأئمة الأربعة، الليث، الثوري، البخاري، مسلم، ومحققي المذاهب وأعلام المقاصد والتجديد (النووي، ابن حجر، العز بن عبد السلام، الشاطبي، ابن تيمية وابن القيم).',
+      category: 'تاريخ الفقه والمذاهب والاجتهاد',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningImamsBiographiesData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathFiqhCodificationEncyclopedias = lp.LearningPath.create(
+      pathId: 'path_fiqh_codification_encyclopedias',
+      title: 'مسار تاريخ التدوين الفقهي ومدارس الإفتاء والموسوعات الفقهية',
+      description: 'دراسة تأصيلية لمراحل تدوين الفقه وتطور كتب المتون والشروح والفتاوى، حركة التقنين الحديث ومجلة الأحكام العدلية، الموسوعات الفقهية الكبرى، ودور المجامع الفقهية والاجتهاد الجماعي المعاصر.',
+      category: 'تاريخ الفقه والمذاهب والاجتهاد',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningFiqhCodificationEncyclopediasData.courseId],
+      estimatedHours: 8,
+    );
+
     final paths = [
       pathFiqhComprehensive,
       pathAqidahComprehensive,
@@ -579,6 +639,7 @@ class CanonicalLearningData {
       pathFamilySocietyComprehensive,
       pathGovernanceJudiciaryRightsComprehensive,
       pathMedicalBioethicsEnvironmentComprehensive,
+      pathMadhahibHistoryComprehensive,
       pathTaharah,
       pathSalah,
       pathZakah,
@@ -616,6 +677,10 @@ class CanonicalLearningData {
       pathGeneticsAssisted,
       pathEpidemicsDispensations,
       pathEnvironmentStewardship,
+      pathFourMadhahibHistory,
+      pathIkhtilafCausesAdab,
+      pathImamsBiographies,
+      pathFiqhCodificationEncyclopedias,
     ];
 
     // -------------------------------------------------------------------------
@@ -668,10 +733,15 @@ class CanonicalLearningData {
       LearningGeneticsAssistedReproductionData.getCourse(),
       LearningEpidemicsPublicHealthDispensationsData.getCourse(),
       LearningEnvironmentEarthStewardshipData.getCourse(),
+      // Major Jurisprudential Schools (Madhahib), Causes of Disagreement, Biographies of Imams & Codification Courses (4)
+      LearningFourMadhahibHistoryData.getCourse(),
+      LearningIkhtilafCausesAdabData.getCourse(),
+      LearningImamsBiographiesData.getCourse(),
+      LearningFiqhCodificationEncyclopediasData.getCourse(),
     ];
 
     // -------------------------------------------------------------------------
-    // 3. Modules (74 Core Modules)
+    // 3. Modules (82 Core Modules)
     // -------------------------------------------------------------------------
     final List<CourseModule> modules = [
       // Fiqh of Worship Modules (10)
@@ -720,6 +790,11 @@ class CanonicalLearningData {
       ...LearningGeneticsAssistedReproductionData.getModules(),
       ...LearningEpidemicsPublicHealthDispensationsData.getModules(),
       ...LearningEnvironmentEarthStewardshipData.getModules(),
+      // Major Jurisprudential Schools (Madhahib), Causes of Disagreement, Biographies of Imams & Codification Modules (8)
+      ...LearningFourMadhahibHistoryData.getModules(),
+      ...LearningIkhtilafCausesAdabData.getModules(),
+      ...LearningImamsBiographiesData.getModules(),
+      ...LearningFiqhCodificationEncyclopediasData.getModules(),
     ];
 
     // -------------------------------------------------------------------------
@@ -772,10 +847,15 @@ class CanonicalLearningData {
       ...LearningGeneticsAssistedReproductionData.getLessons(),
       ...LearningEpidemicsPublicHealthDispensationsData.getLessons(),
       ...LearningEnvironmentEarthStewardshipData.getLessons(),
+      // Major Jurisprudential Schools (Madhahib), Causes of Disagreement, Biographies of Imams & Codification Lessons (24)
+      ...LearningFourMadhahibHistoryData.getLessons(),
+      ...LearningIkhtilafCausesAdabData.getLessons(),
+      ...LearningImamsBiographiesData.getLessons(),
+      ...LearningFiqhCodificationEncyclopediasData.getLessons(),
     ];
 
     // -------------------------------------------------------------------------
-    // 5. Quizzes (94 Formative Assessment Quizzes)
+    // 5. Quizzes (102 Formative Assessment Quizzes)
     // -------------------------------------------------------------------------
     final List<Quiz> quizzes = [
       // Fiqh of Worship Quizzes (17)
@@ -824,17 +904,22 @@ class CanonicalLearningData {
       ...LearningGeneticsAssistedReproductionData.getQuizzes(),
       ...LearningEpidemicsPublicHealthDispensationsData.getQuizzes(),
       ...LearningEnvironmentEarthStewardshipData.getQuizzes(),
+      // Major Jurisprudential Schools (Madhahib), Causes of Disagreement, Biographies of Imams & Codification Quizzes (8)
+      ...LearningFourMadhahibHistoryData.getQuizzes(),
+      ...LearningIkhtilafCausesAdabData.getQuizzes(),
+      ...LearningImamsBiographiesData.getQuizzes(),
+      ...LearningFiqhCodificationEncyclopediasData.getQuizzes(),
     ];
 
     return CanonicalLearningPackage.create(
-      packageId: 'pkg_learning_canonical_seed_v11',
+      packageId: 'pkg_learning_canonical_seed_v12',
       paths: paths,
       courses: courses,
       modules: modules,
       lessons: lessons,
       quizzes: quizzes,
       signerIdentity: 'siraj.learning.curriculum.board',
-      signature: 'sig_canonical_learning_v11_fiqh_aqidah_quran_hadith_seerah_muamalat_family_governance_medical_verified',
+      signature: 'sig_canonical_learning_v12_fiqh_aqidah_quran_hadith_seerah_muamalat_family_governance_medical_madhahib_verified',
       publishedAt: DateTime.utc(2026, 9, 10),
     );
   }
