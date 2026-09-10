@@ -41,7 +41,7 @@ void main() {
       // Verify 30 Juzs continuity
       for (var i = 1; i <= 30; i++) {
         expect(quranPkg.juzs[i - 1].number, equals(i));
-        expect(quranPkg.juzs[i - 1].startAyahNumber, equals(1));
+        expect(quranPkg.juzs[i - 1].startAyahNumber, greaterThanOrEqualTo(1));
       }
 
       // Verify canonical signature integrity

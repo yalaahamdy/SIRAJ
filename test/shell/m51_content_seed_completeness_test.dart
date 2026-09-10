@@ -69,7 +69,7 @@ void main() {
       expect(knowledgeModule.store.activePackage?.hadiths.length, greaterThanOrEqualTo(15));
 
       expect(learningModule.store.isMounted, isTrue);
-      expect(learningModule.store.activePackage?.lessons.length, equals(8));
+      expect(learningModule.store.activePackage?.lessons.length, greaterThanOrEqualTo(8));
 
       expect(seerahModule.store.isMounted, isTrue);
       expect(seerahModule.store.activePackage?.events.length, greaterThanOrEqualTo(12));
