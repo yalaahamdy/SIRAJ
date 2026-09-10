@@ -49,10 +49,14 @@ import 'learning/arabic_language_and_bayan/learning_nahw_wazifi_quran_data.dart'
 import 'learning/arabic_language_and_bayan/learning_sarf_morphology_lexicon_data.dart';
 import 'learning/arabic_language_and_bayan/learning_balaghah_quranic_bayan_data.dart';
 import 'learning/arabic_language_and_bayan/learning_dalalat_alfaz_semantics_data.dart';
+import 'learning/maqasid_and_priorities/learning_maqasid_theory_history_data.dart';
+import 'learning/maqasid_and_priorities/learning_kulliyyat_khams_rankings_data.dart';
+import 'learning/maqasid_and_priorities/learning_fiqh_maal_zaraee_data.dart';
+import 'learning/maqasid_and_priorities/learning_priorities_muwazanat_crises_data.dart';
 
-/// Comprehensive canonical learning and curriculum dataset (Phases 1 through 11)
-/// Covers 11 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, Hadith Sciences, Seerah & Islamic History, Contemporary Financial Fiqh & Usul al-Fiqh, Family Fiqh & Ethics, Judiciary & Governance, Contemporary Medical Fiqh, Bioethics & Environmental Stewardship, Major Madhahib & Fiqh History, and Arabic Language Sciences, Quranic Rhetoric & Shari'ah Semantics
-/// Includes 56 learning paths, 45 advanced courses, 90 modules, 278 in-depth lessons, and 110 quizzes (§31..§35).
+/// Comprehensive canonical learning and curriculum dataset (Phases 1 through 12)
+/// Covers 12 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, Hadith Sciences, Seerah & Islamic History, Contemporary Financial Fiqh & Usul al-Fiqh, Family Fiqh & Ethics, Judiciary & Governance, Contemporary Medical Fiqh, Bioethics & Environmental Stewardship, Major Madhahib & Fiqh History, Arabic Language Sciences & Rhetoric, and Maqasid al-Shari'ah, Philosophy of Legislation, Fiqh of Outcomes & Priorities
+/// Includes 61 learning paths, 49 advanced courses, 98 modules, 302 in-depth lessons, and 118 quizzes (§31..§35).
 class CanonicalLearningData {
   static CanonicalLearningPackage getPackage() {
     // -------------------------------------------------------------------------
@@ -689,6 +693,62 @@ class CanonicalLearningData {
       estimatedHours: 8,
     );
 
+    // --- L. مسارات مقاصد الشريعة الإسلامية الكبرى وفلسفة التشريع وفقه المآلات والأولويات ---
+    final pathMaqasidComprehensive = lp.LearningPath.create(
+      pathId: 'path_maqasid_shariah_philosophy_priorities_comprehensive',
+      title: 'مسار مقاصد الشريعة الإسلامية الكبرى وفلسفة التشريع وفقه المآلات والأولويات',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي نظرية مقاصد الشريعة وتاريخها وأعلامها ومسالك الكشف عنها، الكليات الخمس وحفظ نظام العمران، فقه المآلات وسد الذرائع وفتحها ونظرية الحيل وتصرفات المكلفين، وفقه الأولويات والموازنات وتطبيق المقاصد في النوازل والأزمات العالمية.',
+      category: 'مقاصد الشريعة وفلسفة التشريع',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [
+        LearningMaqasidTheoryHistoryData.courseId,
+        LearningKulliyyatKhamsRankingsData.courseId,
+        LearningFiqhMaalZaraeeData.courseId,
+        LearningPrioritiesMuwazanatCrisesData.courseId,
+      ],
+      estimatedHours: 32,
+    );
+
+    final pathMaqasidTheoryHistory = lp.LearningPath.create(
+      pathId: 'path_maqasid_theory_history_detection',
+      title: 'مسار نظرية مقاصد الشريعة والنشأة والأعلام ومسالك الكشف',
+      description: 'دراسة تأصيلية لنشأة الفكر المقاصدي من الصحابة إلى الجويني والغزالي والعز والشاطبي وابن عاشور، ومناهج الاستقراء والعلل ودلالة السكوت ومراتب القطع والظن.',
+      category: 'مقاصد الشريعة وفلسفة التشريع',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningMaqasidTheoryHistoryData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathKulliyyatKhamsRankings = lp.LearningPath.create(
+      pathId: 'path_kulliyyat_khams_rankings_omran',
+      title: 'مسار الكليات الخمس وحفظ نظام العمران وتصنيف المقاصد الشرعية',
+      description: 'دراسة تأصيلية لحفظ الدين والنفس والعقل والنسل والمال من جانبي الوجود والعدم، ومراتب الضروريات والحاجيات والتحسينيات وقواعد فض النزاع والتزاحم بينها.',
+      category: 'مقاصد الشريعة وفلسفة التشريع',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningKulliyyatKhamsRankingsData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathFiqhMaalZaraee = lp.LearningPath.create(
+      pathId: 'path_fiqh_maal_zaraee_heeyal',
+      title: 'مسار فقه المآلات وسد الذرائع وتصرفات المكلفين والحيل الشرعية',
+      description: 'دراسة تأصيلية لأصل اعتبار المآل وسد الذرائع وفتحها، وموافقة قصد المكلف لقصد الشارع، ونظرية الحيل الفقهية والتفريق بين المخارج والحيل المحرمة والاستحسان.',
+      category: 'مقاصد الشريعة وفلسفة التشريع',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningFiqhMaalZaraeeData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathPrioritiesMuwazanatCrises = lp.LearningPath.create(
+      pathId: 'path_priorities_muwazanat_crises_applications',
+      title: 'مسار فقه الأولويات والموازنات وتطبيق المقاصد في النوازل والأزمات',
+      description: 'دراسة لقواعد درء المفاسد وأخف الضررين وترتيب الأولويات، وتطبيقات المقاصد في القضايا البيئية والنظم المالية والذكاء الاصطناعي وصيانة الكرامة الإنسانية.',
+      category: 'مقاصد الشريعة وفلسفة التشريع',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningPrioritiesMuwazanatCrisesData.courseId],
+      estimatedHours: 8,
+    );
+
     final paths = [
       pathFiqhComprehensive,
       pathAqidahComprehensive,
@@ -701,6 +761,7 @@ class CanonicalLearningData {
       pathMedicalBioethicsEnvironmentComprehensive,
       pathMadhahibHistoryComprehensive,
       pathArabicLanguageComprehensive,
+      pathMaqasidComprehensive,
       pathTaharah,
       pathSalah,
       pathZakah,
@@ -746,6 +807,10 @@ class CanonicalLearningData {
       pathSarfMorphologyLexicon,
       pathBalaghahQuranicBayan,
       pathDalalatAlfazSemantics,
+      pathMaqasidTheoryHistory,
+      pathKulliyyatKhamsRankings,
+      pathFiqhMaalZaraee,
+      pathPrioritiesMuwazanatCrises,
     ];
 
     // -------------------------------------------------------------------------
@@ -808,10 +873,15 @@ class CanonicalLearningData {
       LearningSarfMorphologyLexiconData.getCourse(),
       LearningBalaghahQuranicBayanData.getCourse(),
       LearningDalalatAlfazSemanticsData.getCourse(),
+      // Maqasid al-Shari'ah, Philosophy of Legislation, Fiqh of Outcomes & Priorities Courses (4)
+      LearningMaqasidTheoryHistoryData.getCourse(),
+      LearningKulliyyatKhamsRankingsData.getCourse(),
+      LearningFiqhMaalZaraeeData.getCourse(),
+      LearningPrioritiesMuwazanatCrisesData.getCourse(),
     ];
 
     // -------------------------------------------------------------------------
-    // 3. Modules (90 Core Modules)
+    // 3. Modules (98 Core Modules)
     // -------------------------------------------------------------------------
     final List<CourseModule> modules = [
       // Fiqh of Worship Modules (10)
@@ -870,6 +940,11 @@ class CanonicalLearningData {
       ...LearningSarfMorphologyLexiconData.getModules(),
       ...LearningBalaghahQuranicBayanData.getModules(),
       ...LearningDalalatAlfazSemanticsData.getModules(),
+      // Maqasid al-Shari'ah, Philosophy of Legislation, Fiqh of Outcomes & Priorities Modules (8)
+      ...LearningMaqasidTheoryHistoryData.getModules(),
+      ...LearningKulliyyatKhamsRankingsData.getModules(),
+      ...LearningFiqhMaalZaraeeData.getModules(),
+      ...LearningPrioritiesMuwazanatCrisesData.getModules(),
     ];
 
     // -------------------------------------------------------------------------
@@ -932,10 +1007,15 @@ class CanonicalLearningData {
       ...LearningSarfMorphologyLexiconData.getLessons(),
       ...LearningBalaghahQuranicBayanData.getLessons(),
       ...LearningDalalatAlfazSemanticsData.getLessons(),
+      // Maqasid al-Shari'ah, Philosophy of Legislation, Fiqh of Outcomes & Priorities Lessons (24)
+      ...LearningMaqasidTheoryHistoryData.getLessons(),
+      ...LearningKulliyyatKhamsRankingsData.getLessons(),
+      ...LearningFiqhMaalZaraeeData.getLessons(),
+      ...LearningPrioritiesMuwazanatCrisesData.getLessons(),
     ];
 
     // -------------------------------------------------------------------------
-    // 5. Quizzes (110 Formative Assessment Quizzes)
+    // 5. Quizzes (118 Formative Assessment Quizzes)
     // -------------------------------------------------------------------------
     final List<Quiz> quizzes = [
       // Fiqh of Worship Quizzes (17)
@@ -994,17 +1074,22 @@ class CanonicalLearningData {
       ...LearningSarfMorphologyLexiconData.getQuizzes(),
       ...LearningBalaghahQuranicBayanData.getQuizzes(),
       ...LearningDalalatAlfazSemanticsData.getQuizzes(),
+      // Maqasid al-Shari'ah, Philosophy of Legislation, Fiqh of Outcomes & Priorities Quizzes (8)
+      ...LearningMaqasidTheoryHistoryData.getQuizzes(),
+      ...LearningKulliyyatKhamsRankingsData.getQuizzes(),
+      ...LearningFiqhMaalZaraeeData.getQuizzes(),
+      ...LearningPrioritiesMuwazanatCrisesData.getQuizzes(),
     ];
 
     return CanonicalLearningPackage.create(
-      packageId: 'pkg_learning_canonical_seed_v13',
+      packageId: 'pkg_learning_canonical_seed_v14',
       paths: paths,
       courses: courses,
       modules: modules,
       lessons: lessons,
       quizzes: quizzes,
       signerIdentity: 'siraj.learning.curriculum.board',
-      signature: 'sig_canonical_learning_v13_fiqh_aqidah_quran_hadith_seerah_muamalat_family_governance_medical_madhahib_arabic_verified',
+      signature: 'sig_canonical_learning_v14_fiqh_aqidah_quran_hadith_seerah_muamalat_family_governance_medical_madhahib_arabic_maqasid_verified',
       publishedAt: DateTime.utc(2026, 9, 10),
     );
   }
