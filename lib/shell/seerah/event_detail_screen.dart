@@ -26,6 +26,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   final _noteController = TextEditingController();
   bool _isBookmarked = false;
   bool _isLoading = true;
+  double _fontSizeMultiplier = 1.0;
 
   @override
   void initState() {
@@ -90,6 +91,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         ),
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.text_decrease, size: 20),
+            tooltip: 'تصغير الخط',
+            onPressed: _fontSizeMultiplier > 0.85
+                ? () => setState(() => _fontSizeMultiplier = (_fontSizeMultiplier - 0.1).clamp(0.85, 1.45))
+                : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.text_increase, size: 20),
+            tooltip: 'تكبير الخط',
+            onPressed: _fontSizeMultiplier < 1.45
+                ? () => setState(() => _fontSizeMultiplier = (_fontSizeMultiplier + 0.1).clamp(0.85, 1.45))
+                : null,
+          ),
           IconButton(
             icon: Icon(
               _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
@@ -222,11 +237,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       color: isDark ? AppColors.borderDark : null,
                     ),
                   ),
-                  Text(
+                  SelectableText(
                     event.summary,
                     style: TextStyle(
-                      fontSize: 14,
-                      height: 1.65,
+                      fontSize: 14.5 * _fontSizeMultiplier,
+                      height: 1.8,
                       color: bodyColor,
                       fontWeight: FontWeight.w400,
                     ),
@@ -252,80 +267,94 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ...event.participantIds.map((pId) => _buildParticipantChip(context, pId, isDark)),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
           ],
 
           // 3. Quran & Hadith References
           if (event.relatedQuranAyahs.isNotEmpty || event.relatedHadithIds.isNotEmpty) ...[
             Text(
               'الأدلة والشواهد النصية الموثقة:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: titleColor),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: titleColor),
             ),
-            const SizedBox(height: 6),
-            Card(
-              elevation: isDark ? 1 : 1,
-              color: cardBg,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(color: cardBorder, width: 1),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (event.relatedQuranAyahs.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          Icon(Icons.menu_book, size: 16, color: primaryAccent),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'الآيات الكريمة ذات الصلة:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: primaryAccent,
-                              ),
-                            ),
+            const SizedBox(height: 8),
+            if (event.relatedQuranAyahs.isNotEmpty) ...[
+              ...event.relatedQuranAyahs.map(
+                (ayah) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: primaryAccent.withAlpha(isDark ? 28 : 12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: primaryAccent.withAlpha(isDark ? 100 : 60),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Icon(Icons.auto_stories, size: 18, color: primaryAccent),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SelectableText(
+                          ayah,
+                          style: TextStyle(
+                            fontSize: 14 * _fontSizeMultiplier,
+                            height: 1.7,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        event.relatedQuranAyahs.join('، '),
-                        style: TextStyle(fontSize: 13, color: bodyColor, height: 1.45),
-                      ),
-                      if (event.relatedHadithIds.isNotEmpty) const SizedBox(height: 8),
-                    ],
-                    if (event.relatedHadithIds.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          Icon(Icons.format_quote, size: 16, color: primaryAccent),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'الأحاديث النبوية المسندة:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: primaryAccent,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        event.relatedHadithIds.join('، '),
-                        style: TextStyle(fontSize: 13, color: bodyColor, height: 1.45),
+                        ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+            ],
+            if (event.relatedHadithIds.isNotEmpty) ...[
+              ...event.relatedHadithIds.map(
+                (hadith) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B).withAlpha(160) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Icon(
+                          Icons.format_quote_rounded,
+                          size: 18,
+                          color: isDark ? AppColors.goldAccentLight : const Color(0xFF0F5132),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SelectableText(
+                          hadith,
+                          style: TextStyle(
+                            fontSize: 13.5 * _fontSizeMultiplier,
+                            height: 1.65,
+                            color: bodyColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
           ],
 
           // 5. Narrative Variants (if any)

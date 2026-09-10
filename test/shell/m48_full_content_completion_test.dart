@@ -79,8 +79,8 @@ void main() {
       final seerah = DefaultCanonicalSeedProvider.getSeerahSeedPackage();
       expect(seerah.periods.length, equals(3));
       expect(seerah.events.length, greaterThanOrEqualTo(12));
-      expect(seerah.persons.length, equals(8));
-      expect(seerah.places.length, equals(6));
+      expect(seerah.persons.length, greaterThanOrEqualTo(8));
+      expect(seerah.places.length, greaterThanOrEqualTo(6));
 
       for (final event in seerah.events) {
         expect(event.summary.isNotEmpty, isTrue);

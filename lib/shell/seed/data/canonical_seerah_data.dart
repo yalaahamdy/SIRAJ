@@ -4,11 +4,14 @@ import '../../../modules/seerah/domain/person_relationship.dart';
 import '../../../modules/seerah/domain/seerah_event.dart';
 import 'seerah/seerah_events_part1_data.dart';
 import 'seerah/seerah_events_part2_data.dart';
+import 'seerah/seerah_events_part3_data.dart';
+import 'seerah/seerah_events_part4_data.dart';
+import 'seerah/seerah_events_part5_data.dart';
 import 'seerah/seerah_persons_data.dart';
 import 'seerah/seerah_places_data.dart';
 
 /// Comprehensive, verified canonical Seerah & Islamic History dataset (§28, §29).
-/// Contains 3 comprehensive periods, 22 detailed events, 16 historical figures, 15 holy places, and verified relationships.
+/// Contains 3 comprehensive periods, 48 detailed events, 16 historical figures, 15 holy places, and verified relationships.
 class CanonicalSeerahData {
   static CanonicalSeerahPackage getPackage() {
     // -------------------------------------------------------------------------
@@ -36,9 +39,9 @@ class CanonicalSeerahData {
 
     final p3 = HistoricalPeriod(
       periodId: 'prd_medinan_late',
-      titleArabic: 'الفترة المدنية المتأخرة والفتوحات الكبرى وعالمية الرسالة',
+      titleArabic: 'الفترة المدنية المتأخرة والفتوحات الكبرى وعالمية الرسالة والشمائل',
       description:
-          'من صلح الحديبية ورسائل الملوك وفتح خيبر وسرية مؤتة إلى فتح مكة الأعظم وحنين وتبوك وحجة الوداع والوفاة الشريفة بالمدينة (6 هـ - 11 هـ / 628 - 632 م).',
+          'من صلح الحديبية ورسائل الملوك وفتح خيبر وسرية مؤتة إلى فتح مكة الأعظم وحنين وتبوك وحجة الوداع والوفاة الشريفة بالمدينة والشمائل المحمدية (6 هـ - 11 هـ / 628 - 632 م).',
       orderIndex: 3,
       startYearDisplay: '6 هـ',
       endYearDisplay: '11 هـ',
@@ -55,11 +58,14 @@ class CanonicalSeerahData {
     final persons = SeerahPersonsData.getPersons();
 
     // -------------------------------------------------------------------------
-    // 4. Seerah Events (22 Comprehensive Pivotal Events)
+    // 4. Seerah Events (48 Comprehensive Pivotal Events)
     // -------------------------------------------------------------------------
     final events = <SeerahEvent>[
       ...SeerahEventsPart1Data.getEvents(),
       ...SeerahEventsPart2Data.getEvents(),
+      ...SeerahEventsPart3Data.getEvents(),
+      ...SeerahEventsPart4Data.getEvents(),
+      ...SeerahEventsPart5Data.getEvents(),
     ];
 
     // -------------------------------------------------------------------------
