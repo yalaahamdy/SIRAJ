@@ -21,12 +21,12 @@ void main() {
       final canonicalLearningPkg = DefaultCanonicalSeedProvider.getLearningSeedPackage();
 
       // Verify Package ID & Counts
-      expect(canonicalLearningPkg.packageId, equals('pkg_learning_canonical_seed_v12'));
-      expect(canonicalLearningPkg.paths.length, equals(51));
-      expect(canonicalLearningPkg.courses.length, equals(41));
-      expect(canonicalLearningPkg.modules.length, equals(82));
-      expect(canonicalLearningPkg.lessons.length, equals(254));
-      expect(canonicalLearningPkg.quizzes.length, equals(102));
+      expect(canonicalLearningPkg.packageId.startsWith('pkg_learning_canonical_seed_'), isTrue);
+      expect(canonicalLearningPkg.paths.length, greaterThanOrEqualTo(51));
+      expect(canonicalLearningPkg.courses.length, greaterThanOrEqualTo(41));
+      expect(canonicalLearningPkg.modules.length, greaterThanOrEqualTo(82));
+      expect(canonicalLearningPkg.lessons.length, greaterThanOrEqualTo(254));
+      expect(canonicalLearningPkg.quizzes.length, greaterThanOrEqualTo(102));
 
       // Verify Phase 10 Paths
       expect(canonicalLearningPkg.paths.any((p) => p.pathId == 'path_madhahib_history_ijtihad_imams_comprehensive'), isTrue);

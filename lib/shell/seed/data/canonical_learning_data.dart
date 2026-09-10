@@ -45,10 +45,14 @@ import 'learning/madhahib_and_history/learning_four_madhahib_history_data.dart';
 import 'learning/madhahib_and_history/learning_ikhtilaf_causes_adab_data.dart';
 import 'learning/madhahib_and_history/learning_imams_biographies_data.dart';
 import 'learning/madhahib_and_history/learning_fiqh_codification_encyclopedias_data.dart';
+import 'learning/arabic_language_and_bayan/learning_nahw_wazifi_quran_data.dart';
+import 'learning/arabic_language_and_bayan/learning_sarf_morphology_lexicon_data.dart';
+import 'learning/arabic_language_and_bayan/learning_balaghah_quranic_bayan_data.dart';
+import 'learning/arabic_language_and_bayan/learning_dalalat_alfaz_semantics_data.dart';
 
-/// Comprehensive canonical learning and curriculum dataset (Phases 1 through 10)
-/// Covers 10 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, Hadith Sciences, Seerah & Islamic History, Contemporary Financial Fiqh & Usul al-Fiqh, Family Fiqh & Ethics, Judiciary & Governance, Contemporary Medical Fiqh, Bioethics & Environmental Stewardship, and Major Jurisprudential Schools (Madhahib), Causes of Disagreement, Biographies of Imams & Codification of Fiqh
-/// Includes 51 learning paths, 41 advanced courses, 82 modules, 254 in-depth lessons, and 102 quizzes (§31..§35).
+/// Comprehensive canonical learning and curriculum dataset (Phases 1 through 11)
+/// Covers 11 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, Hadith Sciences, Seerah & Islamic History, Contemporary Financial Fiqh & Usul al-Fiqh, Family Fiqh & Ethics, Judiciary & Governance, Contemporary Medical Fiqh, Bioethics & Environmental Stewardship, Major Madhahib & Fiqh History, and Arabic Language Sciences, Quranic Rhetoric & Shari'ah Semantics
+/// Includes 56 learning paths, 45 advanced courses, 90 modules, 278 in-depth lessons, and 110 quizzes (§31..§35).
 class CanonicalLearningData {
   static CanonicalLearningPackage getPackage() {
     // -------------------------------------------------------------------------
@@ -629,6 +633,62 @@ class CanonicalLearningData {
       estimatedHours: 8,
     );
 
+    // --- K. مسارات علوم اللسان العربي والبيان القرآني ودلالات الألفاظ الشرعية ---
+    final pathArabicLanguageComprehensive = lp.LearningPath.create(
+      pathId: 'path_arabic_language_bayan_semantics_comprehensive',
+      title: 'مسار علوم اللسان العربي والبيان القرآني ودلالات الألفاظ الشرعية',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي علم النحو الوظيفي والتطبيقي وإعراب القرآن والحديث، علم الصرف وبناء الكلمة واشتقاق المعاني، علوم البلاغة القرآنية الثلاثة (المعاني والبيان والبديع) ونظرية النظم، وفقه اللغة واللسانيات الشرعية ودلالات الألفاظ الاستنباطية عند الأصوليين.',
+      category: 'علوم اللغة العربية والبيان القرآني',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [
+        LearningNahwWazifiQuranData.courseId,
+        LearningSarfMorphologyLexiconData.courseId,
+        LearningBalaghahQuranicBayanData.courseId,
+        LearningDalalatAlfazSemanticsData.courseId,
+      ],
+      estimatedHours: 32,
+    );
+
+    final pathNahwWazifiQuran = lp.LearningPath.create(
+      pathId: 'path_nahw_wazifi_quran',
+      title: 'مسار النحو التطبيقي والوظيفي وإعراب القرآن والحديث النبوي',
+      description: 'دراسة تأصيلية لنظام الإعراب والبناء، مرفوعات ومنصوبات ومجرورات الأسماء، إعراب الأفعال، وتطبيقات عملية في توجيه الأحكام الفقهية والتفسيرية.',
+      category: 'علوم اللغة العربية والبيان القرآني',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningNahwWazifiQuranData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathSarfMorphologyLexicon = lp.LearningPath.create(
+      pathId: 'path_sarf_morphology_lexicon',
+      title: 'مسار علم الصرف وبناء الكلمة واشتقاق المعاني الشرعية',
+      description: 'دراسة تأصيلية للميزان الصرفي، معاني صيغ الزيادة في الأفعال، أحكام المشتقات ودلالاتها التشريعية، وقوانين الإعلال والإبدال والتناسب الصوتي في القرآن.',
+      category: 'علوم اللغة العربية والبيان القرآني',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningSarfMorphologyLexiconData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathBalaghahQuranicBayan = lp.LearningPath.create(
+      pathId: 'path_balaghah_quranic_bayan',
+      title: 'مسار علوم البلاغة القرآنية والإعجاز البياني والأسلوبي',
+      description: 'دراسة تأصيلية لعلوم المعاني والبيان والبديع، نظرية النظم عند عبد القاهر الجرجاني، التشبيه والاستعارة والكناية، وأسرار الفصاحة ووجوه الإعجاز القرآني الخالد.',
+      category: 'علوم اللغة العربية والبيان القرآني',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningBalaghahQuranicBayanData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathDalalatAlfazSemantics = lp.LearningPath.create(
+      pathId: 'path_dalalat_alfaz_semantics',
+      title: 'مسار فقه اللغة واللسانيات الشرعية ودلالات الألفاظ الاستنباطية',
+      description: 'دراسة تأصيلية لفلسفة اللسان العربي والاشتقاق ونفي الترادف والمعرب، منظومة المنطوق والمفهوم ودلالات الإشارة والاقتضاء، ونقد القراءات الحداثية المنحرفة لنصوص الشريعة.',
+      category: 'علوم اللغة العربية والبيان القرآني',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningDalalatAlfazSemanticsData.courseId],
+      estimatedHours: 8,
+    );
+
     final paths = [
       pathFiqhComprehensive,
       pathAqidahComprehensive,
@@ -640,6 +700,7 @@ class CanonicalLearningData {
       pathGovernanceJudiciaryRightsComprehensive,
       pathMedicalBioethicsEnvironmentComprehensive,
       pathMadhahibHistoryComprehensive,
+      pathArabicLanguageComprehensive,
       pathTaharah,
       pathSalah,
       pathZakah,
@@ -681,6 +742,10 @@ class CanonicalLearningData {
       pathIkhtilafCausesAdab,
       pathImamsBiographies,
       pathFiqhCodificationEncyclopedias,
+      pathNahwWazifiQuran,
+      pathSarfMorphologyLexicon,
+      pathBalaghahQuranicBayan,
+      pathDalalatAlfazSemantics,
     ];
 
     // -------------------------------------------------------------------------
@@ -738,10 +803,15 @@ class CanonicalLearningData {
       LearningIkhtilafCausesAdabData.getCourse(),
       LearningImamsBiographiesData.getCourse(),
       LearningFiqhCodificationEncyclopediasData.getCourse(),
+      // Arabic Language Sciences, Quranic Rhetoric & Shari'ah Semantics Courses (4)
+      LearningNahwWazifiQuranData.getCourse(),
+      LearningSarfMorphologyLexiconData.getCourse(),
+      LearningBalaghahQuranicBayanData.getCourse(),
+      LearningDalalatAlfazSemanticsData.getCourse(),
     ];
 
     // -------------------------------------------------------------------------
-    // 3. Modules (82 Core Modules)
+    // 3. Modules (90 Core Modules)
     // -------------------------------------------------------------------------
     final List<CourseModule> modules = [
       // Fiqh of Worship Modules (10)
@@ -795,6 +865,11 @@ class CanonicalLearningData {
       ...LearningIkhtilafCausesAdabData.getModules(),
       ...LearningImamsBiographiesData.getModules(),
       ...LearningFiqhCodificationEncyclopediasData.getModules(),
+      // Arabic Language Sciences, Quranic Rhetoric & Shari'ah Semantics Modules (8)
+      ...LearningNahwWazifiQuranData.getModules(),
+      ...LearningSarfMorphologyLexiconData.getModules(),
+      ...LearningBalaghahQuranicBayanData.getModules(),
+      ...LearningDalalatAlfazSemanticsData.getModules(),
     ];
 
     // -------------------------------------------------------------------------
@@ -852,10 +927,15 @@ class CanonicalLearningData {
       ...LearningIkhtilafCausesAdabData.getLessons(),
       ...LearningImamsBiographiesData.getLessons(),
       ...LearningFiqhCodificationEncyclopediasData.getLessons(),
+      // Arabic Language Sciences, Quranic Rhetoric & Shari'ah Semantics Lessons (24)
+      ...LearningNahwWazifiQuranData.getLessons(),
+      ...LearningSarfMorphologyLexiconData.getLessons(),
+      ...LearningBalaghahQuranicBayanData.getLessons(),
+      ...LearningDalalatAlfazSemanticsData.getLessons(),
     ];
 
     // -------------------------------------------------------------------------
-    // 5. Quizzes (102 Formative Assessment Quizzes)
+    // 5. Quizzes (110 Formative Assessment Quizzes)
     // -------------------------------------------------------------------------
     final List<Quiz> quizzes = [
       // Fiqh of Worship Quizzes (17)
@@ -909,17 +989,22 @@ class CanonicalLearningData {
       ...LearningIkhtilafCausesAdabData.getQuizzes(),
       ...LearningImamsBiographiesData.getQuizzes(),
       ...LearningFiqhCodificationEncyclopediasData.getQuizzes(),
+      // Arabic Language Sciences, Quranic Rhetoric & Shari'ah Semantics Quizzes (8)
+      ...LearningNahwWazifiQuranData.getQuizzes(),
+      ...LearningSarfMorphologyLexiconData.getQuizzes(),
+      ...LearningBalaghahQuranicBayanData.getQuizzes(),
+      ...LearningDalalatAlfazSemanticsData.getQuizzes(),
     ];
 
     return CanonicalLearningPackage.create(
-      packageId: 'pkg_learning_canonical_seed_v12',
+      packageId: 'pkg_learning_canonical_seed_v13',
       paths: paths,
       courses: courses,
       modules: modules,
       lessons: lessons,
       quizzes: quizzes,
       signerIdentity: 'siraj.learning.curriculum.board',
-      signature: 'sig_canonical_learning_v12_fiqh_aqidah_quran_hadith_seerah_muamalat_family_governance_medical_madhahib_verified',
+      signature: 'sig_canonical_learning_v13_fiqh_aqidah_quran_hadith_seerah_muamalat_family_governance_medical_madhahib_arabic_verified',
       publishedAt: DateTime.utc(2026, 9, 10),
     );
   }
