@@ -35,12 +35,11 @@ class PlaceDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            place.nameArabic,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+        title: Text(
+          place.nameArabic,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         centerTitle: true,
       ),
@@ -59,42 +58,36 @@ class PlaceDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: badgeColor.withAlpha(isDark ? 40 : 25),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: badgeColor.withAlpha(isDark ? 120 : 80)),
-                          ),
-                          child: Text(
-                            place.certainty.labelArabic,
-                            style: TextStyle(
-                              color: badgeColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11.5,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withAlpha(isDark ? 40 : 25),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: badgeColor.withAlpha(isDark ? 120 : 80)),
+                        ),
+                        child: Text(
+                          place.certainty.labelArabic,
+                          style: TextStyle(
+                            color: badgeColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: isDark ? AppColors.borderDark : Colors.grey.shade300),
-                          ),
-                          child: Text(
-                            'إقليم: ${place.region}',
-                            style: TextStyle(fontSize: 12, color: bodyColor, fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: isDark ? AppColors.borderDark : Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          'إقليم: ${place.region}',
+                          style: TextStyle(fontSize: 12, color: bodyColor, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -106,9 +99,8 @@ class PlaceDetailScreen extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: titleColor,
+                      height: 1.3,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   if (place.modernName != null) ...[
                     const SizedBox(height: 6),

@@ -33,6 +33,13 @@ void main() {
     }
 
     testWidgets('Event Flow 1: Event detail strictly segregates historical fact, variants, and moral lessons', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       final event = seerahModule.getAllEvents().valueOrNull!.first;
 
       await tester.pumpWidget(

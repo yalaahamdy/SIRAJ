@@ -25,7 +25,7 @@ class TimelineScreen extends StatelessWidget {
           fit: BoxFit.scaleDown,
           child: Text(
             'المخطط الزمني للسيرة النبوية',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
           ),
         ),
         centerTitle: true,
@@ -66,41 +66,48 @@ class TimelineScreen extends StatelessWidget {
                         ],
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.history_edu,
-                            color: isDark ? AppColors.goldAccentLight : Colors.white,
-                            size: 20,
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.history_edu,
+                              color: isDark ? AppColors.goldAccentLight : Colors.white,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              slice.period.titleArabic,
-                              style: TextStyle(
-                                color: isDark ? Colors.white : Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppColors.goldAccentLight.withAlpha(30)
-                                  : Colors.white.withAlpha(40),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '${slice.period.startYearDisplay} — ${slice.period.endYearDisplay}',
-                              style: TextStyle(
-                                color: isDark ? AppColors.goldAccentLight : Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11.5,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  slice.period.titleArabic,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? AppColors.goldAccentLight.withAlpha(30)
+                                        : Colors.white.withAlpha(40),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '${slice.period.startYearDisplay} — ${slice.period.endYearDisplay}',
+                                    style: TextStyle(
+                                      color: isDark ? AppColors.goldAccentLight : Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

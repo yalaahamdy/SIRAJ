@@ -59,71 +59,111 @@ class EventCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: Evidence Badge & Date
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Header: Evidence Badge & Uncertainty in Wrap
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: badgeColor.withAlpha(isDark ? 45 : 28),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: badgeColor.withAlpha(isDark ? 140 : 100),
-                          width: 1,
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withAlpha(isDark ? 45 : 28),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: badgeColor.withAlpha(isDark ? 140 : 100),
+                        width: 1,
                       ),
-                      child: Text(
-                        event.evidenceLevel.labelArabic,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: badgeColor,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    ),
+                    child: Text(
+                      event.evidenceLevel.labelArabic,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: badgeColor,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          size: 13,
-                          color: dateColor,
+                  if (event.isOrderUncertain)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF78350F).withAlpha(50)
+                            : Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFFFBBF24).withAlpha(120)
+                              : Colors.orange.shade300,
                         ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            event.historicalDate.dateDisplay,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: dateColor,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 12,
+                            color: isDark
+                                ? const Color(0xFFFBBF24)
+                                : Colors.orange.shade900,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Text(
+                            'ترتيب مختلف فيه',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: isDark
+                                  ? const Color(0xFFFBBF24)
+                                  : Colors.orange.shade900,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Dedicated full-width Date Row (NEVER TRUNCATED)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.calendar_today_outlined,
+                      size: 13,
+                      color: primaryAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      event.historicalDate.dateDisplay,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: dateColor,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Title
               Text(
                 event.title,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 16.5,
                   fontWeight: FontWeight.bold,
                   color: titleColor,
-                  height: 1.3,
+                  height: 1.35,
                 ),
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
@@ -131,12 +171,12 @@ class EventCard extends StatelessWidget {
               // Summary
               Text(
                 event.summary,
-                maxLines: 3,
+                maxLines: 4,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13.5,
                   color: summaryColor,
-                  height: 1.5,
+                  height: 1.55,
                 ),
               ),
               const SizedBox(height: 12),
@@ -156,20 +196,23 @@ class EventCard extends StatelessWidget {
                           color: primaryAccent.withAlpha(isDark ? 100 : 60),
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.menu_book, size: 12, color: primaryAccent),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${event.relatedQuranAyahs.length} شواهد قرآنية',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: primaryAccent,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.menu_book, size: 12, color: primaryAccent),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${event.relatedQuranAyahs.length} شواهد قرآنية',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: primaryAccent,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   if (event.moralLessons.isNotEmpty)
@@ -186,28 +229,31 @@ class EventCard extends StatelessWidget {
                               : Colors.blue.shade200,
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            size: 12,
-                            color: isDark
-                                ? const Color(0xFF93C5FD)
-                                : Colors.blue.shade800,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${event.moralLessons.length} دروس وعبر',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.lightbulb_outline,
+                              size: 12,
                               color: isDark
-                                  ? const Color(0xFFBFDBFE)
-                                  : Colors.blue.shade900,
+                                  ? const Color(0xFF93C5FD)
+                                  : Colors.blue.shade800,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              '${event.moralLessons.length} دروس وعبر',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? const Color(0xFFBFDBFE)
+                                    : Colors.blue.shade900,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                 ],
@@ -215,12 +261,17 @@ class EventCard extends StatelessWidget {
               const SizedBox(height: 12),
 
               // Footer: Uncertain order / Details CTA
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
                 children: [
                   if (event.isOrderUncertain)
-                    Expanded(
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.info_outline,
@@ -230,44 +281,42 @@ class EventCard extends StatelessWidget {
                                 : Colors.orange.shade900,
                           ),
                           const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              'ترتيب مختلف فيه بين المصادر',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark
-                                    ? const Color(0xFFFBBF24)
-                                    : Colors.orange.shade900,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            'ترتيب مختلف فيه بين المصادر',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? const Color(0xFFFBBF24)
+                                  : Colors.orange.shade900,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
-                    )
-                  else
-                    const Spacer(),
+                    ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: primaryAccent.withAlpha(isDark ? 35 : 15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'عرض التفاصيل والأدلة',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: primaryAccent,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'قراءة الوقائع والأدلة الكاملة',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: primaryAccent,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_ios, size: 11, color: primaryAccent),
-                      ],
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_ios, size: 11, color: primaryAccent),
+                        ],
+                      ),
                     ),
                   ),
                 ],

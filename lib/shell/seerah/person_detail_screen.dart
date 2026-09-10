@@ -29,12 +29,11 @@ class PersonDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            person.canonicalName,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+        title: Text(
+          person.canonicalName,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         centerTitle: true,
       ),
@@ -54,52 +53,45 @@ class PersonDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: primaryAccent.withAlpha(isDark ? 40 : 25),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: primaryAccent.withAlpha(isDark ? 120 : 80)),
-                          ),
-                          child: Text(
-                            person.historicalRole,
-                            style: TextStyle(
-                              color: primaryAccent,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11.5,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: primaryAccent.withAlpha(isDark ? 40 : 25),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: primaryAccent.withAlpha(isDark ? 120 : 80)),
+                        ),
+                        child: Text(
+                          person.historicalRole,
+                          style: TextStyle(
+                            color: primaryAccent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
                       ),
-                      if (person.titleOrLakab != null) ...[
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFFFBBF24).withAlpha(35) : const Color(0xFF92400E).withAlpha(20),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: isDark ? const Color(0xFFFBBF24).withAlpha(100) : const Color(0xFF92400E).withAlpha(80),
-                              ),
+                      if (person.titleOrLakab != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFFFBBF24).withAlpha(35) : const Color(0xFF92400E).withAlpha(20),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFFFBBF24).withAlpha(100) : const Color(0xFF92400E).withAlpha(80),
                             ),
-                            child: Text(
-                              person.titleOrLakab!,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
-                                fontSize: 11.5,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          ),
+                          child: Text(
+                            person.titleOrLakab!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                              fontSize: 12,
                             ),
                           ),
                         ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -109,9 +101,8 @@ class PersonDetailScreen extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: titleColor,
+                      height: 1.3,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   if (person.kunyah != null) ...[
                     const SizedBox(height: 4),

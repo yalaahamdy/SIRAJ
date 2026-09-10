@@ -89,9 +89,10 @@ class _SeerahHomeScreenState extends State<SeerahHomeScreen> with SingleTickerPr
       appBar: AppBar(
         title: const FittedBox(
           fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
           child: Text(
             'السيرة النبوية والتاريخ الإسلامي',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold),
           ),
         ),
         centerTitle: false,

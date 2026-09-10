@@ -56,18 +56,18 @@ class NarrativeVariantBox extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'رواية: ${variant.narratorOrScholar}',
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: titleColor,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          'رواية: ${variant.narratorOrScholar}',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: titleColor,
                           ),
                         ),
                         Container(

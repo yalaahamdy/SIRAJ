@@ -40,32 +40,12 @@ class MoralLessonCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.wb_incandescent_outlined,
-                      size: 16,
-                      color: accent,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'العبرة والمقصد: ${lesson.themeArabic}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: titleColor,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -75,51 +55,68 @@ class MoralLessonCard extends StatelessWidget {
                     color: accent.withAlpha(isDark ? 120 : 90),
                   ),
                 ),
-                child: Text(
-                  'استنباط تربوي',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: accent,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.wb_incandescent_outlined,
+                      size: 14,
+                      color: accent,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'استنباط تربوي',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: accent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              if (lesson.sourceOrScholar != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.school_outlined,
+                      size: 13,
+                      color: subColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      lesson.sourceOrScholar!,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: subColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
+            'العبرة والمقصد: ${lesson.themeArabic}',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: titleColor,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
             lesson.lessonText,
             style: TextStyle(
               fontSize: 13.5,
-              height: 1.6,
+              height: 1.65,
               color: bodyColor,
               fontWeight: FontWeight.w400,
             ),
           ),
-          if (lesson.sourceOrScholar != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(
-                  Icons.school_outlined,
-                  size: 13,
-                  color: subColor,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    'المستنبط: ${lesson.sourceOrScholar!}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: subColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );
