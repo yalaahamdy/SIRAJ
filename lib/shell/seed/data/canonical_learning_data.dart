@@ -22,10 +22,29 @@ import 'learning/quran_sciences/learning_quran_sciences_data.dart';
 import 'learning/quran_sciences/learning_quran_tafsir_mufassal_data.dart';
 import 'learning/quran_sciences/learning_quran_tafsir_rules_data.dart';
 import 'learning/quran_sciences/learning_quran_tajweed_data.dart';
+import 'learning/muamalat/learning_muamalat_buyu_data.dart';
+import 'learning/muamalat/learning_muamalat_contemporary_banking_data.dart';
+import 'learning/muamalat/learning_muamalat_qawaid_maqasid_data.dart';
+import 'learning/muamalat/learning_muamalat_usul_fiqh_data.dart';
+import 'learning/seerah/learning_seerah_makkan_data.dart';
+import 'learning/seerah/learning_seerah_medinan_data.dart';
+import 'learning/seerah/learning_seerah_shamail_data.dart';
+import 'learning/family_and_society/learning_family_inheritance_data.dart';
+import 'learning/family_and_society/learning_ethics_adab_tarbiyah_data.dart';
+import 'learning/family_and_society/learning_dawah_hisbah_dialogue_data.dart';
+import 'learning/family_and_society/learning_thought_awareness_data.dart';
+import 'learning/governance_and_judiciary/learning_judiciary_evidence_data.dart';
+import 'learning/governance_and_judiciary/learning_siyasah_shariyyah_governance_data.dart';
+import 'learning/governance_and_judiciary/learning_international_relations_treaties_data.dart';
+import 'learning/governance_and_judiciary/learning_human_rights_liberties_data.dart';
+import 'learning/medical_and_environment/learning_medical_surgeries_transplants_data.dart';
+import 'learning/medical_and_environment/learning_genetics_assisted_reproduction_data.dart';
+import 'learning/medical_and_environment/learning_epidemics_public_health_dispensations_data.dart';
+import 'learning/medical_and_environment/learning_environment_earth_stewardship_data.dart';
 
-/// Comprehensive canonical learning and curriculum dataset (Phases 1, 2, 3, and 4)
-/// Covers 4 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, and Hadith Sciences & Forty Hadith
-/// Includes 22 learning paths, 18 advanced courses, 36 modules, 118 in-depth lessons, and 56 quizzes (§31..§35).
+/// Comprehensive canonical learning and curriculum dataset (Phases 1 through 9)
+/// Covers 9 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, Hadith Sciences, Seerah & Islamic History, Contemporary Financial Fiqh & Usul al-Fiqh, Family Fiqh & Ethics, Judiciary & Governance, and Contemporary Medical Fiqh, Bioethics & Environmental Stewardship
+/// Includes 46 learning paths, 37 advanced courses, 74 modules, 230 in-depth lessons, and 94 quizzes (§31..§35).
 class CanonicalLearningData {
   static CanonicalLearningPackage getPackage() {
     // -------------------------------------------------------------------------
@@ -281,11 +300,285 @@ class CanonicalLearningData {
       estimatedHours: 8,
     );
 
+    // --- E. مسارات السيرة النبوية والشمائل والتاريخ الإسلامي التأصيلي ---
+    final pathSeerahComprehensive = lp.LearningPath.create(
+      pathId: 'path_seerah_history_curriculum',
+      title: 'مسار السيرة النبوية والشمائل والتاريخ الإسلامي التأصيلي',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي العهد المكي والبعثة النبوية، والعهد المدني وتأسيس الدولة والمغازي الكبرى، والشمائل المحمدية ومعالم وأعلام السيرة الموثقة في موسوعة السيرة النبوية بسِراج.',
+      category: 'السيرة النبوية والتاريخ الإسلامي',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [
+        LearningSeerahMakkanData.courseId,
+        LearningSeerahMedinanData.courseId,
+        LearningSeerahShamailData.courseId,
+      ],
+      estimatedHours: 24,
+    );
+
+    final pathSeerahMakkan = lp.LearningPath.create(
+      pathId: 'path_seerah_makkan',
+      title: 'مسار دراسة العهد المكي والبعثة النبوية والابتلاءات',
+      description: 'دراسة تأصيلية منهجية في سيرة المصطفى ﷺ بمكة المكرمة: من المولد والنشأة الشريفة وبدء الوحي إلى الهجرتين وعام الحزن والإسراء والمعراج وبيعتي العقبة.',
+      category: 'السيرة النبوية والتاريخ الإسلامي',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningSeerahMakkanData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathSeerahMedinan = lp.LearningPath.create(
+      pathId: 'path_seerah_medinan',
+      title: 'مسار دراسة العهد المدني وتأسيس الدولة والمغازي الكبرى',
+      description: 'دراسة تأصيلية في العهد المدني: الهجرة الشريفة، بناء المسجد، وثيقة المدينة، المؤاخاة، تحويل القبلة، المغازي الكبرى، صلح الحديبية، فتح مكة الأعظم، وحجة الوداع.',
+      category: 'السيرة النبوية والتاريخ الإسلامي',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningSeerahMedinanData.courseId],
+      estimatedHours: 10,
+    );
+
+    final pathSeerahShamail = lp.LearningPath.create(
+      pathId: 'path_seerah_shamail',
+      title: 'مسار الشمائل المحمدية ومعالم وأعلام السيرة النبوية',
+      description: 'دراسة محققة في صفات النبي ﷺ الخَلقية والخُلقية، وهديه الشريف، وأعلام الصحابة وآل البيت الـ 16، والمواقع والمعالم التاريخية الـ 15 الموثقة في سِراج.',
+      category: 'السيرة النبوية والتاريخ الإسلامي',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningSeerahShamailData.courseId],
+      estimatedHours: 6,
+    );
+
+    // --- F. مسارات فقه المعاملات المالية المعاصرة وأصول الفقه والقواعد الفقهية ---
+    final pathMuamalatComprehensive = lp.LearningPath.create(
+      pathId: 'path_fiqh_muamalat_comprehensive',
+      title: 'مسار فقه المعاملات المالية المعاصرة وأصول الفقه والقواعد الفقهية والمقاصد',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي فقه البيوع والعقود المالية والخيارات والربا والغرر، والمعاملات المصرفية والنوازل الاستثمارية والأسهم والتأمين التكافلي، مع مبادئ أصول الفقه ومصادر التشريع والاجتهاد، والقواعد الفقهية الكبرى ومقاصد الشريعة وفقه الموازنات.',
+      category: 'فقه المعاملات وأصول الفقه',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [
+        LearningMuamalatBuyuData.courseId,
+        LearningMuamalatContemporaryBankingData.courseId,
+        LearningMuamalatUsulFiqhData.courseId,
+        LearningMuamalatQawaidMaqasidData.courseId,
+      ],
+      estimatedHours: 32,
+    );
+
+    final pathMuamalatBuyu = lp.LearningPath.create(
+      pathId: 'path_fiqh_buyu',
+      title: 'مسار فقه البيوع والعقود المالية والخيارات ومفسداتها',
+      description: 'دراسة تأصيلية فقهية لأركان البيع، ضوابط التراضي، أحكام الخيارات الأربعة، ومفسدات العقود من الربا والغرر وبيوع الغش والاحتكار.',
+      category: 'فقه المعاملات وأصول الفقه',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [LearningMuamalatBuyuData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathMuamalatBanking = lp.LearningPath.create(
+      pathId: 'path_fiqh_banking',
+      title: 'مسار المعاملات المصرفية والنوازل المالية المعاصرة',
+      description: 'دراسة فقهية للنوازل المصرفية والاستثمارية: الحسابات البنكية، صيغ التمويل الإسلامي، البطاقات الائتمانية، الأسهم، التأمين التكافلي، والعملات المشفرة.',
+      category: 'فقه المعاملات وأصول الفقه',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [LearningMuamalatContemporaryBankingData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathMuamalatUsul = lp.LearningPath.create(
+      pathId: 'path_fiqh_usul',
+      title: 'مسار مبادئ أصول الفقه ومصادر التشريع والاجتهاد',
+      description: 'دراسة منهجية في حقيقة علم الأصول، الحكم التكليفي والوضعي، الأدلة المتفق عليها والمختلف فيها، ودلالات الألفاظ وشروط الاجتهاد والفتوى.',
+      category: 'فقه المعاملات وأصول الفقه',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [LearningMuamalatUsulFiqhData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathMuamalatQawaid = lp.LearningPath.create(
+      pathId: 'path_fiqh_qawaid',
+      title: 'مسار القواعد الفقهية الكبرى والمقاصد الشرعية وفقه الموازنات',
+      description: 'دراسة جامعة للقواعد الفقهية الخمس الكبرى وفروعها، وحفظ الكليات الخمس، وفقه الموازنات والأولويات عند تزاحم المصالح والمفاسد.',
+      category: 'فقه المعاملات وأصول الفقه',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [LearningMuamalatQawaidMaqasidData.courseId],
+      estimatedHours: 8,
+    );
+
+    // --- G. مسارات فقه الأسرة المسلمة والمواريث والأخلاق والدعوة والفكر المعاصر ---
+    final pathFamilySocietyComprehensive = lp.LearningPath.create(
+      pathId: 'path_family_ethics_society_comprehensive',
+      title: 'مسار فقه الأسرة المسلمة والمواريث ومكارم الأخلاق وفقه الدعوة والفكر الإسلامي المعاصر',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي فقه النكاح والعلاقات الأسرية وحقوق الزوجين والفرقة وعلم الفرائض والمواريث والوصايا، ومكارم الأخلاق وتزكية النفس وآداب المعاشرة، وأصول الدعوة وفقه الأمر بالمعروف والنهي عن المنكر وأدب الحوار، ومقومات الهوية والوسطية وبراهين الإيمان وتفنيد الشبهات المعاصرة.',
+      category: 'فقه الأسرة والأخلاق والمجتمع',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [
+        LearningFamilyInheritanceData.courseId,
+        LearningEthicsAdabTarbiyahData.courseId,
+        LearningDawahHisbahDialogueData.courseId,
+        LearningThoughtAwarenessData.courseId,
+      ],
+      estimatedHours: 32,
+    );
+
+    final pathFamilyInheritance = lp.LearningPath.create(
+      pathId: 'path_fiqh_family_inheritance',
+      title: 'مسار فقه الأسرة المسلمة والأحوال الشخصية وعلم الفرائض',
+      description: 'دراسة تأصيلية فقهية لأركان الزواج وحقوق الزوجين، فقه الطلاق والخلع والحضانة، وأصحاب الفروض والعصبات والحجب وتصفية التركات والوصايا.',
+      category: 'فقه الأسرة والأخلاق والمجتمع',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [LearningFamilyInheritanceData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathEthicsAdab = lp.LearningPath.create(
+      pathId: 'path_ethics_adab_tarbiyah',
+      title: 'مسار مكارم الأخلاق والتربية والآداب الإسلامية وتزكية النفس',
+      description: 'دراسة تأصيلية تربوية لأمهات الفضائل (الصدق والأمانة والحياء والتواضع)، تطهير القلوب من الكبر والرياء والحسد، وبر الوالدين وحقوق الجوار وآداب اللسان.',
+      category: 'فقه الأسرة والأخلاق والمجتمع',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningEthicsAdabTarbiyahData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathDawahHisbah = lp.LearningPath.create(
+      pathId: 'path_dawah_hisbah_dialogue',
+      title: 'مسار فقه الدعوة إلى الله والاحتساب والحوار الحضاري',
+      description: 'دراسة منهجية لأصول الدعوة والحكمة والموعظة الحسنة، فقه الأمر بالمعروف والنهي عن المنكر، أدب الحوار والمناظرة، واستثمار الإعلام الرقمي ودعوة غير المسلمين.',
+      category: 'فقه الأسرة والأخلاق والمجتمع',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [LearningDawahHisbahDialogueData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathThoughtAwareness = lp.LearningPath.create(
+      pathId: 'path_thought_awareness',
+      title: 'مسار الفكر الإسلامي المعاصر وبناء الوعي وتفنيد الشبهات',
+      description: 'دراسة فكرية عقدية معاصرة في مقومات الهوية والوسطية ونبذ الغلو، ضوابط التجديد، براهين الإيمان ومواجهة الإلحاد، والرد التأصيلي على الشبهات المعاصرة.',
+      category: 'فقه الأسرة والأخلاق والمجتمع',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningThoughtAwarenessData.courseId],
+      estimatedHours: 8,
+    );
+
+    // --- H. مسارات فقه القضاء والسياسة الشرعية والعلاقات الدولية وحقوق الإنسان ---
+    final pathGovernanceJudiciaryRightsComprehensive = lp.LearningPath.create(
+      pathId: 'path_governance_judiciary_rights_comprehensive',
+      title: 'مسار فقه القضاء والسياسة الشرعية والعلاقات الدولية وحقوق الإنسان في الإسلام',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي فقه القضاء وطرق الإثبات الشرعية والقرائن المعاصرة، أصول السياسة الشرعية وأنظمة الحكم الرشيد وإدارة الشأن العام، فقه العلاقات الدولية والمعاهدات والسلم وحماية المدنيين، وتأصيل حقوق الإنسان والحريات العامة وكرامة بني آدم في الشريعة الإسلامية.',
+      category: 'القضاء والسياسة الشرعية وحقوق الإنسان',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [
+        LearningJudiciaryEvidenceData.courseId,
+        LearningSiyasahShariyyahGovernanceData.courseId,
+        LearningInternationalRelationsTreatiesData.courseId,
+        LearningHumanRightsLibertiesData.courseId,
+      ],
+      estimatedHours: 32,
+    );
+
+    final pathJudiciaryEvidence = lp.LearningPath.create(
+      pathId: 'path_fiqh_judiciary_evidence',
+      title: 'مسار فقه القضاء وطرق الإثبات الشرعية والقرائن المعاصرة',
+      description: 'دراسة تأصيلية لنظام القضاء وشروط القاضي وآدابه ومجلس الحكم، وطرق الإثبات الشرعية من الإقرار والشهادة واليمين والقرائن القطعية والخبرة الفنية المعاصرة (البصمة الوراثية والطب الشرعي).',
+      category: 'القضاء والسياسة الشرعية وحقوق الإنسان',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningJudiciaryEvidenceData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathSiyasahShariyyah = lp.LearningPath.create(
+      pathId: 'path_siyasah_shariyyah_governance',
+      title: 'مسار السياسة الشرعية وأنظمة الحكم الرشيد وإدارة الشأن العام',
+      description: 'دراسة فقهية تأصيلية لقواعد السياسة الشرعية ومقاصد الإمامة، مبادئ الحكم الرشيد (الشورى والعدل والرقابة والمساءلة ومكافحة الفساد)، وتدبير المال العام والتنظيم الإداري والمؤسسي.',
+      category: 'القضاء والسياسة الشرعية وحقوق الإنسان',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningSiyasahShariyyahGovernanceData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathInternationalRelations = lp.LearningPath.create(
+      pathId: 'path_international_relations_treaties',
+      title: 'مسار فقه العلاقات الدولية والمعاهدات والسلم وحماية المدنيين',
+      description: 'دراسة تأصيلية لأصول العلاقات الدولية في الإسلام، الوفاء بالعهود والمواثيق الدولية، فقه الجهاد وضوابطه وأخلاقياته، حماية المدنيين والبيئة، والتمثيل الدبلوماسي وحل النزاعات سلماً.',
+      category: 'القضاء والسياسة الشرعية وحقوق الإنسان',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningInternationalRelationsTreatiesData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathHumanRightsLiberties = lp.LearningPath.create(
+      pathId: 'path_human_rights_liberties',
+      title: 'مسار تأصيل حقوق الإنسان والحريات العامة في الشريعة الإسلامية',
+      description: 'دراسة تأصيلية مقارنة لمرتكزات كرامة الإنسان وحقوقه في الإسلام، الحقوق الأساسية (الحياة، التدين، التفكير والتعبير، التملك، والكرامة الإنسانية)، وحقوق الفئات الأولى بالرعاية (المرأة، الطفل، ذوي الإعاقة، وغير المسلمين).',
+      category: 'القضاء والسياسة الشرعية وحقوق الإنسان',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningHumanRightsLibertiesData.courseId],
+      estimatedHours: 8,
+    );
+
+    // --- I. مسارات فقه النوازل الطبية المعاصرة والأخلاقيات البيولوجية وعمارة البيئة ---
+    final pathMedicalBioethicsEnvironmentComprehensive = lp.LearningPath.create(
+      pathId: 'path_medical_bioethics_environment_comprehensive',
+      title: 'مسار فقه النوازل الطبية المعاصرة والأخلاقيات البيولوجية وعمارة البيئة',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي فقه النوازل الطبية والجراحية والتداوي والموت الدماغي وزراعة الأعضاء، الهندسة الوراثية والإنجاب المساعد والأخلاقيات الحيوية (Bioethics)، فقه الأوبئة والطب الوقائي والرخص الطبية في العبادات، وفقه البيئة وعمارة الأرض وحفظ الموارد والرفق بالحيوان ومكافحة التلوث.',
+      category: 'النوازل الطبية والأخلاقيات الحيوية والبيئة',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [
+        LearningMedicalSurgeriesTransplantsData.courseId,
+        LearningGeneticsAssistedReproductionData.courseId,
+        LearningEpidemicsPublicHealthDispensationsData.courseId,
+        LearningEnvironmentEarthStewardshipData.courseId,
+      ],
+      estimatedHours: 32,
+    );
+
+    final pathMedicalSurgeries = lp.LearningPath.create(
+      pathId: 'path_medical_surgeries_transplants',
+      title: 'مسار النوازل الطبية والجراحية وأحكام التداوي ونقل الأعضاء',
+      description: 'دراسة تأصيلية لأحكام التداوي والمسؤولية الطبية، الموت الدماغي ورفع أجهزة الإنعاش، زراعة الأعضاء البشرية، بنوك الدم والقرنيات، وضوابط الجراحة التجميلية.',
+      category: 'النوازل الطبية والأخلاقيات الحيوية والبيئة',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningMedicalSurgeriesTransplantsData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathGeneticsAssisted = lp.LearningPath.create(
+      pathId: 'path_genetics_assisted_reproduction',
+      title: 'مسار الهندسة الوراثية والإنجاب المساعد والأخلاقيات الحيوية',
+      description: 'دراسة تأصيلية لوسائل الإنجاب المساعد (أطفال الأنابيب، الحقن المجهري)، تحريم تأجير الأرحام، الفحص الوراثي، الاستنساخ، وتعديل الجينوم وأبحاث الخلايا الجذعية.',
+      category: 'النوازل الطبية والأخلاقيات الحيوية والبيئة',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningGeneticsAssistedReproductionData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathEpidemicsDispensations = lp.LearningPath.create(
+      pathId: 'path_epidemics_public_health_dispensations',
+      title: 'مسار فقه الأوبئة والصحة العامة والصيام والرخص الطبية',
+      description: 'دراسة فقهية للطب الوقائي النبوي، الحجر الصحي وإدارة الجوائح، أحكام اللقاحات، والمفطرات الطبية المعاصرة ورخص المرضى في الصلاة والصيام والحج.',
+      category: 'النوازل الطبية والأخلاقيات الحيوية والبيئة',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningEpidemicsPublicHealthDispensationsData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathEnvironmentStewardship = lp.LearningPath.create(
+      pathId: 'path_environment_earth_stewardship',
+      title: 'مسار فقه البيئة وعمارة الأرض وحماية الموارد الطبيعية',
+      description: 'دراسة تأصيلية لمفهوم الاستخلاف وعمارة الأرض، فقه الموارد المائية، إحياء الموات والتشجير والمحميات، التوازن الكوني والمناخي، والرفق بالحيوان ومكافحة التلوث.',
+      category: 'النوازل الطبية والأخلاقيات الحيوية والبيئة',
+      level: lp.LearningLevel.advanced,
+      courseIds: const [LearningEnvironmentEarthStewardshipData.courseId],
+      estimatedHours: 8,
+    );
+
     final paths = [
       pathFiqhComprehensive,
       pathAqidahComprehensive,
       pathQuranComprehensive,
       pathHadithComprehensive,
+      pathSeerahComprehensive,
+      pathMuamalatComprehensive,
+      pathFamilySocietyComprehensive,
+      pathGovernanceJudiciaryRightsComprehensive,
+      pathMedicalBioethicsEnvironmentComprehensive,
       pathTaharah,
       pathSalah,
       pathZakah,
@@ -304,10 +597,29 @@ class CanonicalLearningData {
       pathHadithGrading,
       pathHadithNawawiFull,
       pathHadithNawawiPart1,
+      pathSeerahMakkan,
+      pathSeerahMedinan,
+      pathSeerahShamail,
+      pathMuamalatBuyu,
+      pathMuamalatBanking,
+      pathMuamalatUsul,
+      pathMuamalatQawaid,
+      pathFamilyInheritance,
+      pathEthicsAdab,
+      pathDawahHisbah,
+      pathThoughtAwareness,
+      pathJudiciaryEvidence,
+      pathSiyasahShariyyah,
+      pathInternationalRelations,
+      pathHumanRightsLiberties,
+      pathMedicalSurgeries,
+      pathGeneticsAssisted,
+      pathEpidemicsDispensations,
+      pathEnvironmentStewardship,
     ];
 
     // -------------------------------------------------------------------------
-    // 2. Courses (14 Advanced Courses)
+    // 2. Courses (29 Advanced Courses)
     // -------------------------------------------------------------------------
     final List<Course> courses = [
       // Fiqh of Worship Courses (5)
@@ -332,10 +644,34 @@ class CanonicalLearningData {
       LearningHadithGradingRulesData.getCourse(),
       LearningHadithNawawiPart1Data.getCourse(),
       LearningHadithNawawiPart2Data.getCourse(),
+      // Seerah & Islamic History Courses (3)
+      LearningSeerahMakkanData.getCourse(),
+      LearningSeerahMedinanData.getCourse(),
+      LearningSeerahShamailData.getCourse(),
+      // Contemporary Financial Fiqh & Usul al-Fiqh Courses (4)
+      LearningMuamalatBuyuData.getCourse(),
+      LearningMuamalatContemporaryBankingData.getCourse(),
+      LearningMuamalatUsulFiqhData.getCourse(),
+      LearningMuamalatQawaidMaqasidData.getCourse(),
+      // Family Fiqh, Islamic Ethics, Dawah & Contemporary Thought Courses (4)
+      LearningFamilyInheritanceData.getCourse(),
+      LearningEthicsAdabTarbiyahData.getCourse(),
+      LearningDawahHisbahDialogueData.getCourse(),
+      LearningThoughtAwarenessData.getCourse(),
+      // Governance, Judiciary, International Relations & Human Rights Courses (4)
+      LearningJudiciaryEvidenceData.getCourse(),
+      LearningSiyasahShariyyahGovernanceData.getCourse(),
+      LearningInternationalRelationsTreatiesData.getCourse(),
+      LearningHumanRightsLibertiesData.getCourse(),
+      // Contemporary Medical Fiqh, Bioethics & Environmental Stewardship Courses (4)
+      LearningMedicalSurgeriesTransplantsData.getCourse(),
+      LearningGeneticsAssistedReproductionData.getCourse(),
+      LearningEpidemicsPublicHealthDispensationsData.getCourse(),
+      LearningEnvironmentEarthStewardshipData.getCourse(),
     ];
 
     // -------------------------------------------------------------------------
-    // 3. Modules (36 Core Modules)
+    // 3. Modules (74 Core Modules)
     // -------------------------------------------------------------------------
     final List<CourseModule> modules = [
       // Fiqh of Worship Modules (10)
@@ -360,10 +696,34 @@ class CanonicalLearningData {
       ...LearningHadithGradingRulesData.getModules(),
       ...LearningHadithNawawiPart1Data.getModules(),
       ...LearningHadithNawawiPart2Data.getModules(),
+      // Seerah & Islamic History Modules (6)
+      ...LearningSeerahMakkanData.getModules(),
+      ...LearningSeerahMedinanData.getModules(),
+      ...LearningSeerahShamailData.getModules(),
+      // Contemporary Financial Fiqh & Usul al-Fiqh Modules (8)
+      ...LearningMuamalatBuyuData.getModules(),
+      ...LearningMuamalatContemporaryBankingData.getModules(),
+      ...LearningMuamalatUsulFiqhData.getModules(),
+      ...LearningMuamalatQawaidMaqasidData.getModules(),
+      // Family Fiqh, Islamic Ethics, Dawah & Contemporary Thought Modules (8)
+      ...LearningFamilyInheritanceData.getModules(),
+      ...LearningEthicsAdabTarbiyahData.getModules(),
+      ...LearningDawahHisbahDialogueData.getModules(),
+      ...LearningThoughtAwarenessData.getModules(),
+      // Governance, Judiciary, International Relations & Human Rights Modules (8)
+      ...LearningJudiciaryEvidenceData.getModules(),
+      ...LearningSiyasahShariyyahGovernanceData.getModules(),
+      ...LearningInternationalRelationsTreatiesData.getModules(),
+      ...LearningHumanRightsLibertiesData.getModules(),
+      // Contemporary Medical Fiqh, Bioethics & Environmental Stewardship Modules (8)
+      ...LearningMedicalSurgeriesTransplantsData.getModules(),
+      ...LearningGeneticsAssistedReproductionData.getModules(),
+      ...LearningEpidemicsPublicHealthDispensationsData.getModules(),
+      ...LearningEnvironmentEarthStewardshipData.getModules(),
     ];
 
     // -------------------------------------------------------------------------
-    // 4. Lessons (118 In-Depth Canonical Lessons)
+    // 4. Lessons (230 In-Depth Canonical Lessons)
     // -------------------------------------------------------------------------
     final List<Lesson> lessons = [
       // Fiqh of Worship Lessons (32)
@@ -388,10 +748,34 @@ class CanonicalLearningData {
       ...LearningHadithGradingRulesData.getLessons(),
       ...LearningHadithNawawiPart1Data.getLessons(),
       ...LearningHadithNawawiPart2Data.getLessons(),
+      // Seerah & Islamic History Lessons (16)
+      ...LearningSeerahMakkanData.getLessons(),
+      ...LearningSeerahMedinanData.getLessons(),
+      ...LearningSeerahShamailData.getLessons(),
+      // Contemporary Financial Fiqh & Usul al-Fiqh Lessons (24)
+      ...LearningMuamalatBuyuData.getLessons(),
+      ...LearningMuamalatContemporaryBankingData.getLessons(),
+      ...LearningMuamalatUsulFiqhData.getLessons(),
+      ...LearningMuamalatQawaidMaqasidData.getLessons(),
+      // Family Fiqh, Islamic Ethics, Dawah & Contemporary Thought Lessons (24)
+      ...LearningFamilyInheritanceData.getLessons(),
+      ...LearningEthicsAdabTarbiyahData.getLessons(),
+      ...LearningDawahHisbahDialogueData.getLessons(),
+      ...LearningThoughtAwarenessData.getLessons(),
+      // Governance, Judiciary, International Relations & Human Rights Lessons (24)
+      ...LearningJudiciaryEvidenceData.getLessons(),
+      ...LearningSiyasahShariyyahGovernanceData.getLessons(),
+      ...LearningInternationalRelationsTreatiesData.getLessons(),
+      ...LearningHumanRightsLibertiesData.getLessons(),
+      // Contemporary Medical Fiqh, Bioethics & Environmental Stewardship Lessons (24)
+      ...LearningMedicalSurgeriesTransplantsData.getLessons(),
+      ...LearningGeneticsAssistedReproductionData.getLessons(),
+      ...LearningEpidemicsPublicHealthDispensationsData.getLessons(),
+      ...LearningEnvironmentEarthStewardshipData.getLessons(),
     ];
 
     // -------------------------------------------------------------------------
-    // 5. Quizzes (56 Formative Assessment Quizzes)
+    // 5. Quizzes (94 Formative Assessment Quizzes)
     // -------------------------------------------------------------------------
     final List<Quiz> quizzes = [
       // Fiqh of Worship Quizzes (17)
@@ -416,17 +800,41 @@ class CanonicalLearningData {
       ...LearningHadithGradingRulesData.getQuizzes(),
       ...LearningHadithNawawiPart1Data.getQuizzes(),
       ...LearningHadithNawawiPart2Data.getQuizzes(),
+      // Seerah & Islamic History Quizzes (6)
+      ...LearningSeerahMakkanData.getQuizzes(),
+      ...LearningSeerahMedinanData.getQuizzes(),
+      ...LearningSeerahShamailData.getQuizzes(),
+      // Contemporary Financial Fiqh & Usul al-Fiqh Quizzes (8)
+      ...LearningMuamalatBuyuData.getQuizzes(),
+      ...LearningMuamalatContemporaryBankingData.getQuizzes(),
+      ...LearningMuamalatUsulFiqhData.getQuizzes(),
+      ...LearningMuamalatQawaidMaqasidData.getQuizzes(),
+      // Family Fiqh, Islamic Ethics, Dawah & Contemporary Thought Quizzes (8)
+      ...LearningFamilyInheritanceData.getQuizzes(),
+      ...LearningEthicsAdabTarbiyahData.getQuizzes(),
+      ...LearningDawahHisbahDialogueData.getQuizzes(),
+      ...LearningThoughtAwarenessData.getQuizzes(),
+      // Governance, Judiciary, International Relations & Human Rights Quizzes (8)
+      ...LearningJudiciaryEvidenceData.getQuizzes(),
+      ...LearningSiyasahShariyyahGovernanceData.getQuizzes(),
+      ...LearningInternationalRelationsTreatiesData.getQuizzes(),
+      ...LearningHumanRightsLibertiesData.getQuizzes(),
+      // Contemporary Medical Fiqh, Bioethics & Environmental Stewardship Quizzes (8)
+      ...LearningMedicalSurgeriesTransplantsData.getQuizzes(),
+      ...LearningGeneticsAssistedReproductionData.getQuizzes(),
+      ...LearningEpidemicsPublicHealthDispensationsData.getQuizzes(),
+      ...LearningEnvironmentEarthStewardshipData.getQuizzes(),
     ];
 
     return CanonicalLearningPackage.create(
-      packageId: 'pkg_learning_canonical_seed_v6',
+      packageId: 'pkg_learning_canonical_seed_v11',
       paths: paths,
       courses: courses,
       modules: modules,
       lessons: lessons,
       quizzes: quizzes,
       signerIdentity: 'siraj.learning.curriculum.board',
-      signature: 'sig_canonical_learning_v6_fiqh_aqidah_quran_hadith_verified',
+      signature: 'sig_canonical_learning_v11_fiqh_aqidah_quran_hadith_seerah_muamalat_family_governance_medical_verified',
       publishedAt: DateTime.utc(2026, 9, 10),
     );
   }

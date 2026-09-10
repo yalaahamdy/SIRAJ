@@ -5,6 +5,7 @@ import '../../../modules/learning/learning_module.dart';
 import 'learning_goals_screen.dart';
 import 'learning_path_screen.dart';
 import 'widgets/learning_progress_card.dart';
+import '../routing/app_router.dart';
 
 /// Main Home Screen for Islamic Learning & Education Engine (§4, §26, §45).
 class LearningHomeScreen extends StatefulWidget {
@@ -87,10 +88,14 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
                   // 1. Hero Progress Card
                   if (_mastery != null) ...[
                     LearningProgressCard(snapshot: _mastery!),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                   ],
 
-                  // 2. Paths Header
+                  // 2. Seerah Timeline & Canonical Encyclopedia Card
+                  _buildSeerahShortcutCard(),
+                  const SizedBox(height: 20),
+
+                  // 3. Paths Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -207,6 +212,112 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeerahShortcutCard() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1B4332),
+            Color(0xFF2D6A4F),
+          ],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1B4332).withValues(alpha: 0.22),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.of(context).pushNamed(AppRouter.seerah);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.auto_stories_rounded,
+                    color: Colors.amberAccent,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Flexible(
+                            child: Text(
+                              'موسوعة ومخطط السيرة النبوية',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.amberAccent.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'مخطط زمني',
+                              style: TextStyle(
+                                color: Colors.amberAccent,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'استكشف 48 حدثاً و 16 شخصية و 15 معلماً مقدساً مرتبطة بالمناهج الدراسية.',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.white70,
+                  size: 14,
+                ),
+              ],
+            ),
           ),
         ),
       ),
