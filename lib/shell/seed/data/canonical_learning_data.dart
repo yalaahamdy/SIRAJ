@@ -12,6 +12,10 @@ import 'learning/aqidah/learning_aqidah_tawheed_data.dart';
 import 'learning/learning_fasting_data.dart';
 import 'learning/learning_hajj_data.dart';
 import 'learning/learning_salah_data.dart';
+import 'learning/hadith/learning_hadith_grading_rules_data.dart';
+import 'learning/hadith/learning_hadith_mustalah_intro_data.dart';
+import 'learning/hadith/learning_hadith_nawawi_part1_data.dart';
+import 'learning/hadith/learning_hadith_nawawi_part2_data.dart';
 import 'learning/learning_taharah_data.dart';
 import 'learning/learning_zakah_data.dart';
 import 'learning/quran_sciences/learning_quran_sciences_data.dart';
@@ -19,9 +23,9 @@ import 'learning/quran_sciences/learning_quran_tafsir_mufassal_data.dart';
 import 'learning/quran_sciences/learning_quran_tafsir_rules_data.dart';
 import 'learning/quran_sciences/learning_quran_tajweed_data.dart';
 
-/// Comprehensive canonical learning and curriculum dataset (Phase 1, 2, and 3)
-/// Covers 3 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), and Quranic Sciences & Tafsir
-/// Includes 17 learning paths, 14 advanced courses, 28 modules, 87 in-depth lessons, and 44 quizzes (§31..§35).
+/// Comprehensive canonical learning and curriculum dataset (Phases 1, 2, 3, and 4)
+/// Covers 4 major tracks: Fiqh of Worship, Islamic Creed (Aqidah), Quranic Sciences & Tafsir, and Hadith Sciences & Forty Hadith
+/// Includes 22 learning paths, 18 advanced courses, 36 modules, 118 in-depth lessons, and 56 quizzes (§31..§35).
 class CanonicalLearningData {
   static CanonicalLearningPackage getPackage() {
     // -------------------------------------------------------------------------
@@ -218,10 +222,70 @@ class CanonicalLearningData {
       estimatedHours: 5,
     );
 
+    // --- D. مسارات علوم الحديث ومصطلحه وشرح الأربعين النووية ---
+    final pathHadithComprehensive = lp.LearningPath.create(
+      pathId: 'path_hadith_sciences_comprehensive',
+      title: 'مسار علوم الحديث النبوي ومصطلحه وشرح الأربعين النووية التأصيلي',
+      description: 'مسار منهجي موسوعي تأصيلي يغطي حجية السنة وتاريخ التدوين ومناهج الكتب الستة، وقواعد التصنيف والجرح والتعديل والوضع، مع الشرح التأصيلي والتربوي الموسع لمتن الأربعين النووية (الأحاديث 1 إلى 42 كاملة).',
+      category: 'علوم الحديث النبوي',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [
+        LearningHadithMustalahIntroData.courseId,
+        LearningHadithGradingRulesData.courseId,
+        LearningHadithNawawiPart1Data.courseId,
+        LearningHadithNawawiPart2Data.courseId,
+      ],
+      estimatedHours: 30,
+    );
+
+    final pathHadithMustalah = lp.LearningPath.create(
+      pathId: 'path_hadith_mustalah',
+      title: 'مسار مبادئ علم مصطلح الحديث وتاريخ التدوين',
+      description: 'دراسة تأصيلية في حجية السنة، ومصطلحات السند والمتن، ومراحل تدوين الحديث، والكتب الستة، والحديث المتواتر والآحاد.',
+      category: 'علوم الحديث النبوي',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningHadithMustalahIntroData.courseId],
+      estimatedHours: 6,
+    );
+
+    final pathHadithGrading = lp.LearningPath.create(
+      pathId: 'path_hadith_grading',
+      title: 'مسار قواعد تصنيف الحديث وقبوله ورده وعلم الجرح والتعديل',
+      description: 'دراسة متخصصة في شروط الحديث الصحيح والحسن، والسقط في الإسناد، والطعن في الراوي، والأحاديث الموضوعة، وضوابط الجرح والتعديل.',
+      category: 'علوم الحديث النبوي',
+      level: lp.LearningLevel.intermediate,
+      courseIds: const [LearningHadithGradingRulesData.courseId],
+      estimatedHours: 8,
+    );
+
+    final pathHadithNawawiFull = lp.LearningPath.create(
+      pathId: 'path_hadith_nawawi_full',
+      title: 'مسار الشرح التأصيلي الموسع للأربعين النووية كاملة',
+      description: 'الشرح التحليلي والفقهي والتربوي الشامل لمتن الأربعين النووية (42 حديثاً نبوياً) التي تدور عليها كليات وقواعد الإسلام وأصول الإيمان والسلوك.',
+      category: 'السنة والحديث الشريف',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [
+        LearningHadithNawawiPart1Data.courseId,
+        LearningHadithNawawiPart2Data.courseId,
+      ],
+      estimatedHours: 16,
+    );
+
+    final pathHadithNawawiPart1 = lp.LearningPath.create(
+      pathId: 'path_hadith_nawawi_part1',
+      title: 'مسار الأربعين النووية (الجزء الأول: الأحاديث 1 إلى 21)',
+      description: 'دراسة الأحاديث 1 إلى 21 من الأربعين النووية: أصول النيات، حديث جبريل في مراتب الدين، حفظ الشريعة، الورع، ومحاسن الأخلاق.',
+      category: 'السنة والحديث الشريف',
+      level: lp.LearningLevel.beginner,
+      courseIds: const [LearningHadithNawawiPart1Data.courseId],
+      estimatedHours: 8,
+    );
+
     final paths = [
       pathFiqhComprehensive,
       pathAqidahComprehensive,
       pathQuranComprehensive,
+      pathHadithComprehensive,
       pathTaharah,
       pathSalah,
       pathZakah,
@@ -236,6 +300,10 @@ class CanonicalLearningData {
       pathQuranSciences,
       pathQuranTafsirRules,
       pathQuranTafsirMufassal,
+      pathHadithMustalah,
+      pathHadithGrading,
+      pathHadithNawawiFull,
+      pathHadithNawawiPart1,
     ];
 
     // -------------------------------------------------------------------------
@@ -259,10 +327,15 @@ class CanonicalLearningData {
       LearningQuranSciencesData.getCourse(),
       LearningQuranTafsirRulesData.getCourse(),
       LearningQuranTafsirMufassalData.getCourse(),
+      // Hadith Sciences & Forty Hadith Courses (4)
+      LearningHadithMustalahIntroData.getCourse(),
+      LearningHadithGradingRulesData.getCourse(),
+      LearningHadithNawawiPart1Data.getCourse(),
+      LearningHadithNawawiPart2Data.getCourse(),
     ];
 
     // -------------------------------------------------------------------------
-    // 3. Modules (28 Core Modules)
+    // 3. Modules (36 Core Modules)
     // -------------------------------------------------------------------------
     final List<CourseModule> modules = [
       // Fiqh of Worship Modules (10)
@@ -282,10 +355,15 @@ class CanonicalLearningData {
       ...LearningQuranSciencesData.getModules(),
       ...LearningQuranTafsirRulesData.getModules(),
       ...LearningQuranTafsirMufassalData.getModules(),
+      // Hadith Sciences & Forty Hadith Modules (8)
+      ...LearningHadithMustalahIntroData.getModules(),
+      ...LearningHadithGradingRulesData.getModules(),
+      ...LearningHadithNawawiPart1Data.getModules(),
+      ...LearningHadithNawawiPart2Data.getModules(),
     ];
 
     // -------------------------------------------------------------------------
-    // 4. Lessons (87 In-Depth Canonical Lessons)
+    // 4. Lessons (118 In-Depth Canonical Lessons)
     // -------------------------------------------------------------------------
     final List<Lesson> lessons = [
       // Fiqh of Worship Lessons (32)
@@ -305,10 +383,15 @@ class CanonicalLearningData {
       ...LearningQuranSciencesData.getLessons(),
       ...LearningQuranTafsirRulesData.getLessons(),
       ...LearningQuranTafsirMufassalData.getLessons(),
+      // Hadith Sciences & Forty Hadith Lessons (31)
+      ...LearningHadithMustalahIntroData.getLessons(),
+      ...LearningHadithGradingRulesData.getLessons(),
+      ...LearningHadithNawawiPart1Data.getLessons(),
+      ...LearningHadithNawawiPart2Data.getLessons(),
     ];
 
     // -------------------------------------------------------------------------
-    // 5. Quizzes (44 Formative Assessment Quizzes)
+    // 5. Quizzes (56 Formative Assessment Quizzes)
     // -------------------------------------------------------------------------
     final List<Quiz> quizzes = [
       // Fiqh of Worship Quizzes (17)
@@ -328,17 +411,22 @@ class CanonicalLearningData {
       ...LearningQuranSciencesData.getQuizzes(),
       ...LearningQuranTafsirRulesData.getQuizzes(),
       ...LearningQuranTafsirMufassalData.getQuizzes(),
+      // Hadith Sciences & Forty Hadith Quizzes (12)
+      ...LearningHadithMustalahIntroData.getQuizzes(),
+      ...LearningHadithGradingRulesData.getQuizzes(),
+      ...LearningHadithNawawiPart1Data.getQuizzes(),
+      ...LearningHadithNawawiPart2Data.getQuizzes(),
     ];
 
     return CanonicalLearningPackage.create(
-      packageId: 'pkg_learning_canonical_seed_v5',
+      packageId: 'pkg_learning_canonical_seed_v6',
       paths: paths,
       courses: courses,
       modules: modules,
       lessons: lessons,
       quizzes: quizzes,
       signerIdentity: 'siraj.learning.curriculum.board',
-      signature: 'sig_canonical_learning_v5_fiqh_aqidah_quran_verified',
+      signature: 'sig_canonical_learning_v6_fiqh_aqidah_quran_hadith_verified',
       publishedAt: DateTime.utc(2026, 9, 10),
     );
   }
