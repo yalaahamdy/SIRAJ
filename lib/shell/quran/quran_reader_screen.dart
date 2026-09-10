@@ -29,6 +29,7 @@ import 'widgets/reader_settings_sheet.dart';
 import 'widgets/surah_header_card.dart';
 import 'widgets/tafsir_bottom_sheet.dart';
 import 'widgets/word_by_word_sheet.dart';
+import 'widgets/surah_downloader_sheet.dart';
 import '../../modules/quran/recitation/domain/quran_recitation_target.dart';
 import '../../modules/quran/recitation/domain/quran_recitation_word.dart';
 import '../../modules/quran/recitation/domain/quran_recitation_session.dart';
@@ -1116,6 +1117,9 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
             true,
           );
         }
+        if (widget.isReviewMode) {
+          await widget.memorizationModule!.recordDailyReviewCompleted();
+        }
         SirajFeedbackAudioService.instance.playSuccess();
       }
 
@@ -1171,14 +1175,24 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
           'يشترط النظام إكمال تسميع المقطع كاملاً بنسبة إتقان 95% فأكثر ومساعدة لا تتجاوز 5% لاعتماد حفظ الآيات تلقائياً.\n'
           'يمكنك إعادة التسميع لإتمام المقطع كاملاً.';
     } else if (isPassed) {
-      dialogTitle = 'مبارك! أتقنت التسميع 🌟';
-      dialogIcon = Icons.stars_rounded;
-      dialogColor = AppColors.goldAccent;
-      dialogMessage =
-          'ما شاء الله! سمّعت الآيات المقررة غيباً بنسبة استحضار ذاتي بلغت ${masteryPercent.toStringAsFixed(1)}% '
-          '(استعنت بإظهار $revealedWords كلمة فقط من أصل $totalWords).\n\n'
-          'تم اعتماد وحفظ الآيات من ${target.startAyah} إلى ${target.endAyah} في سورة ${target.surahNameArabic} بنجاح، '
-          'وتم تحديث خطتك في لوحة التحفيظ.';
+      if (widget.isReviewMode) {
+        dialogTitle = 'مبارك! أتقنت تسميع مراجعة الماضي 🌟';
+        dialogIcon = Icons.verified_rounded;
+        dialogColor = Colors.green;
+        dialogMessage =
+            'ما شاء الله! سمّعت ورد مراجعة الماضي غيباً بنسبة استحضار ذاتي بلغت ${masteryPercent.toStringAsFixed(1)}% '
+            '(استعنت بإظهار $revealedWords كلمة فقط من أصل $totalWords).\n\n'
+            'تم تسجيل وتثبيت إتمام مراجعة الماضي لليوم بنجاح، وثبتت الآيات من ${target.startAyah} إلى ${target.endAyah} في سورة ${target.surahNameArabic}.';
+      } else {
+        dialogTitle = 'مبارك! أتقنت التسميع 🌟';
+        dialogIcon = Icons.stars_rounded;
+        dialogColor = AppColors.goldAccent;
+        dialogMessage =
+            'ما شاء الله! سمّعت الآيات المقررة غيباً بنسبة استحضار ذاتي بلغت ${masteryPercent.toStringAsFixed(1)}% '
+            '(استعنت بإظهار $revealedWords كلمة فقط من أصل $totalWords).\n\n'
+            'تم اعتماد وحفظ الآيات من ${target.startAyah} إلى ${target.endAyah} في سورة ${target.surahNameArabic} بنجاح، '
+            'وتم تحديث خطتك في لوحة التحفيظ.';
+      }
     } else {
       dialogTitle = 'محاولة طيبة وخطوة للإتقان 🌿';
       dialogIcon = Icons.info_outline_rounded;
@@ -1836,6 +1850,17 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
+                  icon: const Icon(Icons.download_for_offline_rounded, color: AppColors.goldAccent),
+                  tooltip: 'تحميل تلاوة هذه السورة أوفلاين',
+                  onPressed: () => SurahDownloaderSheet.show(
+                    context,
+                    quranModule: widget.quranModule,
+                    initialSurahNumber: _currentSurahNumber,
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   icon: const Icon(Icons.tune_rounded),
                   tooltip: 'خيارات القراءة والمصحف',
                   onPressed: _openReaderSettings,
@@ -1845,11 +1870,28 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                   icon: const Icon(Icons.more_vert_rounded),
                   tooltip: 'المزيد من الخيارات',
                   onSelected: (val) {
+                    if (val == 'download') {
+                      SurahDownloaderSheet.show(
+                        context,
+                        quranModule: widget.quranModule,
+                        initialSurahNumber: _currentSurahNumber,
+                      );
+                    }
                     if (val == 'jump') _showJumpToAyahDialog();
                     if (val == 'prev') _goToPreviousSurah();
                     if (val == 'next') _goToNextSurah();
                   },
                   itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'download',
+                      child: Row(
+                        children: [
+                          Icon(Icons.download_for_offline_rounded, size: 18, color: AppColors.goldAccent),
+                          SizedBox(width: 8),
+                          Text('تحميل تلاوة السورة أوفلاين'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'jump',
                       child: Text('الانتقال إلى آية'),

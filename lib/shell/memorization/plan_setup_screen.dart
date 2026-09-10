@@ -33,6 +33,7 @@ class PlanSetupScreen extends StatefulWidget {
 class _PlanSetupScreenState extends State<PlanSetupScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _dailyNewController = TextEditingController();
+  final TextEditingController _dailyReviewController = TextEditingController();
   final TextEditingController _startAyahController = TextEditingController();
   final TextEditingController _endAyahController = TextEditingController();
   PlanSelectionMode _selectionMode = PlanSelectionMode.byJuz;
@@ -64,6 +65,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
   void dispose() {
     _titleController.dispose();
     _dailyNewController.dispose();
+    _dailyReviewController.dispose();
     _startAyahController.dispose();
     _endAyahController.dispose();
     super.dispose();
@@ -82,6 +84,7 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     _dailyNew = plan.dailyNewAyahs > 0 ? plan.dailyNewAyahs : 5;
     _dailyNewController.text = '$_dailyNew';
     _dailyReview = plan.dailyReviewTarget > 0 ? plan.dailyReviewTarget : 20;
+    _dailyReviewController.text = '$_dailyReview';
 
     if (widget.initialTargetAyahKey != null) {
       final k = widget.initialTargetAyahKey!;
@@ -345,6 +348,10 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
 
                   // 3. Daily Target Picker
                   _buildDailyTargetPicker(isDark),
+                  const SizedBox(height: AppSpacing.m),
+
+                  // 3b. Daily Review Target Picker
+                  _buildDailyReviewPicker(isDark),
                   const SizedBox(height: AppSpacing.m),
 
                   // 4. Estimation Summary Card
@@ -795,6 +802,134 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
                       ),
                       const SizedBox(width: 10),
                       const Text('آية / يومياً', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDailyReviewPicker(bool isDark) {
+    final targets = [10, 20, 30, 40, 50];
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.m),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('المستهدف اليومي لمراجعة الماضي:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('$_dailyReview آيات / يومياً', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.goldAccent, fontSize: 13)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'الالتزام اليومي بتسميع ومراجعة المحفوظات السابقة لتثبيت حفظك وتفادي النسيان.',
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: targets.map((t) {
+                final isSel = _dailyReview == t;
+                return ChoiceChip(
+                  label: Text('$t آية', style: TextStyle(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                  selected: isSel,
+                  selectedColor: AppColors.goldAccent,
+                  labelStyle: TextStyle(
+                    color: isSel ? Colors.black87 : (isDark ? Colors.white70 : Colors.black87),
+                    fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  backgroundColor: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
+                  side: BorderSide(color: isSel ? AppColors.goldAccent : (isDark ? Colors.white12 : Colors.grey.shade300)),
+                  onSelected: (_) {
+                    setState(() {
+                      _dailyReview = t;
+                      _dailyReviewController.text = '$t';
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('أو حدد عدد آيات المراجعة بدقة:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline_rounded, size: 26),
+                        color: AppColors.goldAccent,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'إنقاص آية',
+                        onPressed: () {
+                          if (_dailyReview > 1) {
+                            setState(() {
+                              _dailyReview--;
+                              _dailyReviewController.text = '$_dailyReview';
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 14),
+                      SizedBox(
+                        width: 64,
+                        height: 38,
+                        child: TextFormField(
+                          controller: _dailyReviewController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          onChanged: (val) {
+                            final parsed = int.tryParse(val);
+                            if (parsed != null && parsed > 0) {
+                              setState(() {
+                                _dailyReview = parsed;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline_rounded, size: 26),
+                        color: AppColors.goldAccent,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'زيادة آية',
+                        onPressed: () {
+                          setState(() {
+                            _dailyReview++;
+                            _dailyReviewController.text = '$_dailyReview';
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('آية / مراجعة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
                     ],
                   ),
                 ],

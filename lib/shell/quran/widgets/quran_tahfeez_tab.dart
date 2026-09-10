@@ -8,6 +8,7 @@ import '../../../../modules/quran/domain/ayah_key.dart';
 import '../../../../modules/quran/quran_module.dart';
 import '../../memorization/plan_setup_screen.dart';
 import '../quran_reader_screen.dart';
+import 'surah_downloader_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/state_views.dart';
@@ -36,11 +37,15 @@ class QuranTahfeezTab extends StatefulWidget {
 class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
   MemorizationPlan? _plan;
   List<Ayah> _todayWirdAyahs = [];
+  List<Ayah> _todayReviewAyahs = [];
+  bool _isReviewCompletedToday = false;
   List<TahfeezSurahSummary> _surahsSummary = [];
   final Set<AyahKey> _memorizedKeys = {};
   bool _isLoading = true;
   int? _customWirdCount;
   final TextEditingController _customCountController = TextEditingController();
+  int? _customReviewCount;
+  final TextEditingController _customReviewCountController = TextEditingController();
   int _selectedReviewSurahNumber = 0;
 
   @override
@@ -52,6 +57,7 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
   @override
   void dispose() {
     _customCountController.dispose();
+    _customReviewCountController.dispose();
     super.dispose();
   }
 
@@ -67,6 +73,11 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
       plan,
       customTargetAyahs: _customWirdCount,
     );
+    final reviewWirdRes = await widget.memorizationModule.getTodayReviewAyahs(
+      plan,
+      customTargetAyahs: _customReviewCount,
+    );
+    final isRevDoneRes = await widget.memorizationModule.isDailyReviewCompletedToday();
     final summaryRes = await widget.memorizationModule.getPlanSurahsSummary(plan);
     final itemsRes = await widget.memorizationModule.getAllItems();
 
@@ -81,10 +92,18 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
       _customCountController.text = '$_customWirdCount';
     }
 
+    final loadedReviewWird = reviewWirdRes.valueOrNull ?? [];
+    if (_customReviewCount == null || _customReviewCount! <= 0) {
+      _customReviewCount = loadedReviewWird.isNotEmpty ? loadedReviewWird.length : plan.dailyReviewTarget;
+      _customReviewCountController.text = '$_customReviewCount';
+    }
+
     if (mounted) {
       setState(() {
         _plan = plan;
         _todayWirdAyahs = loadedWird;
+        _todayReviewAyahs = loadedReviewWird;
+        _isReviewCompletedToday = isRevDoneRes.valueOrNull ?? false;
         _surahsSummary = summaryRes.valueOrNull ?? [];
         _memorizedKeys
           ..clear()
@@ -109,6 +128,21 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
     }
   }
 
+  Future<void> _updateCustomReviewCount(int count) async {
+    if (_plan == null) return;
+    final revRes = await widget.memorizationModule.getTodayReviewAyahs(
+      _plan!,
+      customTargetAyahs: count,
+    );
+    if (mounted && revRes.isSuccess) {
+      setState(() {
+        _customReviewCount = count;
+        _customReviewCountController.text = '$count';
+        _todayReviewAyahs = revRes.valueOrNull ?? [];
+      });
+    }
+  }
+
   String _getSurahName(int surahNumber) {
     final s = _surahsSummary.where((e) => e.surahNumber == surahNumber).firstOrNull;
     if (s != null) return s.surahNameArabic;
@@ -125,6 +159,7 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
           onSaved: () {
             Navigator.pop(ctx);
             _customWirdCount = null; // Adopt the new plan daily target immediately
+            _customReviewCount = null; // Adopt the new plan review target immediately
             _loadTahfeezData();
           },
         ),
@@ -640,7 +675,6 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
   }
 
   Widget _buildPastReviewCard(bool isDark) {
-    // Find past memorized surah / passage
     final memorizedSurahs = _surahsSummary.where((s) => s.memorizedAyahsCount > 0).toList();
     if (memorizedSurahs.isEmpty) {
       return const SizedBox.shrink();
@@ -656,100 +690,356 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
       orElse: () => memorizedSurahs.first,
     );
 
+    final totalReviewAyahs = _todayReviewAyahs.length;
+    final hasReviewWird = _todayReviewAyahs.isNotEmpty;
+
+    // Group review wird ayahs by surah
+    final Map<int, List<Ayah>> reviewSurahGroups = {};
+    for (final a in _todayReviewAyahs) {
+      reviewSurahGroups.putIfAbsent(a.surahNumber, () => []).add(a);
+    }
+
+    final firstReviewAyah = hasReviewWird ? _todayReviewAyahs.first : null;
+    final lastReviewAyah = hasReviewWird ? _todayReviewAyahs.last : null;
+
+    final String reviewWirdTitle;
+    if (!hasReviewWird) {
+      reviewWirdTitle = 'لا يوجد ورد ماضٍ محدد بعد';
+    } else if (reviewSurahGroups.length == 1) {
+      final sNum = reviewSurahGroups.keys.first;
+      reviewWirdTitle = 'سورة ${_getSurahName(sNum)} — من الآية ${firstReviewAyah!.ayahNumber} إلى الآية ${lastReviewAyah!.ayahNumber}';
+    } else {
+      reviewWirdTitle = 'من سورة ${_getSurahName(firstReviewAyah!.surahNumber)} (${firstReviewAyah.ayahNumber}) إلى سورة ${_getSurahName(lastReviewAyah!.surahNumber)} (${lastReviewAyah.ayahNumber})';
+    }
+
+    // Target surah group for the main recitation button
+    final firstReviewGroup = reviewSurahGroups.entries.firstOrNull;
+
     return Card(
-      elevation: 1,
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.goldAccent.withValues(alpha: 0.3)),
+        side: BorderSide(
+          color: _isReviewCompletedToday
+              ? Colors.green.withValues(alpha: 0.4)
+              : AppColors.goldAccent.withValues(alpha: 0.5),
+        ),
       ),
-      color: isDark ? AppColors.surfaceDark : Colors.amber.withValues(alpha: 0.04),
+      color: isDark ? AppColors.surfaceDark : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Status Header Row
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.goldAccent.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _isReviewCompletedToday
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : AppColors.goldAccent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isReviewCompletedToday ? Icons.verified_rounded : Icons.history_edu_rounded,
+                          color: _isReviewCompletedToday ? Colors.green : AppColors.goldAccent,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _isReviewCompletedToday
+                                  ? 'تم تسميع ورد الماضي لليوم ✅'
+                                  : 'ورد مراجعة الماضي (مطلوب التسميع 🎙️)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: _isReviewCompletedToday ? Colors.green : (isDark ? Colors.amber[300] : const Color(0xFF8B6508)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Icon(Icons.history_edu_rounded, color: AppColors.goldAccent, size: 18),
                 ),
-                const SizedBox(width: 8),
-                const Expanded(
+                const SizedBox(width: 6),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
                   child: Text(
-                    'مراجعة وتثبيت الماضي (التسميع الغيبي)',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.goldAccent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '$totalMemAyahs آية محفوظة',
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.goldAccent),
+                    hasReviewWird
+                        ? (reviewSurahGroups.length > 1
+                            ? '$totalReviewAyahs آية (${reviewSurahGroups.length} سُوَر)'
+                            : '$totalReviewAyahs آية مراجعة')
+                        : '$totalMemAyahs آية محفوظة',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
-              memorizedSurahs.length > 1
-                  ? 'المحفوظات: ${memorizedSurahs.length} سُوَر — من سورة ${memorizedSurahs.first.surahNameArabic} إلى سورة ${memorizedSurahs.last.surahNameArabic}'
-                  : 'المحفوظات: سورة ${memorizedSurahs.first.surahNameArabic} ($totalMemAyahs آية)',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              reviewWirdTitle,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: memorizedSurahs.map((s) {
-                final isSelected = s.surahNumber == _selectedReviewSurahNumber;
-                return ChoiceChip(
-                  label: Text('سورة ${s.surahNameArabic} (${s.memorizedAyahsCount})'),
-                  selected: isSelected,
-                  selectedColor: AppColors.goldAccent.withValues(alpha: 0.25),
-                  backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
-                  labelStyle: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected
-                        ? (isDark ? Colors.amber[300] : const Color(0xFF8B6508))
-                        : (isDark ? Colors.white70 : Colors.black87),
+            if (firstReviewAyah != null) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.black26 : Colors.amber.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.goldAccent.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  '« ${firstReviewAyah.textUthmani} ... »',
+                  style: const TextStyle(
+                    fontFamily: 'Amiri',
+                    fontSize: 14,
+                    height: 1.6,
                   ),
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _selectedReviewSurahNumber = s.surahNumber);
-                    }
-                  },
-                );
-              }).toList(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+            if (reviewSurahGroups.length > 1) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: reviewSurahGroups.entries.map((entry) {
+                  final sNum = entry.key;
+                  final aList = entry.value;
+                  final sName = _getSurahName(sNum);
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _openReaderForMemorization(
+                      sNum,
+                      aList.first.ayahNumber,
+                      aList.last.ayahNumber,
+                      isReview: true,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _isReviewCompletedToday
+                            ? Colors.green.withValues(alpha: 0.12)
+                            : AppColors.goldAccent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _isReviewCompletedToday
+                              ? Colors.green.withValues(alpha: 0.4)
+                              : AppColors.goldAccent.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isReviewCompletedToday ? Icons.check_circle_rounded : Icons.mic_none_rounded,
+                            size: 13,
+                            color: _isReviewCompletedToday ? Colors.green : AppColors.goldAccent,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$sName (${aList.first.ayahNumber}-${aList.last.ayahNumber})',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _isReviewCompletedToday ? Colors.green : (isDark ? Colors.amber[300] : const Color(0xFF8B6508)),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '• ${aList.length}',
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+            const SizedBox(height: 12),
+
+            // Daily Past Review Count Adjuster
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      const Text(
+                        'حدد عدد آيات ورد الماضي بحرية:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'المقرر لليوم: $totalReviewAyahs آية من أصل $totalMemAyahs',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.goldAccent),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline_rounded, size: 24),
+                            color: AppColors.goldAccent,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'إنقاص آية',
+                            onPressed: () {
+                              if (totalReviewAyahs > 1) {
+                                _updateCustomReviewCount(totalReviewAyahs - 1);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 60,
+                            height: 36,
+                            child: TextFormField(
+                              controller: _customReviewCountController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                              ),
+                              onFieldSubmitted: (val) {
+                                final parsed = int.tryParse(val);
+                                if (parsed != null && parsed > 0) {
+                                  _updateCustomReviewCount(parsed);
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline_rounded, size: 24),
+                            color: AppColors.goldAccent,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'زيادة آية',
+                            onPressed: () {
+                              if (totalReviewAyahs < totalMemAyahs) {
+                                _updateCustomReviewCount(totalReviewAyahs + 1);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('آيات', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.goldAccent.withValues(alpha: 0.8)),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+
+            // Big Action Button for Past Review Recitation
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: _isReviewCompletedToday ? const Color(0xFF2E7D32) : AppColors.goldAccent,
+                foregroundColor: _isReviewCompletedToday ? Colors.white : Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              icon: const Icon(Icons.mic_rounded, size: 16, color: AppColors.goldAccent),
+              icon: Icon(_isReviewCompletedToday ? Icons.refresh_rounded : Icons.mic_rounded, size: 18),
               label: Text(
-                'تسميع سورة ${currentReviewSurah.surahNameArabic} غيباً في المصحف (الآيات 1 - ${currentReviewSurah.memorizedAyahsCount}) 🎙️',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.goldAccent),
+                _isReviewCompletedToday
+                    ? 'إعادة تسميع ورد الماضي في المصحف 🔄'
+                    : (firstReviewGroup != null
+                        ? 'ابدأ تسميع ورد الماضي (${_getSurahName(firstReviewGroup.key)} ${firstReviewGroup.value.first.ayahNumber}-${firstReviewGroup.value.last.ayahNumber}) 🎙️'
+                        : 'ابدأ تسميع مراجعة الماضي 🎙️'),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
-              onPressed: () => _openReaderForMemorization(
-                currentReviewSurah.surahNumber,
-                1,
-                currentReviewSurah.memorizedAyahsCount,
-                isReview: true,
-              ),
+              onPressed: () {
+                if (firstReviewGroup != null) {
+                  _openReaderForMemorization(
+                    firstReviewGroup.key,
+                    firstReviewGroup.value.first.ayahNumber,
+                    firstReviewGroup.value.last.ayahNumber,
+                    isReview: true,
+                  );
+                } else {
+                  _openReaderForMemorization(
+                    currentReviewSurah.surahNumber,
+                    1,
+                    currentReviewSurah.memorizedAyahsCount,
+                    isReview: true,
+                  );
+                }
+              },
             ),
+
+            // Individual Surah Choice Chips
+            if (memorizedSurahs.length > 1) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'أو اختر سورة معينة لتسميعها بشكل مستقل:',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: memorizedSurahs.map((s) {
+                  final isSelected = s.surahNumber == _selectedReviewSurahNumber;
+                  return ChoiceChip(
+                    label: Text('سورة ${s.surahNameArabic} (${s.memorizedAyahsCount})'),
+                    selected: isSelected,
+                    selectedColor: AppColors.goldAccent.withValues(alpha: 0.25),
+                    backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
+                    labelStyle: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? (isDark ? Colors.amber[300] : const Color(0xFF8B6508))
+                          : (isDark ? Colors.white70 : Colors.black87),
+                    ),
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() => _selectedReviewSurahNumber = s.surahNumber);
+                        _openReaderForMemorization(
+                          s.surahNumber,
+                          1,
+                          s.memorizedAyahsCount,
+                          isReview: true,
+                        );
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
       ),
@@ -831,6 +1121,16 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.download_for_offline_rounded, color: AppColors.goldAccent, size: 18),
+                      tooltip: 'تحميل تلاوة سورة ${surah.surahNameArabic}',
+                      onPressed: () => SurahDownloaderSheet.show(
+                        context,
+                        quranModule: widget.quranModule,
+                        initialSurahNumber: surah.surahNumber,
+                      ),
+                    ),
                     if (surah.memorizedAyahsCount > 0)
                       IconButton(
                         visualDensity: VisualDensity.compact,

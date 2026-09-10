@@ -5,13 +5,13 @@ import '../../../../modules/quran/domain/quran_bookmark.dart';
 import '../../../../modules/quran/domain/quran_reader_modes.dart';
 import '../../../../modules/quran/domain/quran_reciter.dart';
 import '../../../../modules/quran/domain/quran_translation.dart';
-import '../../../../modules/quran/domain/surah.dart';
 import '../../../../modules/quran/quran_module.dart';
 import '../../../../modules/quran/services/quran_typography_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../controllers/quran_reader_settings_controller.dart';
 import 'zip_import_progress_dialog.dart';
+import 'surah_downloader_sheet.dart';
 
 /// Comprehensive Quran Settings & Customization Tab (§10..§16, §20..§25).
 /// Enables users to customize:
@@ -42,7 +42,6 @@ class QuranSettingsTab extends StatefulWidget {
 class _QuranSettingsTabState extends State<QuranSettingsTab> {
   late QuranReaderSettingsController _settingsController;
   List<QuranBookmark> _bookmarks = [];
-  List<Surah> _surahs = [];
   bool _isLoadingBookmarks = true;
   int _downloadedFilesCount = 0;
 
@@ -53,7 +52,6 @@ class _QuranSettingsTabState extends State<QuranSettingsTab> {
       store: widget.quranModule.userDataService.store,
     );
     _settingsController.addListener(_handleSettingsUpdate);
-    _surahs = widget.quranModule.getAllSurahs().valueOrNull ?? [];
     _loadBookmarks();
     _refreshOfflineAudioStatus();
   }
@@ -134,18 +132,13 @@ class _QuranSettingsTabState extends State<QuranSettingsTab> {
   }
 
   void _showDownloadSurahsSheet(QuranReciter reciter) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _SurahDownloaderSheet(
-        quranModule: widget.quranModule,
-        reciter: reciter,
-        surahs: _surahs,
-        onDownloadCompleted: () {
-          _refreshOfflineAudioStatus();
-        },
-      ),
+    SurahDownloaderSheet.show(
+      context,
+      quranModule: widget.quranModule,
+      reciter: reciter,
+      onDownloadCompleted: () {
+        _refreshOfflineAudioStatus();
+      },
     );
   }
 
@@ -734,218 +727,3 @@ class _QuranSettingsTabState extends State<QuranSettingsTab> {
   }
 }
 
-/// Modal Sheet allowing the user to download individual Surahs on-demand for offline listening.
-class _SurahDownloaderSheet extends StatefulWidget {
-  final QuranModule quranModule;
-  final QuranReciter reciter;
-  final List<Surah> surahs;
-  final VoidCallback onDownloadCompleted;
-
-  const _SurahDownloaderSheet({
-    required this.quranModule,
-    required this.reciter,
-    required this.surahs,
-    required this.onDownloadCompleted,
-  });
-
-  @override
-  State<_SurahDownloaderSheet> createState() => _SurahDownloaderSheetState();
-}
-
-class _SurahDownloaderSheetState extends State<_SurahDownloaderSheet> {
-  final Map<int, bool> _downloadedMap = {};
-  int? _activeDownloadingSurah;
-  int _downloadedAyahsInCurrentSurah = 0;
-  int _totalAyahsInCurrentSurah = 0;
-  bool _isCancelled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkStatus();
-  }
-
-  Future<void> _checkStatus() async {
-    for (final surah in widget.surahs) {
-      final isDone = await widget.quranModule.offlineAudioService.isSurahDownloaded(
-        widget.reciter.id,
-        surah.number,
-        surah.ayahCount,
-      );
-      if (mounted) {
-        setState(() {
-          _downloadedMap[surah.number] = isDone;
-        });
-      }
-    }
-  }
-
-  Future<void> _startDownload(Surah surah) async {
-    setState(() {
-      _activeDownloadingSurah = surah.number;
-      _downloadedAyahsInCurrentSurah = 0;
-      _totalAyahsInCurrentSurah = surah.ayahCount;
-      _isCancelled = false;
-    });
-
-    await widget.quranModule.offlineAudioService.downloadSurahAudio(
-      reciter: widget.reciter,
-      surahNumber: surah.number,
-      ayahCount: surah.ayahCount,
-      onProgress: (current, total) {
-        if (mounted) {
-          setState(() {
-            _downloadedAyahsInCurrentSurah = current;
-            _totalAyahsInCurrentSurah = total;
-          });
-        }
-      },
-      onError: (err) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(err), backgroundColor: AppColors.error),
-          );
-        }
-      },
-      isCancelled: () => _isCancelled,
-    );
-
-    if (mounted) {
-      final isDone = await widget.quranModule.offlineAudioService.isSurahDownloaded(
-        widget.reciter.id,
-        surah.number,
-        surah.ayahCount,
-      );
-
-      setState(() {
-        _downloadedMap[surah.number] = isDone;
-        _activeDownloadingSurah = null;
-      });
-
-      widget.onDownloadCompleted();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1B2129) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          // Drag Handle
-          Container(
-            width: 36,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          // Title Row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.download_for_offline_rounded, color: AppColors.goldAccent),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('تحميل سور كاملة بدون إنترنت', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                      Text('القارئ: ${widget.reciter.nameArabic}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () {
-                    _isCancelled = true;
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-
-          // Surahs List
-          Expanded(
-            child: ListView.separated(
-              itemCount: widget.surahs.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final surah = widget.surahs[index];
-                final isDownloaded = _downloadedMap[surah.number] == true;
-                final isCurrentDownloading = _activeDownloadingSurah == surah.number;
-
-                return ListTile(
-                  dense: true,
-                  leading: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: isDownloaded ? AppColors.goldAccent : Colors.grey.withValues(alpha: 0.2),
-                    foregroundColor: isDownloaded ? Colors.black : null,
-                    child: Text('${surah.number}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                  title: Text('سورة ${surah.nameArabic}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  subtitle: isCurrentDownloading
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'جارٍ التحميل: آية $_downloadedAyahsInCurrentSurah من $_totalAyahsInCurrentSurah',
-                              style: const TextStyle(fontSize: 10, color: AppColors.goldAccent),
-                            ),
-                            const SizedBox(height: 4),
-                            LinearProgressIndicator(
-                              value: _totalAyahsInCurrentSurah > 0
-                                  ? _downloadedAyahsInCurrentSurah / _totalAyahsInCurrentSurah
-                                  : 0,
-                              color: AppColors.goldAccent,
-                              minHeight: 3,
-                            ),
-                          ],
-                        )
-                      : Text(
-                          '${surah.nameEnglish} • ${surah.ayahCount} آية',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                  trailing: isDownloaded
-                      ? const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
-                            SizedBox(width: 4),
-                            Text('محمّلة', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold)),
-                          ],
-                        )
-                      : (isCurrentDownloading
-                          ? IconButton(
-                              icon: const Icon(Icons.cancel_rounded, color: AppColors.error, size: 20),
-                              tooltip: 'إلغاء التحميل',
-                              onPressed: () {
-                                setState(() => _isCancelled = true);
-                              },
-                            )
-                          : IconButton(
-                              icon: const Icon(Icons.download_rounded, color: AppColors.goldAccent, size: 20),
-                              tooltip: 'تحميل السورة',
-                              onPressed: _activeDownloadingSurah != null ? null : () => _startDownload(surah),
-                            )),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

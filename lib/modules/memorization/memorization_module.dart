@@ -335,6 +335,43 @@ class MemorizationModule {
     return Result.ok(revision);
   }
 
+  /// Evaluates whether today's past review recitation has been completed.
+  Future<Result<bool, Failure>> isDailyReviewCompletedToday() => dataStore.isDailyReviewCompletedToday();
+
+  /// Records that today's past review session was completed.
+  Future<Result<bool, Failure>> recordDailyReviewCompleted() => dataStore.recordDailyReviewCompleted();
+
+  /// Retrieves today's past review Ayahs from the user's memorized collection.
+  /// Applies target quota and boundary inclusion rules (ضم خواتيم السور تلقائياً).
+  Future<Result<List<Ayah>, Failure>> getTodayReviewAyahs(
+    MemorizationPlan plan, {
+    int? customTargetAyahs,
+  }) async {
+    final allPlanAyahsRes = getPlanAyahs(plan);
+    if (allPlanAyahsRes.isFailure) return Result.err(allPlanAyahsRes.failureOrNull!);
+
+    final allPlanAyahs = allPlanAyahsRes.valueOrNull ?? [];
+    if (allPlanAyahs.isEmpty) return Result.ok(const []);
+
+    final itemsRes = await dataStore.getItems();
+    final memorizedKeys = (itemsRes.valueOrNull ?? [])
+        .where((i) => i.state == MemorizationState.mastered)
+        .map((i) => i.ayahKey)
+        .toSet();
+
+    final memorizedAyahs = allPlanAyahs.where((a) => memorizedKeys.contains(a.key)).toList();
+    if (memorizedAyahs.isEmpty) {
+      return Result.ok(const []);
+    }
+
+    final targetCount = (customTargetAyahs != null && customTargetAyahs > 0)
+        ? customTargetAyahs
+        : plan.dailyReviewTarget;
+
+    final reviewWird = _applyWirdBoundaryRules(memorizedAyahs, targetCount);
+    return Result.ok(reviewWird);
+  }
+
   /// Takes [targetCount] Ayahs from [availableAyahs] and, if 3 or fewer Ayahs remain
   /// in the final surah reached by the wird, automatically appends them so the user
   /// completes the surah instead of leaving a small remainder for the next session.

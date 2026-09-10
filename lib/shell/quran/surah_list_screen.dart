@@ -10,6 +10,7 @@ import '../widgets/state_views.dart';
 import '../../../modules/memorization/memorization_module.dart';
 import 'widgets/quran_settings_tab.dart';
 import 'widgets/quran_tahfeez_tab.dart';
+import 'widgets/surah_downloader_sheet.dart';
 
 /// Screen displaying the 114 Surahs, 30 Juzs, Quran memorization & review hub, settings & audio studio, and search (§3..§10, §20..§35, §50..§55).
 class SurahListScreen extends StatefulWidget {
@@ -102,6 +103,18 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
       appBar: AppBar(
         title: const Text('القرآن الكريم'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download_for_offline_rounded, color: AppColors.goldAccent),
+            tooltip: 'تحميل تلاوات السور بدون إنترنت',
+            onPressed: () => SurahDownloaderSheet.show(
+              context,
+              quranModule: widget.quranModule,
+              onDownloadCompleted: _loadAllData,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: MediaQuery.withClampedTextScaling(
@@ -250,9 +263,28 @@ class _SurahListScreenState extends State<SurahListScreen> with SingleTickerProv
               '${surah.nameEnglish} • ${surah.revelationType.nameArabic} • ${surah.ayahCount} آيات',
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            trailing: Text(
-              'ص ${surah.startPage}',
-              style: TextStyle(fontSize: 12, color: isDark ? AppColors.goldAccent : AppColors.primaryLight),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'ص ${surah.startPage}',
+                  style: TextStyle(fontSize: 12, color: isDark ? AppColors.goldAccent : AppColors.primaryLight),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.download_for_offline_rounded, size: 20),
+                  color: isDark ? AppColors.goldAccent : AppColors.primary,
+                  tooltip: 'تحميل تلاوة سورة ${surah.nameArabic}',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => SurahDownloaderSheet.show(
+                    context,
+                    quranModule: widget.quranModule,
+                    initialSurahNumber: surah.number,
+                    onDownloadCompleted: _loadAllData,
+                  ),
+                ),
+              ],
             ),
             onTap: () => widget.onOpenSurah(surah.number, targetPage: surah.startPage),
           );

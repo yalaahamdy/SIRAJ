@@ -21,6 +21,7 @@ class MemorizationUserDataStore {
   static const String _keyHistory = 'review_history';
   static const String _keyActiveSession = 'active_session';
   static const String _keyLastCompletedDate = 'last_completed_session_date';
+  static const String _keyLastCompletedReviewDate = 'last_completed_review_date';
   static const String _keyStreakCount = 'consistency_streak_count';
 
   MemorizationUserDataStore({
@@ -193,15 +194,43 @@ class MemorizationUserDataStore {
     return Result.ok(res.valueOrNull ?? 0);
   }
 
+  /// Evaluates whether today's past review session has been completed.
+  Future<Result<bool, Failure>> isDailyReviewCompletedToday() async {
+    final res = await _store.getString(_keyLastCompletedReviewDate);
+    if (res.isFailure) return Result.err(res.failureOrNull!);
+    final str = res.valueOrNull;
+    if (str == null) return Result.ok(false);
+
+    final now = _clock.nowUtc();
+    final todayMidnight = DateTime.utc(now.year, now.month, now.day);
+    try {
+      final lastDate = DateTime.parse(str);
+      final lastMidnight = DateTime.utc(lastDate.year, lastDate.month, lastDate.day);
+      return Result.ok(lastMidnight.isAtSameMomentAs(todayMidnight));
+    } catch (_) {
+      return Result.ok(false);
+    }
+  }
+
+  /// Records that today's past review session was completed.
+  Future<Result<bool, Failure>> recordDailyReviewCompleted() async {
+    final now = _clock.nowUtc();
+    final todayMidnight = DateTime.utc(now.year, now.month, now.day);
+    final res = await _store.setString(_keyLastCompletedReviewDate, todayMidnight.toIso8601String());
+    if (res.isFailure) return Result.err(res.failureOrNull!);
+    return Result.ok(true);
+  }
+
   /// Executes a safe reset of all user memorization data (§27).
   Future<Result<bool, Failure>> resetAllData() async {
     final r1 = await _store.remove(_keyItems);
     final r2 = await _store.remove(_keyHistory);
     final r3 = await _store.remove(_keyActiveSession);
     final r4 = await _store.remove(_keyLastCompletedDate);
-    final r5 = await _store.remove(_keyStreakCount);
+    final r5 = await _store.remove(_keyLastCompletedReviewDate);
+    final r6 = await _store.remove(_keyStreakCount);
 
-    if (r1.isFailure || r2.isFailure || r3.isFailure || r4.isFailure || r5.isFailure) {
+    if (r1.isFailure || r2.isFailure || r3.isFailure || r4.isFailure || r5.isFailure || r6.isFailure) {
       return Result.err(const StorageFailure(message: 'Failed to reset all memorization data'));
     }
     return Result.ok(true);
