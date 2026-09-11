@@ -586,6 +586,31 @@ class _AthanSettingsScreenState extends State<AthanSettingsScreen> {
                       label: Text(_isRescheduling ? 'جارٍ تحديث الجدولة...' : 'تحديث وإعادة جدولة الـ 14 يوماً الآن'),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        await SirajNotificationManager.instance.scheduleQuickTestNotification(seconds: 5);
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('تمت جدولة إشعار تجريبي بعد 5 ثوانٍ! اخرج من التطبيق أو أقفل الشاشة لتجربته الآن 🔔'),
+                            duration: Duration(seconds: 4),
+                            backgroundColor: AppColors.primary,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.notifications_active_rounded, color: Colors.white),
+                      label: const Text('اختبار إشعار خارجي بعد 5 ثوانٍ (تجربة بالخلفية)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

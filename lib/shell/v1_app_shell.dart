@@ -177,16 +177,14 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
     AppRouter.defaultSeerahModule = _seerahModule;
     AppRouter.defaultHajjModule = _hajjModule;
 
-    // Automatic background scheduling of Athan & daily prayers for today and tomorrow
-    _scheduleBackgroundPrayerAlarms();
-    _locationEngine.locationStream.listen((newLoc) {
-      _scheduleBackgroundPrayerAlarms(location: newLoc);
-    });
-
     // Register app lifecycle observer & notification wiring
     WidgetsBinding.instance.addObserver(this);
     _initNotificationListeners();
     _initMediaNotificationSync();
+
+    _locationEngine.locationStream.listen((newLoc) {
+      _scheduleBackgroundPrayerAlarms(location: newLoc);
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestUnifiedPermissions();
@@ -232,6 +230,7 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
 
     if (mounted) {
       _locationEngine.acquireLocation();
+      await _scheduleBackgroundPrayerAlarms();
     }
   }
 

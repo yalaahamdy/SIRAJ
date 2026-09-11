@@ -72,7 +72,7 @@ class SirajNotificationManager {
   Future<void> init() async {
     if (_isInitialized) return;
 
-    _initTimeZone();
+    await _initTimeZone();
 
     try {
       if (Platform.environment.containsKey('FLUTTER_TEST')) {
@@ -233,28 +233,50 @@ class SirajNotificationManager {
     }
   }
 
-  void _initTimeZone() {
+  Future<void> _initTimeZone() async {
     try {
       tz.initializeTimeZones();
+
+      // 1. استعلام مباشر ودقيق من نظام أندرويد الأصلي عن المعرف الحقيقي لمنطقة الهاتف الزمنية
+      String? nativeTz;
+      if (!kIsWeb && Platform.isAndroid) {
+        try {
+          nativeTz = await SirajNativeOverlayBridge.getDeviceTimeZone();
+        } catch (_) {}
+      }
+
+      if (nativeTz != null && tz.timeZoneDatabase.locations.containsKey(nativeTz)) {
+        tz.setLocalLocation(tz.getLocation(nativeTz));
+        debugPrint('SirajNotificationManager: Successfully set local timezone from native OS to: $nativeTz');
+        return;
+      }
+
+      // 2. مطابقة ذكية حسابية متوافقة مع الفارق الزمني الحالي للهاتف
       final now = DateTime.now();
-      final offset = now.timeZoneOffset;
+      final currentOffset = now.timeZoneOffset;
       tz.Location? matched;
       for (final loc in tz.timeZoneDatabase.locations.values) {
-        if (loc.currentTimeZone.offset == offset) {
+        if (loc.currentTimeZone.offset == currentOffset) {
           matched = loc;
           break;
         }
       }
+
       if (matched != null) {
         tz.setLocalLocation(matched);
+        debugPrint('SirajNotificationManager: Matched local timezone by offset: ${matched.name}');
       } else {
-        tz.setLocalLocation(tz.UTC);
+        // افتراض توقيت القاهرة أو مكة كأصل عربي بدلاً من تصفيره لـ UTC
+        if (tz.timeZoneDatabase.locations.containsKey('Africa/Cairo')) {
+          tz.setLocalLocation(tz.getLocation('Africa/Cairo'));
+        } else if (tz.timeZoneDatabase.locations.containsKey('Asia/Riyadh')) {
+          tz.setLocalLocation(tz.getLocation('Asia/Riyadh'));
+        } else {
+          tz.setLocalLocation(tz.local);
+        }
       }
     } catch (e) {
       debugPrint('Error setting up timezone: $e');
-      try {
-        tz.setLocalLocation(tz.UTC);
-      } catch (_) {}
     }
   }
 
@@ -265,7 +287,12 @@ class SirajNotificationManager {
             AndroidFlutterLocalNotificationsPlugin>();
         if (androidPlugin != null) {
           final granted = await androidPlugin.requestNotificationsPermission();
-          await androidPlugin.requestExactAlarmsPermission();
+          try {
+            final canSchedule = await SirajNativeOverlayBridge.canScheduleExactAlarms();
+            if (!canSchedule) {
+              await androidPlugin.requestExactAlarmsPermission();
+            }
+          } catch (_) {}
           return granted ?? false;
         }
       } else if (!kIsWeb && Platform.isIOS) {
@@ -423,32 +450,103 @@ class SirajNotificationManager {
         iOS: darwinDetails,
       );
 
+      await _safeZonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tzTime,
+        notificationDetails: notificationDetails,
+        payload: payload,
+      );
+      debugPrint('Successfully scheduled prayer alarm notification for: $scheduledTime (id: $id)');
+    } catch (e) {
+      debugPrint('Error scheduling prayer notification: $e');
+    }
+  }
+
+  /// جدولة آمنة تطبق المنبه الدقيق exactAllowWhileIdle مع تحويل فوري لـ inexactAllowWhileIdle عند قيود النظام
+  Future<void> _safeZonedSchedule({
+    required int id,
+    required String? title,
+    required String? body,
+    required tz.TZDateTime scheduledDate,
+    required NotificationDetails notificationDetails,
+    String? payload,
+  }) async {
+    try {
+      await _notifications.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: payload,
+      );
+    } catch (exactAlarmEx) {
+      debugPrint('Exact alarm failed (permission/battery restrictions), fallback to inexact: $exactAlarmEx');
       try {
         await _notifications.zonedSchedule(
           id: id,
           title: title,
           body: body,
-          scheduledDate: tzTime,
-          notificationDetails: notificationDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          payload: payload,
-        );
-      } catch (exactAlarmEx) {
-        debugPrint('Exact alarm failed (permission/battery saver), fallback to inexact: $exactAlarmEx');
-        await _notifications.zonedSchedule(
-          id: id,
-          title: title,
-          body: body,
-          scheduledDate: tzTime,
+          scheduledDate: scheduledDate,
           notificationDetails: notificationDetails,
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           payload: payload,
         );
+      } catch (e) {
+        debugPrint('Failed to schedule notification (id: $id): $e');
       }
-      debugPrint('Successfully scheduled prayer alarm notification for: $scheduledTime (id: $id)');
-    } catch (e) {
-      debugPrint('Error scheduling prayer notification: $e');
     }
+  }
+
+  /// يجدول إشعاراً اختبارياً خارجياً ينطلق بعد ثوانٍ محددة (افتراضياً 5 ثوانٍ)
+  /// ليتسنى للمستخدم إغلاق التطبيق أو قفل الشاشة والتأكد من انطلاق الإشعار والصوت خارجياً
+  Future<void> scheduleQuickTestNotification({int seconds = 5}) async {
+    if (!_isInitialized) await init();
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+    } catch (_) {}
+
+    final tzTime = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
+
+    final androidDetails = AndroidNotificationDetails(
+      athanChannelId,
+      athanChannelName,
+      channelDescription: athanChannelDescription,
+      importance: Importance.max,
+      priority: Priority.max,
+      playSound: true,
+      sound: const RawResourceAndroidNotificationSound('athan_abdulbasit'),
+      enableVibration: true,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      category: AndroidNotificationCategory.alarm,
+      visibility: NotificationVisibility.public,
+      icon: 'ic_notification',
+      fullScreenIntent: true,
+      ticker: 'تجربة إشعار سِراج الخارجي',
+      actions: _buildAthanActions(true),
+    );
+
+    const darwinDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      sound: 'athan_abdulbasit.mp3',
+    );
+
+    await _safeZonedSchedule(
+      id: 99998,
+      title: 'تجربة إشعار سِراج الخارجي 🔔',
+      body: 'الله أكبر — نجح انطلاق الإشعار والصوت خارج التطبيق بنجاح تام!',
+      scheduledDate: tzTime,
+      notificationDetails: NotificationDetails(
+        android: androidDetails,
+        iOS: darwinDetails,
+      ),
+      payload: 'siraj_test_outside_notification',
+    );
   }
 
   /// إرسال إشعار تجريبي فوري للتأكد من خروج صوت الأذان على هاتف المستخدم
@@ -552,13 +650,12 @@ class SirajNotificationManager {
         priority: Priority.high,
         icon: 'ic_notification',
       );
-      await _notifications.zonedSchedule(
+      await _safeZonedSchedule(
         id: id,
         title: title,
         body: body,
         scheduledDate: tzTime,
         notificationDetails: const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: payload ?? 'siraj_adhkar',
       );
     } catch (e) {
@@ -597,13 +694,12 @@ class SirajNotificationManager {
         priority: Priority.high,
         icon: 'ic_notification',
       );
-      await _notifications.zonedSchedule(
+      await _safeZonedSchedule(
         id: id,
         title: 'قيام الليل — ركعة في جوف الليل',
         body: 'الوتر جنة القلوب ونور الظلمات، استثمر الثلث الأخير من الليل بالدعاء والمناجاة',
         scheduledDate: tzTime,
         notificationDetails: const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: 'siraj_qiyam',
       );
     } catch (e) {
@@ -642,13 +738,12 @@ class SirajNotificationManager {
         priority: Priority.defaultPriority,
         icon: 'ic_notification',
       );
-      await _notifications.zonedSchedule(
+      await _safeZonedSchedule(
         id: id,
         title: 'صلاة الضحى — صلاة الأوابين',
         body: 'يصبح على كل سلامى من أحدكم صدقة، وتجزئ عن ذلك ركعتان يركعهما من الضحى',
         scheduledDate: tzTime,
         notificationDetails: const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: 'siraj_duha',
       );
     } catch (e) {
@@ -687,13 +782,12 @@ class SirajNotificationManager {
         priority: Priority.defaultPriority,
         icon: 'ic_notification',
       );
-      await _notifications.zonedSchedule(
+      await _safeZonedSchedule(
         id: id,
         title: 'نور بين الجمعتين — سورة الكهف',
         body: 'من قرأ سورة الكهف في يوم الجمعة أضاء له من النور ما بين الجمعتين، وأكثروا من الصلاة على الحبيب ﷺ',
         scheduledDate: tzTime,
         notificationDetails: const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: 'siraj_friday',
       );
     } catch (e) {
@@ -735,13 +829,12 @@ class SirajNotificationManager {
         priority: Priority.high,
         icon: 'ic_notification',
       );
-      await _notifications.zonedSchedule(
+      await _safeZonedSchedule(
         id: id,
         title: title,
         body: body,
         scheduledDate: tzTime,
         notificationDetails: const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: payload ?? 'siraj_quran_wird',
       );
     } catch (e) {
@@ -783,13 +876,12 @@ class SirajNotificationManager {
         priority: Priority.high,
         icon: 'ic_notification',
       );
-      await _notifications.zonedSchedule(
+      await _safeZonedSchedule(
         id: id,
         title: title,
         body: body,
         scheduledDate: tzTime,
         notificationDetails: const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: payload ?? 'siraj_fasting',
       );
     } catch (e) {

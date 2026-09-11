@@ -101,4 +101,28 @@ class SirajNativeOverlayBridge {
       return false;
     }
   }
+
+  /// يستعلم عن المعرف الحقيقي لمنطقة الجهاز الزمنية من نظام أندرويد النواة
+  static Future<String?> getDeviceTimeZone() async {
+    if (kIsWeb || !Platform.isAndroid) return null;
+    try {
+      return await _channel.invokeMethod<String>('getDeviceTimeZone');
+    } catch (e) {
+      debugPrint('Error getting device timezone from native: $e');
+      return null;
+    }
+  }
+
+  /// يتحقق مما إذا كان مسموحاً للتطبيق بجدولة المنبهات الدقيقة في أندرويد 12 فما فوق
+  static Future<bool> canScheduleExactAlarms() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+    try {
+      final res = await _channel.invokeMethod<bool>('canScheduleExactAlarms');
+      return res ?? true;
+    } catch (e) {
+      debugPrint('Error checking exact alarms capability: $e');
+      return true;
+    }
+  }
 }
+

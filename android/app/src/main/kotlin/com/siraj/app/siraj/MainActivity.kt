@@ -1,5 +1,6 @@
 package com.siraj.app.siraj
 
+import android.app.AlarmManager
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
@@ -55,6 +56,22 @@ class MainActivity : FlutterActivity() {
                 "checkOverlayPermission" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         result.success(Settings.canDrawOverlays(this))
+                    } else {
+                        result.success(true)
+                    }
+                }
+                "getDeviceTimeZone" -> {
+                    try {
+                        val tzId = java.util.TimeZone.getDefault().id
+                        result.success(tzId)
+                    } catch (e: Exception) {
+                        result.success(null)
+                    }
+                }
+                "canScheduleExactAlarms" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+                        result.success(alarmManager?.canScheduleExactAlarms() ?: true)
                     } else {
                         result.success(true)
                     }
