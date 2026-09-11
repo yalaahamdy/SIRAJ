@@ -90,7 +90,11 @@ void main() {
       // Tab 3: رحلتي وإنجازاتي
       await tester.tap(find.textContaining('رحلتي').first);
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+      final tabErr = tester.takeException();
+      if (tabErr is FlutterError) {
+        print('TAB3 ERROR: ${tabErr.diagnostics.map((d) => d.toString()).join('\n')}');
+      }
+      expect(tabErr, isNull);
 
     });
 

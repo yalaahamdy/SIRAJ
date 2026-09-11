@@ -221,6 +221,16 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
 
   Widget _buildCourseCard(Course course, LearningDomainTheme theme) {
     final progressPct = widget.module.curriculumEngine.getCourseProgressPercentage(course, _progress);
+    int totalCourseLessons = 0;
+    int completedCourseLessons = 0;
+    for (final modId in course.moduleIds) {
+      final modRes = widget.module.store.getModule(modId);
+      if (modRes.isFailure) continue;
+      for (final lsnId in modRes.valueOrNull!.lessonIds) {
+        totalCourseLessons++;
+        if (_progress.isLessonCompleted(lsnId)) completedCourseLessons++;
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -272,7 +282,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${progressPct.toStringAsFixed(0)}%',
+                  '${progressPct.toStringAsFixed(0)}% ($completedCourseLessons من $totalCourseLessons)',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.primaryColor),
                 ),
               ],

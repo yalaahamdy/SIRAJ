@@ -740,9 +740,23 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'مؤشر الإتقان العام في الأكاديمية',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Flexible(
+                        child: Text(
+                          'مؤشر الإتقان العام في الأكاديمية',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_mastery!.overallMasteryScore >= 10 || _mastery!.overallMasteryScore == 0 ? _mastery!.overallMasteryScore.toStringAsFixed(0) : _mastery!.overallMasteryScore.toStringAsFixed(1)}%',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F5132)),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   ClipRRect(
@@ -757,8 +771,8 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: _buildJourneyMetric('الدروس المكتملة', '${_mastery!.totalLessonsCompleted}')),
-                      Expanded(child: _buildJourneyMetric('الاختبارات المجتازة', '${_mastery!.totalQuizzesPassed}')),
+                      Expanded(child: _buildJourneyMetric('الدروس المكتملة', '${_mastery!.totalLessonsCompleted} من ${_lessons.length}')),
+                      Expanded(child: _buildJourneyMetric('الاختبارات المجتازة', '${_mastery!.totalQuizzesPassed} من ${_quizzes.length}')),
                       Expanded(child: _buildJourneyMetric('نسبة الدقة', '${_mastery!.quizPerformanceFactor.toStringAsFixed(0)}%')),
                     ],
                   ),

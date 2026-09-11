@@ -67,9 +67,13 @@ class LearningMasteryEngine {
       revisionFactor = ((1.0 - overdueRatio) * 100.0).clamp(0.0, 100.0);
     }
 
-    // Overall Weighted Score
-    final rawOverall = (lessonFactor * 0.40) + (quizFactor * 0.40) + (revisionFactor * 0.20);
-    final overallScore = rawOverall.clamp(0.0, 100.0);
+    // Overall Pedagogical Mastery Score:
+    // Strictly bounded in [0.0, 100.0], directly proportional to actual content completion,
+    // and modulated by assessment performance and retention health (§21, §41).
+    final qualityMultiplier = progress.assessmentResults.isNotEmpty
+        ? ((quizFactor / 100.0) * 0.85 + (revisionFactor / 100.0) * 0.15)
+        : (revisionFactor / 100.0);
+    final overallScore = (lessonFactor * qualityMultiplier).clamp(0.0, 100.0);
 
     return LearningMasterySnapshot(
       overallMasteryScore: overallScore,

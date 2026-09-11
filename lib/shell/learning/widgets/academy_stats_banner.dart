@@ -134,7 +134,7 @@ class AcademyStatsBanner extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${pct.toStringAsFixed(0)}%',
+                '${pct >= 10 || pct == 0 ? pct.toStringAsFixed(0) : pct.toStringAsFixed(1)}%',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
