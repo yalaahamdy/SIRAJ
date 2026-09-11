@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../modules/quran/domain/surah.dart';
 import '../../modules/quran/quran_module.dart';
+import '../../modules/quran/services/cairo_radio_audio_service.dart';
 import '../../modules/quran/store/tawasheeh_store.dart';
 import '../quran/widgets/cairo_radio_live_view.dart';
 import '../quran/widgets/quran_audio_radio_tab.dart';
@@ -52,7 +53,23 @@ class SirajAudioHubScreenState extends State<SirajAudioHubScreen>
       vsync: this,
       initialIndex: widget.initialTab.clamp(0, 3),
     );
+    _tabController.addListener(_handleTabChange);
     _loadSurahs();
+  }
+
+  void _handleTabChange() {
+    if (_tabController.indexIsChanging) return;
+    if (_tabController.index == 0) {
+      if (widget.quranModule.radioService.mode != CairoRadioMode.liveRadio &&
+          !widget.quranModule.radioService.isPlaying) {
+        widget.quranModule.radioService.setMode(CairoRadioMode.liveRadio);
+      }
+    } else if (_tabController.index == 1) {
+      if (widget.quranModule.radioService.mode != CairoRadioMode.tawasheeh &&
+          !widget.quranModule.radioService.isPlaying) {
+        widget.quranModule.radioService.setMode(CairoRadioMode.tawasheeh);
+      }
+    }
   }
 
   void _loadSurahs() {
@@ -73,6 +90,7 @@ class SirajAudioHubScreenState extends State<SirajAudioHubScreen>
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
   }

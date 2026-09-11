@@ -168,5 +168,38 @@ void main() {
       expect(find.text('إدارة'), findsOneWidget);
       expect(find.text('إخفاء'), findsNothing);
     });
+
+    testWidgets('Tapping play in CairoRadioLiveView plays live radio and NEVER plays Tawasheeh', (tester) async {
+      // 1. Precondition: A Tawasheeh was previously played
+      final item = sampleItems.first;
+      await radioService.playTawasheeh(item);
+      expect(radioService.mode, equals(CairoRadioMode.tawasheeh));
+      expect(radioService.currentTawasheeh?.id, equals(item.id));
+      await radioService.pause();
+
+      // 2. Render CairoRadioLiveView
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CairoRadioLiveView(
+              radioService: radioService,
+              tawasheehStore: tawasheehStore,
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // 3. Find and tap play button on CairoRadioLiveView
+      final playButton = find.byTooltip('تشغيل إذاعة القاهرة');
+      expect(playButton, findsOneWidget);
+      await tester.tap(playButton);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // 4. Verification: Mode MUST be liveRadio and NOT tawasheeh, and currentTawasheeh MUST be cleared
+      expect(radioService.mode, equals(CairoRadioMode.liveRadio));
+      expect(radioService.currentTawasheeh, isNull);
+      expect(radioService.isPlaying, isTrue);
+    });
   });
 }

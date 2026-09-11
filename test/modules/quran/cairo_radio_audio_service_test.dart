@@ -224,5 +224,27 @@ void main() {
       expect(radioService.playbackSpeed, equals(1.5));
       expect(mockAdapter.playbackRate, equals(1.5));
     });
+
+    test('playLiveRadio switches mode to liveRadio, clears tawasheeh, and plays live stream', () async {
+      const item = TawasheehItem(
+        id: 't1',
+        cleanTitle: 'إلهي إن يكن ذنبي عظيما',
+        fullTitle: 'إلهي إن يكن ذنبي عظيما - الشيخ محمد عمران',
+        reciter: 'محمد عمران',
+        duration: '03:59',
+        durationSeconds: 239.0,
+        url: 'https://archive.org/download/2071215/test1.mp3',
+      );
+      await radioService.playTawasheeh(item);
+      expect(radioService.mode, equals(CairoRadioMode.tawasheeh));
+      expect(radioService.currentTawasheeh, isNotNull);
+
+      await radioService.playLiveRadio();
+
+      expect(radioService.mode, equals(CairoRadioMode.liveRadio));
+      expect(radioService.currentTawasheeh, isNull);
+      expect(mockAdapter.playedUrls.last, equals(CairoRadioStation.cairoQuranRadio.primaryStreamUrl));
+      expect(radioService.status, equals(CairoRadioStatus.playing));
+    });
   });
 }

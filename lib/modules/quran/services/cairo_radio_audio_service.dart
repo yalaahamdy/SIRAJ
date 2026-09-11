@@ -415,7 +415,28 @@ class CairoRadioAudioService {
   Future<void> playLiveRadio() async {
     _mode = CairoRadioMode.liveRadio;
     _modeController.add(_mode);
-    await play();
+    _currentTawasheeh = null;
+
+    if (_status == CairoRadioStatus.idle || _status == CairoRadioStatus.error) {
+      _activeUrlIndex = 0;
+    }
+
+    if (_status == CairoRadioStatus.paused) {
+      try {
+        await _player.playUrl(currentActiveUrl);
+        _setStatus(CairoRadioStatus.playing);
+        onPlaybackStarted?.call();
+        return;
+      } catch (_) {
+        // Fallback to full reconnect
+      }
+    }
+
+    _errorMessage = null;
+    _setStatus(CairoRadioStatus.connecting);
+    onPlaybackStarted?.call();
+
+    await _attemptStreamPlayback();
   }
 
   /// Advances to the next Tawasheeh in playlist.
@@ -466,35 +487,22 @@ class CairoRadioAudioService {
 
   /// Starts or resumes audio playback depending on active mode.
   Future<void> play() async {
-    if (_mode == CairoRadioMode.tawasheeh && _currentTawasheeh != null) {
-      if (_status == CairoRadioStatus.paused) {
-        try {
-          await _player.playUrl(_currentTawasheeh!.url);
-          _setStatus(CairoRadioStatus.playing);
-          onPlaybackStarted?.call();
-          return;
-        } catch (_) {}
+    if (_mode == CairoRadioMode.tawasheeh) {
+      if (_currentTawasheeh != null) {
+        if (_status == CairoRadioStatus.paused) {
+          try {
+            await _player.playUrl(_currentTawasheeh!.url);
+            _setStatus(CairoRadioStatus.playing);
+            onPlaybackStarted?.call();
+            return;
+          } catch (_) {}
+        }
+        await playTawasheeh(_currentTawasheeh!);
       }
-      await playTawasheeh(_currentTawasheeh!);
       return;
     }
 
-    if (_status == CairoRadioStatus.paused) {
-      try {
-        await _player.playUrl(currentActiveUrl);
-        _setStatus(CairoRadioStatus.playing);
-        onPlaybackStarted?.call();
-        return;
-      } catch (_) {
-        // Fallback to full reconnect
-      }
-    }
-
-    _errorMessage = null;
-    _setStatus(CairoRadioStatus.connecting);
-    onPlaybackStarted?.call();
-
-    await _attemptStreamPlayback();
+    await playLiveRadio();
   }
 
   Future<void> _attemptStreamPlayback() async {

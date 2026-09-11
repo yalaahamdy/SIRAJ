@@ -34,6 +34,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
   StreamSubscription<CairoRadioStatus>? _statusSub;
   StreamSubscription<TawasheehItem?>? _tawasheehSub;
   StreamSubscription<Duration?>? _sleepSub;
+  StreamSubscription<CairoRadioMode>? _modeSub;
 
   CairoRadioStatus _status = CairoRadioStatus.idle;
   TawasheehItem? _currentTawasheeh;
@@ -103,14 +104,30 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
       });
     }
 
-    if (_status == CairoRadioStatus.playing && !Platform.environment.containsKey('FLUTTER_TEST')) {
+    final isInitiallyTawasheehPlaying = _status == CairoRadioStatus.playing &&
+        widget.radioService.mode == CairoRadioMode.tawasheeh;
+    if (isInitiallyTawasheehPlaying && !Platform.environment.containsKey('FLUTTER_TEST')) {
       _waveAnimController.repeat(reverse: true);
     }
 
     _statusSub = widget.radioService.statusStream.listen((s) {
       if (mounted) {
         setState(() => _status = s);
-        if (s == CairoRadioStatus.playing) {
+        if (s == CairoRadioStatus.playing &&
+            widget.radioService.mode == CairoRadioMode.tawasheeh) {
+          if (!_waveAnimController.isAnimating && !Platform.environment.containsKey('FLUTTER_TEST')) {
+            _waveAnimController.repeat(reverse: true);
+          }
+        } else {
+          _waveAnimController.stop();
+        }
+      }
+    });
+
+    _modeSub = widget.radioService.modeStream.listen((m) {
+      if (mounted) {
+        setState(() {});
+        if (m == CairoRadioMode.tawasheeh && _status == CairoRadioStatus.playing) {
           if (!_waveAnimController.isAnimating && !Platform.environment.containsKey('FLUTTER_TEST')) {
             _waveAnimController.repeat(reverse: true);
           }
@@ -134,6 +151,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
     _waveAnimController.dispose();
     _searchController.dispose();
     _statusSub?.cancel();
+    _modeSub?.cancel();
     _tawasheehSub?.cancel();
     _sleepSub?.cancel();
     super.dispose();
@@ -243,8 +261,9 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
     bool isDark,
     List<TawasheehItem> currentFilteredList,
   ) {
-    final isPlaying = _status == CairoRadioStatus.playing;
-    final isConnecting = _status == CairoRadioStatus.connecting;
+    final isTawasheehMode = widget.radioService.mode == CairoRadioMode.tawasheeh;
+    final isPlaying = _status == CairoRadioStatus.playing && isTawasheehMode;
+    final isConnecting = _status == CairoRadioStatus.connecting && isTawasheehMode;
     final hasTrack = _currentTawasheeh != null;
 
     return Container(
@@ -540,7 +559,7 @@ class _TawasheehPlayerViewState extends State<TawasheehPlayerView>
                         widget.radioService.pause();
                       } else {
                         if (hasTrack) {
-                          widget.radioService.play();
+                          widget.radioService.playTawasheeh(_currentTawasheeh!);
                         } else if (currentFilteredList.isNotEmpty) {
                           widget.radioService.playTawasheeh(
                             currentFilteredList.first,

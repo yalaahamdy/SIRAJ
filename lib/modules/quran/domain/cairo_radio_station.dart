@@ -35,10 +35,10 @@ class CairoRadioStation extends Equatable {
     nameArabic: 'إذاعة القرآن الكريم من القاهرة',
     subtitleArabic: 'البث الحي المباشر على مدار الساعة — جمهورية مصر العربية',
     frequencyDescription: 'FM 98.2 MHz — القاهرة الكبرى وعبر الأقمار الصناعية',
-    primaryStreamUrl: 'https://stream.radiojar.com/8s5u5tpdtwzuv',
+    primaryStreamUrl: 'https://stream.zeno.fm/ru2hqnplhk7uv',
     backupStreamUrls: [
-      'https://n0a.radiojar.com/8s5u5tpdtwzuv',
-      'http://live.mp3quran.net:9702/',
+      'https://stream.zeno.fm/tv0x28xvyc9uv',
+      'https://service.webvideocore.net/CL1olYogIrDWvwqiIKK7eCxOS4PStqG9DuEjAr2ZjZQtvS3d4y9r0cvRhvS17SGN/a_7a4vuubc6mo8.m3u8',
     ],
     historicalNote:
         'أقدم إذاعة قرآنية في العالم، انطلقت في 25 مارس 1964م بمباركة كبار قراء وأعلام الأزهر الشريف: '

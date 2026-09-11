@@ -32,6 +32,7 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
 
   StreamSubscription<CairoRadioStatus>? _statusSub;
   StreamSubscription<Duration?>? _sleepSub;
+  StreamSubscription<CairoRadioMode>? _modeSub;
 
   CairoRadioStatus _status = CairoRadioStatus.idle;
   Duration? _sleepRemaining;
@@ -52,14 +53,30 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
       duration: const Duration(milliseconds: 1200),
     );
 
-    if (_status == CairoRadioStatus.playing && !Platform.environment.containsKey('FLUTTER_TEST')) {
+    final isInitiallyLivePlaying = _status == CairoRadioStatus.playing &&
+        widget.radioService.mode == CairoRadioMode.liveRadio;
+    if (isInitiallyLivePlaying && !Platform.environment.containsKey('FLUTTER_TEST')) {
       _waveAnimController.repeat(reverse: true);
     }
 
     _statusSub = widget.radioService.statusStream.listen((newStatus) {
       if (mounted) {
         setState(() => _status = newStatus);
-        if (newStatus == CairoRadioStatus.playing) {
+        if (newStatus == CairoRadioStatus.playing &&
+            widget.radioService.mode == CairoRadioMode.liveRadio) {
+          if (!_waveAnimController.isAnimating && !Platform.environment.containsKey('FLUTTER_TEST')) {
+            _waveAnimController.repeat(reverse: true);
+          }
+        } else {
+          _waveAnimController.stop();
+        }
+      }
+    });
+
+    _modeSub = widget.radioService.modeStream.listen((mode) {
+      if (mounted) {
+        setState(() {});
+        if (mode == CairoRadioMode.liveRadio && _status == CairoRadioStatus.playing) {
           if (!_waveAnimController.isAnimating && !Platform.environment.containsKey('FLUTTER_TEST')) {
             _waveAnimController.repeat(reverse: true);
           }
@@ -78,6 +95,7 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
   void dispose() {
     _waveAnimController.dispose();
     _statusSub?.cancel();
+    _modeSub?.cancel();
     _sleepSub?.cancel();
     super.dispose();
   }
@@ -92,9 +110,10 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
   Widget build(BuildContext context) {
     super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isPlaying = _status == CairoRadioStatus.playing;
-    final isConnecting = _status == CairoRadioStatus.connecting;
-    final isError = _status == CairoRadioStatus.error;
+    final isLiveRadioMode = widget.radioService.mode == CairoRadioMode.liveRadio;
+    final isPlaying = _status == CairoRadioStatus.playing && isLiveRadioMode;
+    final isConnecting = _status == CairoRadioStatus.connecting && isLiveRadioMode;
+    final isError = _status == CairoRadioStatus.error && isLiveRadioMode;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
@@ -289,7 +308,7 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
                   )
                 else if (isError)
                   ElevatedButton.icon(
-                    onPressed: () => widget.radioService.retry(),
+                    onPressed: () => widget.radioService.playLiveRadio(),
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text('إعادة المحاولة'),
                     style: ElevatedButton.styleFrom(
@@ -305,7 +324,7 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
                     children: [
                       // Stop button
                       IconButton(
-                        onPressed: isPlaying || _status == CairoRadioStatus.paused
+                        onPressed: isPlaying || (_status == CairoRadioStatus.paused && isLiveRadioMode)
                             ? () => widget.radioService.stop()
                             : null,
                         icon: const Icon(Icons.stop_rounded),
@@ -337,7 +356,7 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
                             if (isPlaying) {
                               widget.radioService.pause();
                             } else {
-                              widget.radioService.play();
+                              widget.radioService.playLiveRadio();
                             }
                           },
                           icon: Icon(
