@@ -15,6 +15,8 @@ class CanonicalQuranLoader {
   static Map<String, dynamic>? _cachedAudioManifest;
   static CanonicalTafsirPackage? _cachedTafsirPackage;
 
+  static CanonicalTafsirPackage? get cachedTafsirPackage => _cachedTafsirPackage;
+
   /// Loads the complete 114 Surahs and 6,236 Ayahs package from assets or local filesystem.
   static Future<CanonicalQuranPackage> loadPackage({AssetBundle? bundle}) async {
     if (_cachedPackage != null) return _cachedPackage!;

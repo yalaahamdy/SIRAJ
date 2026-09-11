@@ -102,6 +102,30 @@ class _ZakatSettingsScreenState extends State<ZakatSettingsScreen> {
     }
   }
 
+  static double getDefaultGoldPrice(String currencyCode) {
+    switch (currencyCode.toUpperCase()) {
+      case 'SAR': return 320.0;
+      case 'AED': return 315.0;
+      case 'USD': return 85.0;
+      case 'EUR': return 78.0;
+      case 'KWD': return 26.0;
+      case 'QAR': return 310.0;
+      case 'EGP': default: return 4500.0;
+    }
+  }
+
+  static double getDefaultSilverPrice(String currencyCode) {
+    switch (currencyCode.toUpperCase()) {
+      case 'SAR': return 4.0;
+      case 'AED': return 3.9;
+      case 'USD': return 1.05;
+      case 'EUR': return 0.95;
+      case 'KWD': return 0.33;
+      case 'QAR': return 3.85;
+      case 'EGP': default: return 55.0;
+    }
+  }
+
   Future<void> _changeCurrency() async {
     final selected = await CurrencyPickerBottomSheet.show(
       context,
@@ -109,19 +133,30 @@ class _ZakatSettingsScreenState extends State<ZakatSettingsScreen> {
     );
 
     if (selected != null && selected.code != _profile.currencyCode) {
-      // Update currency
+      final defaultGold = getDefaultGoldPrice(selected.code);
+      final defaultSilver = getDefaultSilverPrice(selected.code);
       final updated = _profile.copyWith(
         currencyCode: selected.code,
         goldPricePerGram: CurrencyAmount.fromDouble(
-          _profile.goldPricePerGram.toDouble(),
+          defaultGold,
           currency: selected.code,
         ),
         silverPricePerGram: CurrencyAmount.fromDouble(
-          _profile.silverPricePerGram.toDouble(),
+          defaultSilver,
           currency: selected.code,
         ),
       );
       await widget.module.saveProfile(updated);
+      await widget.module.setMarketSnapshot(
+        MarketDataSnapshot(
+          goldPricePerGram24k: updated.goldPricePerGram,
+          silverPricePerGram: updated.silverPricePerGram,
+          currency: updated.currencyCode,
+          sourceName: 'السعر الإرشادي للعملة (${selected.nameArabic})',
+          timestamp: widget.module.clock.nowUtc(),
+          isManualEntry: false,
+        ),
+      );
       _loadProfile();
     }
   }

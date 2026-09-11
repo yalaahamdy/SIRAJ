@@ -24,25 +24,30 @@ class DefaultQuranTafsirService implements QuranTafsirService {
     }
   }
 
-  @override
-  TafsirEdition get currentEdition =>
-      _package?.edition ?? TafsirEdition.alMuyassar;
+  CanonicalTafsirPackage? get _effectivePackage =>
+      _package ?? CanonicalQuranLoader.cachedTafsirPackage;
 
   @override
-  bool get isAvailable => _package != null && _package.tafsirsByKey.isNotEmpty;
+  TafsirEdition get currentEdition =>
+      _effectivePackage?.edition ?? TafsirEdition.alMuyassar;
+
+  @override
+  bool get isAvailable =>
+      _effectivePackage != null && _effectivePackage!.tafsirsByKey.isNotEmpty;
 
   @override
   AyahTafsir? getTafsir(int surahNumber, int ayahNumber) {
-    return _package?.getTafsir(surahNumber, ayahNumber);
+    return _effectivePackage?.getTafsir(surahNumber, ayahNumber);
   }
 
   @override
   List<AyahTafsir> getSurahTafsir(int surahNumber) {
-    if (_package == null) return const [];
+    final pkg = _effectivePackage;
+    if (pkg == null) return const [];
     final results = <AyahTafsir>[];
     int ayah = 1;
     while (true) {
-      final t = _package.getTafsir(surahNumber, ayah);
+      final t = pkg.getTafsir(surahNumber, ayah);
       if (t == null) break;
       results.add(t);
       ayah++;
@@ -52,10 +57,11 @@ class DefaultQuranTafsirService implements QuranTafsirService {
 
   @override
   List<AyahTafsir> getRangeTafsir(int surahNumber, int startAyah, int endAyah) {
-    if (_package == null) return const [];
+    final pkg = _effectivePackage;
+    if (pkg == null) return const [];
     final results = <AyahTafsir>[];
     for (int a = startAyah; a <= endAyah; a++) {
-      final t = _package.getTafsir(surahNumber, a);
+      final t = pkg.getTafsir(surahNumber, a);
       if (t != null) results.add(t);
     }
     return results;

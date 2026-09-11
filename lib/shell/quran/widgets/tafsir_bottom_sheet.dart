@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../modules/quran/domain/ayah.dart';
 import '../../../../modules/quran/services/quran_tafsir_service.dart';
+import '../../../../modules/quran/store/canonical_quran_loader.dart';
 import '../../theme/app_colors.dart';
 
 /// Context-aware, scholarly exegesis modal displaying Al-Tafsir Al-Muyassar (§13, §14).
@@ -29,11 +30,25 @@ class TafsirBottomSheet extends StatefulWidget {
 class _TafsirBottomSheetState extends State<TafsirBottomSheet> {
   late int _currentAyahNumber;
   final ScrollController _scrollController = ScrollController();
+  bool _isLoadingTafsir = false;
 
   @override
   void initState() {
     super.initState();
     _currentAyahNumber = widget.initialAyahNumber;
+    _checkAndLoadTafsir();
+  }
+
+  Future<void> _checkAndLoadTafsir() async {
+    if (!widget.tafsirService.isAvailable) {
+      setState(() => _isLoadingTafsir = true);
+      try {
+        await CanonicalQuranLoader.loadTafsir();
+      } catch (_) {}
+      if (mounted) {
+        setState(() => _isLoadingTafsir = false);
+      }
+    }
   }
 
   @override
@@ -163,7 +178,21 @@ class _TafsirBottomSheetState extends State<TafsirBottomSheet> {
                 ],
 
                 // Tafsir Text
-                if (tafsir != null)
+                if (_isLoadingTafsir)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 12),
+                          Text('جارٍ تحميل التفسير الميسر المعتمد...'),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (tafsir != null)
                   Text(
                     tafsir.tafsirText,
                     textDirection: TextDirection.rtl,

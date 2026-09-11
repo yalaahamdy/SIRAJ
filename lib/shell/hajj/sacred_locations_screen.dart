@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../modules/hajj/domain/sacred_location.dart';
 import '../../../modules/hajj/hajj_module.dart';
+import 'widgets/interactive_sacred_map_widget.dart';
 
 /// Sacred Locations Guide Screen (§50..§52, §107).
 class SacredLocationsScreen extends StatelessWidget {
@@ -20,47 +21,81 @@ class SacredLocationsScreen extends StatelessWidget {
       ),
       body: locations.isEmpty
           ? const Center(child: Text('لا توجد مواقع مقدسة محملة.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: locations.length,
-              itemBuilder: (context, index) {
-                final l = locations[index];
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.symmetric(vertical: 6),
+          : ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  elevation: 1.5,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on, color: Colors.teal, size: 20),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                l.nameArabic,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          l.description,
-                          style: const TextStyle(fontSize: 13, height: 1.4),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'السياق الشرعي والتاريخي: ${l.historicalContext}',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontStyle: FontStyle.italic),
-                        ),
-                      ],
+                  child: ExpansionTile(
+                    leading: const Icon(Icons.map_outlined, color: Colors.teal),
+                    title: const Text(
+                      'خريطة المشاعر والمواقيت التفاعلية',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
+                    subtitle: const Text(
+                      'عرض جغرافي بصري تفاعلي للمشاعر والمواقيت بدون إنترنت',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: InteractiveSacredMapWidget(locations: locations),
+                      ),
+                    ],
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    'دليل المواقع والمشاعر التفصيلي (${locations.length}):',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ),
+                ...locations.map((l) {
+                  return Card(
+                    elevation: 1,
+                    margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on, color: Colors.teal, size: 20),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  l.nameArabic,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            l.description,
+                            style: const TextStyle(fontSize: 13, height: 1.4),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'السياق الشرعي والتاريخي: ${l.historicalContext}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ),
     );
   }

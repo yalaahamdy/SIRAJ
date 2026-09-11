@@ -31,12 +31,20 @@ class PersistentKeyValueStore implements KeyValueStore {
     if (_isLoaded) return;
     try {
       final file = _file;
-      if (file != null && file.existsSync()) {
-        final content = file.readAsStringSync();
-        if (content.isNotEmpty) {
-          final decoded = jsonDecode(content);
-          if (decoded is Map<String, dynamic>) {
-            _cache.addAll(decoded);
+      if (file != null) {
+        final tmpFile = File('${file.path}.tmp');
+        if (!file.existsSync() && tmpFile.existsSync()) {
+          try {
+            tmpFile.renameSync(file.path);
+          } catch (_) {}
+        }
+        if (file.existsSync()) {
+          final content = file.readAsStringSync();
+          if (content.isNotEmpty) {
+            final decoded = jsonDecode(content);
+            if (decoded is Map<String, dynamic>) {
+              _cache.addAll(decoded);
+            }
           }
         }
       }
@@ -55,7 +63,12 @@ class PersistentKeyValueStore implements KeyValueStore {
         file.parent.createSync(recursive: true);
       }
       final jsonStr = jsonEncode(_cache);
-      await file.writeAsString(jsonStr, flush: true);
+      final tempFile = File('${file.path}.tmp');
+      await tempFile.writeAsString(jsonStr, flush: true);
+      if (file.existsSync()) {
+        await file.delete();
+      }
+      await tempFile.rename(file.path);
     } catch (e) {
       debugPrint('Error saving storage for $namespace: $e');
     }

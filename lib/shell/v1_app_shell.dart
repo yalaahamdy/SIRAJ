@@ -205,6 +205,8 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _compassService.dispose();
+    _locationEngine.dispose();
     super.dispose();
   }
 

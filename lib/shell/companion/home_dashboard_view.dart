@@ -111,8 +111,12 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
           ),
         ],
       ),
-      body: ListView(
-        children: [
+      body: RefreshIndicator(
+        onRefresh: _loadDashboard,
+        color: AppColors.primary,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
           // 1. Top Now / Context Hero Card
           if (topNowCard != null)
             HomeHeroNowCard(
@@ -479,7 +483,8 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildNavChip(

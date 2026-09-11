@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'core/config/app_config.dart';
 import 'core/i18n/locale_manager.dart';
@@ -13,9 +14,8 @@ void main() async {
 
   // Pre-load the verified canonical Quran dataset (114 Surahs, 6,236 Ayahs) from assets
   await CanonicalQuranLoader.loadPackage();
-  await CanonicalQuranLoader.loadTafsir();
 
-  final config = AppConfig.development();
+  final config = kReleaseMode ? AppConfig.production() : AppConfig.development();
   final localeManager = LocaleManager();
 
   runApp(
