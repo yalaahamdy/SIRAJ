@@ -32,6 +32,7 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
   List<LearningPath> _paths = [];
   List<Course> _courses = [];
   List<Lesson> _lessons = [];
+  List<dynamic> _quizzes = [];
   LearningMasterySnapshot? _mastery;
   Lesson? _activeLesson;
   String _activeLessonCourseTitle = '';
@@ -60,12 +61,14 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
     final pathsRes = widget.module.getAllPaths();
     final coursesRes = widget.module.getAllCourses();
     final lessonsRes = widget.module.getAllLessons();
+    final quizzesRes = widget.module.getAllQuizzes();
     final masteryRes = await widget.module.computeMastery();
     final progRes = await widget.module.getUserProgress();
 
     final allPaths = pathsRes.valueOrNull ?? [];
     final allCourses = coursesRes.valueOrNull ?? [];
     final allLessons = lessonsRes.valueOrNull ?? [];
+    final allQuizzes = quizzesRes.valueOrNull ?? [];
 
     Lesson? resumeLesson;
     String resumeCourseTitle = 'المنهج التأسيسي';
@@ -97,6 +100,7 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
         _paths = allPaths;
         _courses = allCourses;
         _lessons = allLessons;
+        _quizzes = allQuizzes;
         _mastery = masteryRes.valueOrNull;
         _activeLesson = resumeLesson;
         _activeLessonCourseTitle = resumeCourseTitle;
@@ -128,15 +132,16 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
   }
 
   List<LearningPath> get _grandComprehensivePaths {
-    final list = _paths.where((p) => p.pathId.contains('comprehensive')).toList();
+    final list = _paths.where((p) => p.pathId.contains('comprehensive') || p.pathId == 'path_seerah_history_curriculum').toList();
     // Fallback if no paths contain 'comprehensive' (e.g. in testing fixtures)
     return list.isNotEmpty ? list : _paths;
   }
 
   List<LearningPath> get _specializedPaths {
-    final list = _paths.where((p) => !p.pathId.contains('comprehensive')).toList();
+    final list = _paths.where((p) => !p.pathId.contains('comprehensive') && p.pathId != 'path_seerah_history_curriculum').toList();
     return list.isNotEmpty ? list : _paths;
   }
+
 
   List<LearningPath> _applyFilters(List<LearningPath> source) {
     var result = source;
@@ -242,12 +247,16 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
   }
 
   Widget _buildSearchBar() {
+    final totalPaths = _paths.isNotEmpty ? '${_paths.length} مساراً' : 'المسارات';
+    final totalCourses = _courses.isNotEmpty ? '${_courses.length} مقرراً' : 'المقررات';
+    final totalLessons = _lessons.isNotEmpty ? '${_lessons.length} درساً' : 'الدروس';
+
     return TextField(
       controller: _searchController,
       autofocus: true,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
-        hintText: 'ابحث في 61 مساراً، 49 مقرراً، و 302 درساً...',
+        hintText: 'ابحث في $totalPaths، $totalCourses، و $totalLessons...',
         prefixIcon: const Icon(Icons.search, color: Color(0xFF0F5132)),
         suffixIcon: _searchController.text.isNotEmpty
             ? IconButton(
@@ -277,12 +286,17 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
   }
 
   Widget _buildViewModeSelector() {
+    final grandCount = _grandComprehensivePaths.isNotEmpty ? ' (${_grandComprehensivePaths.length})' : '';
+    final specCount = _specializedPaths.isNotEmpty ? ' (${_specializedPaths.length})' : '';
+    final courseCount = _courses.isNotEmpty ? ' (${_courses.length})' : '';
+
     final modes = [
-      {'label': 'الكليات الكبرى (12)', 'icon': Icons.account_balance_outlined},
-      {'label': 'المسارات التخصصية', 'icon': Icons.track_changes_outlined},
-      {'label': 'فهرس المقررات (49)', 'icon': Icons.menu_book_outlined},
-      {'label': 'رحلتي وإنجازاتي', 'icon': Icons.person_outline},
+      {'label': 'الكليات$grandCount', 'icon': Icons.account_balance_outlined},
+      {'label': 'المسارات$specCount', 'icon': Icons.track_changes_outlined},
+      {'label': 'المقررات$courseCount', 'icon': Icons.menu_book_outlined},
+      {'label': 'رحلتي', 'icon': Icons.person_outline},
     ];
+
 
     return Container(
       decoration: BoxDecoration(
@@ -613,21 +627,26 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor.withAlpha(20),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          path.category,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: theme.primaryColor,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withAlpha(20),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            theme.shortTitle,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         path.level.labelArabic,
                         style: TextStyle(
@@ -638,6 +657,7 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 8),
                   Text(
                     path.title,
@@ -694,9 +714,9 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
         // 1. Academy Grand Stats Banner
         AcademyStatsBanner(
           grandTracksCount: _grandComprehensivePaths.length,
-          coursesCount: _courses.isNotEmpty ? _courses.length : 49,
-          lessonsCount: _lessons.isNotEmpty ? _lessons.length : 302,
-          quizzesCount: 118,
+          coursesCount: _courses.length,
+          lessonsCount: _lessons.length,
+          quizzesCount: _quizzes.length,
           overallMastery: _mastery?.overallMasteryScore ?? 0.0,
         ),
         const SizedBox(height: 14),
@@ -728,7 +748,7 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
-                      value: _mastery!.overallMasteryScore.clamp(0.0, 1.0),
+                      value: (_mastery!.overallMasteryScore / 100.0).clamp(0.0, 1.0),
                       minHeight: 10,
                       backgroundColor: Colors.grey.shade200,
                       valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0F5132)),
@@ -736,11 +756,10 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
                   ),
                   const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildJourneyMetric('الدروس المكتملة', '${_mastery!.totalLessonsCompleted}'),
-                      _buildJourneyMetric('الاختبارات المجتازة', '${_mastery!.totalQuizzesPassed}'),
-                      _buildJourneyMetric('نسبة الدقة', '${_mastery!.overallMasteryScore.toInt()}%'),
+                      Expanded(child: _buildJourneyMetric('الدروس المكتملة', '${_mastery!.totalLessonsCompleted}')),
+                      Expanded(child: _buildJourneyMetric('الاختبارات المجتازة', '${_mastery!.totalQuizzesPassed}')),
+                      Expanded(child: _buildJourneyMetric('نسبة الدقة', '${_mastery!.quizPerformanceFactor.toStringAsFixed(0)}%')),
                     ],
                   ),
                 ],
@@ -749,6 +768,7 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
           ),
           const SizedBox(height: 14),
         ],
+
 
         // Learning Goals Card
         Card(
@@ -777,9 +797,20 @@ class _LearningHomeScreenState extends State<LearningHomeScreen> {
 
   Widget _buildJourneyMetric(String label, String value) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F5132))),
-        Text(label, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F5132))),
+        ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ],
     );
   }

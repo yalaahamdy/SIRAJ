@@ -122,7 +122,7 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
         children: [
           // 1. Radio Station Hero Identity Card
                       Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                         decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isDark
@@ -150,76 +150,89 @@ class _CairoRadioLiveViewState extends State<CairoRadioLiveView>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.goldAccent.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppColors.goldAccent.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.radio_rounded, size: 14, color: isDark ? AppColors.goldAccentLight : AppColors.goldAccent),
-                          const SizedBox(width: 5),
-                          Text(
-                            'FM 98.2 MHz',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? AppColors.goldAccentLight : AppColors.primary,
-                            ),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.goldAccent.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.goldAccent.withValues(alpha: 0.5),
                           ),
-                        ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.radio_rounded, size: 14, color: isDark ? AppColors.goldAccentLight : AppColors.goldAccent),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'FM 98.2 MHz',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? AppColors.goldAccentLight : AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 6),
 
                     // Live Status Badge with pulse
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isPlaying
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : (isConnecting
-                                ? Colors.amber.withValues(alpha: 0.2)
-                                : Colors.grey.withValues(alpha: 0.15)),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
+                    Flexible(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
                           color: isPlaying
-                              ? Colors.green
-                              : (isConnecting ? Colors.amber : Colors.grey.shade400),
+                              ? Colors.green.withValues(alpha: 0.2)
+                              : (isConnecting
+                                  ? Colors.amber.withValues(alpha: 0.2)
+                                  : Colors.grey.withValues(alpha: 0.15)),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isPlaying
+                                ? Colors.green
+                                : (isConnecting ? Colors.amber : Colors.grey.shade400),
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isPlaying
-                                  ? Colors.green
-                                  : (isConnecting ? Colors.amber : Colors.grey),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isPlaying
+                                    ? Colors.green
+                                    : (isConnecting ? Colors.amber : Colors.grey),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isPlaying
-                                ? 'مباشر • LIVE'
-                                : (isConnecting ? 'جارٍ الاتصال...' : 'متوقف'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isPlaying
-                                  ? Colors.green
-                                  : (isConnecting ? Colors.amber.shade800 : Colors.grey),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                isPlaying
+                                    ? 'مباشر • LIVE'
+                                    : (isConnecting ? 'جارٍ الاتصال...' : 'متوقف'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPlaying
+                                      ? Colors.green
+                                      : (isConnecting ? Colors.amber.shade800 : Colors.grey),
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ],

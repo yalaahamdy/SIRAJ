@@ -138,6 +138,12 @@ class ReadOnlyLearningStore {
     return Result.ok(item);
   }
 
+  Result<List<Quiz>, Failure> getAllQuizzes() {
+    if (!isMounted) return Result.err(const ContentNotFoundFailure(message: 'Store not mounted'));
+    return Result.ok(_quizzesById.values.toList());
+  }
+
+
   bool verifyIntegrity() {
     if (_activePackage == null) return false;
     return _activePackage!.verifyPackageIntegrity();

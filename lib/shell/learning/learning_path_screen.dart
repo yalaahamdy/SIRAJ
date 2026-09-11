@@ -104,28 +104,35 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: theme.primaryColor.withAlpha(25),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(theme.icon, size: 14, color: theme.primaryColor),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    widget.path.category,
-                                    style: TextStyle(
-                                      color: theme.primaryColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11,
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: theme.primaryColor.withAlpha(25),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(theme.icon, size: 14, color: theme.primaryColor),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        widget.path.category,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: theme.primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
@@ -156,20 +163,32 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         const SizedBox(height: 14),
                         Divider(height: 1, color: Colors.grey.shade200),
                         const SizedBox(height: 10),
-                        Row(
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Icon(Icons.menu_book_rounded, size: 14, color: theme.primaryColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${widget.path.courseIds.length} مقررات منهجية',
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.menu_book_rounded, size: 14, color: theme.primaryColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${widget.path.courseIds.length} مقررات',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 16),
-                            Icon(Icons.schedule_rounded, size: 14, color: theme.primaryColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${widget.path.estimatedHours} ساعات تقديرية',
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.schedule_rounded, size: 14, color: theme.primaryColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${widget.path.estimatedHours} ساعات',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
                           ],
                         ),

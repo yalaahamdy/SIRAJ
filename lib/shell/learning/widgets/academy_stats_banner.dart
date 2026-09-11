@@ -10,10 +10,10 @@ class AcademyStatsBanner extends StatelessWidget {
 
   const AcademyStatsBanner({
     super.key,
-    this.grandTracksCount = 12,
-    this.coursesCount = 49,
-    this.lessonsCount = 302,
-    this.quizzesCount = 118,
+    this.grandTracksCount = 0,
+    this.coursesCount = 0,
+    this.lessonsCount = 0,
+    this.quizzesCount = 0,
     required this.overallMastery,
   });
 
@@ -32,71 +32,123 @@ class AcademyStatsBanner extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          // Academy Stats Items
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem(context, '$grandTracksCount', 'كليات كبرى', Icons.account_balance),
-                _buildDivider(),
-                _buildStatItem(context, '$coursesCount', 'مقرراً', Icons.menu_book),
-                _buildDivider(),
-                _buildStatItem(context, '$lessonsCount', 'درساً تأصيلياً', Icons.article_outlined),
-                _buildDivider(),
-                _buildStatItem(context, '$quizzesCount', 'اختباراً', Icons.quiz_outlined),
-              ],
-            ),
-          ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 360;
 
-          const SizedBox(width: 8),
-
-          // Mini Mastery Circular Progress
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F5132).withAlpha(15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+          if (isCompact) {
+            return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    value: overallMastery.clamp(0.0, 1.0),
-                    strokeWidth: 3.5,
-                    backgroundColor: Colors.grey.shade300,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0F5132)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${(overallMastery * 100).toInt()}%',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F5132),
+                    const Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.military_tech_rounded, size: 16, color: Color(0xFF0F5132)),
+                          SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'صرح الأكاديمية',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Text(
-                      'إتقانك',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
+                    const SizedBox(width: 6),
+                    _buildMasteryBadge(),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+                Divider(height: 1, color: Colors.grey.withAlpha(40)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(child: _buildStatItem(context, '$grandTracksCount', 'كليات', Icons.account_balance)),
+                    _buildDivider(),
+                    Expanded(child: _buildStatItem(context, '$coursesCount', 'مقررات', Icons.menu_book)),
+                    _buildDivider(),
+                    Expanded(child: _buildStatItem(context, '$lessonsCount', 'دروساً', Icons.article_outlined)),
+                    _buildDivider(),
+                    Expanded(child: _buildStatItem(context, '$quizzesCount', 'اختباراً', Icons.quiz_outlined)),
                   ],
                 ),
               ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(child: _buildStatItem(context, '$grandTracksCount', 'كليات كبرى', Icons.account_balance)),
+                    _buildDivider(),
+                    Expanded(child: _buildStatItem(context, '$coursesCount', 'مقرراً', Icons.menu_book)),
+                    _buildDivider(),
+                    Expanded(child: _buildStatItem(context, '$lessonsCount', 'درساً تأصيلياً', Icons.article_outlined)),
+                    _buildDivider(),
+                    Expanded(child: _buildStatItem(context, '$quizzesCount', 'اختباراً', Icons.quiz_outlined)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildMasteryBadge(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMasteryBadge() {
+    final pct = overallMastery.clamp(0.0, 100.0);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F5132).withAlpha(15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              value: (pct / 100.0).clamp(0.0, 1.0),
+              strokeWidth: 3,
+              backgroundColor: Colors.grey.shade300,
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0F5132)),
             ),
+          ),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${pct.toStringAsFixed(0)}%',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F5132),
+                ),
+              ),
+              Text(
+                'إتقانك',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -107,20 +159,26 @@ class AcademyStatsBanner extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF0F5132)),
+        Icon(icon, size: 15, color: const Color(0xFF0F5132)),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey.shade600,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 9.5,
+              color: Colors.grey.shade600,
+            ),
           ),
         ),
       ],
@@ -129,9 +187,11 @@ class AcademyStatsBanner extends StatelessWidget {
 
   Widget _buildDivider() {
     return Container(
-      height: 24,
+      height: 22,
       width: 1,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
       color: Colors.grey.withAlpha(60),
     );
   }
 }
+

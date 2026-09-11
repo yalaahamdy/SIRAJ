@@ -87,6 +87,11 @@ class LearningModule {
     return store.getQuizByLesson(lessonId);
   }
 
+  Result<List<Quiz>, Failure> getAllQuizzes() {
+    return store.getAllQuizzes();
+  }
+
+
   Result<QuizEvaluationReport, Failure> evaluateQuiz({
     required String quizId,
     required Map<String, List<int>> userAnswers,

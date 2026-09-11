@@ -249,11 +249,15 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
                         children: [
                           Row(
                             children: [
-                              const Text(
-                                'إذاعة القرآن الكريم من القاهرة',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13.5,
+                              const Flexible(
+                                child: Text(
+                                  'إذاعة القرآن الكريم من القاهرة',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13.5,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -295,7 +299,7 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
                           if (isPlaying) {
                             CairoRadioAudioService.instance.pause();
                           } else {
-                            CairoRadioAudioService.instance.play();
+                            CairoRadioAudioService.instance.playLiveRadio();
                           }
                         },
                       ),
@@ -451,7 +455,7 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
           ),
           _buildStartHereTile(
             context,
-            title: 'المناهج والمسارات: ابدأ مسار فقه الطهارة والوضوء',
+            title: 'الأكاديمية المنهجية: 12 كلية و 49 مساراً تخصصياً',
             subtitle: 'دروس تفاعلية متسلسلة مع أهداف تعليمية وأدلة شرعية واختبارات قياس الفهم.',
             icon: Icons.school_rounded,
             route: AppRouter.learning,
@@ -460,7 +464,7 @@ class _HomeDashboardViewState extends State<HomeDashboardView> {
           _buildStartHereTile(
             context,
             title: 'السيرة النبوية: الخط الزمني والأحداث الكبرى',
-            subtitle: 'استكشف 12 حدثاً محورياً من المولد الشريف والبعثة والهجرة حتى حجة الوداع.',
+            subtitle: 'استكشف 50 حدثاً مفصلاً من المولد الشريف والبعثة والهجرة حتى حجة الوداع.',
             icon: Icons.history_edu,
             route: AppRouter.seerah,
             color: const Color(0xFFD4AF37),

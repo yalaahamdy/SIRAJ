@@ -157,22 +157,28 @@ class _QuizScreenState extends State<QuizScreen> {
                   )
                 else
                   const SizedBox.shrink(),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F5132),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                Flexible(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F5132),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onPressed: selectedIndices.isEmpty
+                        ? null
+                        : () {
+                            if (isLastQuestion) {
+                              _submitQuiz();
+                            } else {
+                              setState(() => _currentQuestionIndex++);
+                            }
+                          },
+                    child: Text(
+                      isLastQuestion ? 'تأكيد الإجابات' : 'التالي',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  onPressed: selectedIndices.isEmpty
-                      ? null
-                      : () {
-                          if (isLastQuestion) {
-                            _submitQuiz();
-                          } else {
-                            setState(() => _currentQuestionIndex++);
-                          }
-                        },
-                  child: Text(isLastQuestion ? 'إنهاء الاختبار وتأكيد الإجابات' : 'التالي'),
                 ),
               ],
             ),

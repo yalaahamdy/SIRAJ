@@ -71,7 +71,7 @@ class ContinueLearningCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
-                              'تابع من حيث توقفت',
+                              'متابعة',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -79,14 +79,15 @@ class ContinueLearningCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Flexible(
+                          const SizedBox(width: 6),
+                          Expanded(
                             child: Text(
                               courseTitle,
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: Colors.white70,
                               ),
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -108,9 +109,13 @@ class ContinueLearningCard extends StatelessWidget {
                         children: [
                           const Icon(Icons.schedule, size: 12, color: Colors.white70),
                           const SizedBox(width: 4),
-                          Text(
-                            '${(lesson.sections.length * 4).clamp(10, 30)} دقيقة للقراءة والاستيعاب',
-                            style: const TextStyle(fontSize: 11, color: Colors.white70),
+                          Expanded(
+                            child: Text(
+                              '${(lesson.sections.length * 4).clamp(10, 30)} دقيقة استيعاب',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 11, color: Colors.white70),
+                            ),
                           ),
                         ],
                       ),

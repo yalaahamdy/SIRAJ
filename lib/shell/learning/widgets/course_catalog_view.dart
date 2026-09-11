@@ -136,23 +136,28 @@ class CourseCatalogView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: theme.primaryColor.withAlpha(20),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                parentPath.category,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.primaryColor,
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: theme.primaryColor.withAlpha(20),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  theme.shortTitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.primaryColor,
+                                  ),
                                 ),
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
@@ -193,18 +198,31 @@ class CourseCatalogView extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(Icons.layers_outlined, size: 13, color: Colors.grey.shade600),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${course.moduleIds.length} وحدات تفاعلية',
-                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                            Flexible(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.layers_outlined, size: 13, color: Colors.grey.shade600),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      '${course.moduleIds.length} وحدات',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 6),
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'تصفح المقرر',
+                                  'تصفح',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
