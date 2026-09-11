@@ -1589,11 +1589,9 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
               if (_allSurahAyahs.isNotEmpty)
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                   icon: Icon(
                     _filterToMemorizationTarget ? Icons.filter_alt_rounded : Icons.filter_alt_off_rounded,
-                    size: 16,
+                    size: 18,
                     color: _filterToMemorizationTarget ? AppColors.primary : Colors.grey,
                   ),
                   tooltip: _filterToMemorizationTarget ? 'عرض السورة كاملة' : 'عزل الورد فقط',
@@ -1613,9 +1611,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
               // Collapse icon
               IconButton(
                 visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 18, color: Colors.grey),
+                icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 20, color: Colors.grey),
                 tooltip: 'طي الشريط',
                 onPressed: () => setState(() => _isMemorizationBarCollapsed = true),
               ),
@@ -2226,23 +2222,20 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                   _startInPlaceRecitation(_activeRecitationTarget!, RecitationMode.recordAndReplay);
                 }
               },
-              icon: const Icon(Icons.refresh_rounded, size: 16),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
               tooltip: 'إعادة التسجيل',
               visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
             ),
             const SizedBox(width: 4),
             FilledButton(
               onPressed: _finishInPlaceRecitation,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF2E7D32),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                minimumSize: const Size(0, 26),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: const Size(0, 32),
                 visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('إنهاء', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+              child: const Text('إنهاء', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -2257,20 +2250,16 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                 icon: Icon(
                   _isRecitationAudioPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
                   color: AppColors.primary,
-                  size: 26,
+                  size: 28,
                 ),
                 visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
               ),
               // Replay 5s backwards button
               IconButton(
                 onPressed: _replayRecitationAudio5Seconds,
-                icon: const Icon(Icons.replay_5_rounded, size: 18),
+                icon: const Icon(Icons.replay_5_rounded, size: 20),
                 tooltip: 'ترجيع 5 ثوانٍ',
                 visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
               ),
               // Scrubbing Slider
               Expanded(

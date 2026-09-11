@@ -314,8 +314,8 @@ class _PlanSetupScreenState extends State<PlanSetupScreen> {
     final totalDays = (totalAyahs / _dailyNew).ceil();
     final finishDate = DateTime.now().add(Duration(days: totalDays));
 
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.35,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(

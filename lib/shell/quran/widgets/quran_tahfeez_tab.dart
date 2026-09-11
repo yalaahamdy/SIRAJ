@@ -203,8 +203,8 @@ class _QuranTahfeezTabState extends State<QuranTahfeezTab> {
     final memorizedCount = _surahsSummary.fold<int>(0, (sum, s) => sum + s.memorizedAyahsCount);
     final overallProgress = totalAyahsCount > 0 ? (memorizedCount / totalAyahsCount) * 100 : 0.0;
 
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.35,
       child: RefreshIndicator(
         onRefresh: _loadTahfeezData,
         child: SingleChildScrollView(

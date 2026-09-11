@@ -118,18 +118,19 @@ class AyahActionBottomSheet extends StatelessWidget {
             // Ayah Preview Box
             Container(
               width: double.infinity,
+              constraints: const BoxConstraints(maxHeight: 140),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: (isDark ? AppColors.surfaceDark : AppColors.primaryLight).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: (isDark ? AppColors.borderDark : AppColors.borderLight)),
               ),
-              child: Text(
-                ayah.textUthmani,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(fontFamily: 'Amiri', fontSize: 16, height: 1.8),
+              child: SingleChildScrollView(
+                child: Text(
+                  ayah.textUthmani,
+                  textDirection: TextDirection.rtl,
+                  style: const TextStyle(fontFamily: 'Amiri', fontSize: 16, height: 1.8),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.m),

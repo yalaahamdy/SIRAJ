@@ -64,6 +64,7 @@ class _RitualStepDetailScreenState extends State<RitualStepDetailScreen> {
   Widget build(BuildContext context) {
     final refsRes = widget.module.resolveStepReferences(widget.step.stepId);
     final refs = refsRes.isSuccess ? refsRes.valueOrNull! : const StepResolvedReferences();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -94,8 +95,12 @@ class _RitualStepDetailScreenState extends State<RitualStepDetailScreen> {
                           label: Text(
                             widget.step.phase.labelArabic,
                             overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF0F5132),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          backgroundColor: Colors.teal.shade50,
+                          backgroundColor: isDark ? const Color(0xFF064E3B) : Colors.teal.shade50,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -104,8 +109,16 @@ class _RitualStepDetailScreenState extends State<RitualStepDetailScreen> {
                           label: Text(
                             widget.step.isRequired ? 'ركن / واجب' : 'سنة ومستحب',
                             overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: widget.step.isRequired
+                                  ? (isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E))
+                                  : (isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF)),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          backgroundColor: widget.step.isRequired ? Colors.amber.shade100 : Colors.blue.shade50,
+                          backgroundColor: widget.step.isRequired
+                              ? (isDark ? const Color(0xFF451A03) : Colors.amber.shade100)
+                              : (isDark ? const Color(0xFF172554) : Colors.blue.shade50),
                         ),
                       ),
                     ],
@@ -157,20 +170,31 @@ class _RitualStepDetailScreenState extends State<RitualStepDetailScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : Colors.grey.shade300,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.verified, size: 16, color: Colors.teal),
-                    SizedBox(width: 6),
+                    Icon(
+                      Icons.verified,
+                      size: 16,
+                      color: isDark ? const Color(0xFF2DD4BF) : Colors.teal,
+                    ),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'التوثيق والمصادر المعتمدة (§41, §42):',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                        ),
                       ),
                     ),
                   ],
@@ -178,7 +202,10 @@ class _RitualStepDetailScreenState extends State<RitualStepDetailScreen> {
                 const SizedBox(height: 6),
                 Text(
                   'المصادر المرجعية: ${widget.step.sourceIds.join("، ")}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade700,
+                  ),
                 ),
               ],
             ),

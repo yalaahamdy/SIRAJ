@@ -113,8 +113,8 @@ class _PastMemorizationExamScreenState extends State<PastMemorizationExamScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.35,
       child: Scaffold(
       appBar: AppBar(
         title: const FittedBox(

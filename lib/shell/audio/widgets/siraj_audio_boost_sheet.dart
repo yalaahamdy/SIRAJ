@@ -39,10 +39,16 @@ class SirajAudioBoostSheet extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.88,
+            ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
               // Drag handle
               Container(
                 width: 40,
@@ -293,7 +299,10 @@ class SirajAudioBoostSheet extends StatelessWidget {
               const SizedBox(height: 10),
             ],
           ),
-        );
+        ),
+      ),
+    ),
+  );
       },
     );
   }

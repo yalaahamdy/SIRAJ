@@ -13,6 +13,7 @@ class SacredLocationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final locRes = module.getAllLocations();
     final locations = locRes.isSuccess ? locRes.valueOrNull! : <SacredLocation>[];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -29,14 +30,20 @@ class SacredLocationsScreen extends StatelessWidget {
                   elevation: 1.5,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ExpansionTile(
-                    leading: const Icon(Icons.map_outlined, color: Colors.teal),
+                    leading: Icon(
+                      Icons.map_outlined,
+                      color: isDark ? const Color(0xFF2DD4BF) : Colors.teal,
+                    ),
                     title: const Text(
                       'خريطة المشاعر والمواقيت التفاعلية',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
-                    subtitle: const Text(
+                    subtitle: Text(
                       'عرض جغرافي بصري تفاعلي للمشاعر والمواقيت بدون إنترنت',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600,
+                      ),
                     ),
                     children: [
                       Padding(
@@ -86,7 +93,7 @@ class SacredLocationsScreen extends StatelessWidget {
                             'السياق الشرعي والتاريخي: ${l.historicalContext}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade700,
+                              color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade700,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
