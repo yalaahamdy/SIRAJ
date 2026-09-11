@@ -71,8 +71,16 @@ class LearningModule {
     return store.getCourse(courseId);
   }
 
+  Result<List<Course>, Failure> getAllCourses() {
+    return store.getAllCourses();
+  }
+
   Result<Lesson, Failure> getLesson(String lessonId) {
     return lessonEngine.getLesson(lessonId);
+  }
+
+  Result<List<Lesson>, Failure> getAllLessons() {
+    return store.getAllLessons();
   }
 
   Result<Quiz, Failure> getQuizByLesson(String lessonId) {
