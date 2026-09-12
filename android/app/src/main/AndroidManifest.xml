@@ -54,11 +54,12 @@
             android:value="2" />
 
         <!-- Receivers for flutter_local_notifications background exact alarms and reboot rescheduling -->
+        <!-- CRITICAL FIX: exported="true" is REQUIRED so AlarmManager can fire these from outside the app process -->
         <receiver
-            android:exported="false"
+            android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver
-            android:exported="false"
+            android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -68,7 +69,7 @@
             </intent-filter>
         </receiver>
         <receiver
-            android:exported="false"
+            android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
 
         <!-- Foreground Service for persistent audio playback when screen is locked -->

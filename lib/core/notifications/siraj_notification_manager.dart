@@ -6,6 +6,16 @@ import 'package:timezone/timezone.dart' as tz;
 import 'siraj_media_notification_service.dart';
 import 'siraj_native_overlay_bridge.dart';
 
+/// معالج الإشعارات في الخلفية (يُشغَّل في Isolate منفصل عند إغلاق التطبيق)
+/// REQUIRED annotation: يجب أن يكون خارج الكلاس وعلى مستوى الملف
+@pragma('vm:entry-point')
+void sirajNotificationBackgroundHandler(NotificationResponse response) {
+  // هذه الدالة تُشغَّل حتى لو كان التطبيق مغلقاً كليًا
+  // لا يمكن هنا استخدام BuildContext أو Navigator
+  // يمكن هنا فقط تسجيل الحدث أو تنفيذ عمليات خفيفة
+  debugPrint('[BGHandler] Notification received in background: id=${response.id}, payload=${response.payload}');
+}
+
 /// مدير إشعارات سِراج المحلية للصلوات والأذكار والوسائط (§17, §32)
 class SirajNotificationManager {
   static final SirajNotificationManager instance = SirajNotificationManager._internal();
@@ -103,6 +113,8 @@ class SirajNotificationManager {
           debugPrint('Notification clicked: payload=${response.payload}, actionId=${response.actionId}');
           _handleNotificationResponse(response);
         },
+        // CRITICAL: يُسجَّل هنا معالج الخلفية ليعمل حتى لو كان التطبيق مغلقاً كليًا
+        onDidReceiveBackgroundNotificationResponse: sirajNotificationBackgroundHandler,
       );
 
       // إنشاء قنوات أندرويد الرسمية

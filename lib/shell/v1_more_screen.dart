@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../modules/companion/companion_module.dart';
 import 'companion/companion_preferences_screen.dart';
 import 'companion/federated_search_screen.dart';
+import 'prayer/screens/siraj_notifications_diagnostic_screen.dart';
 import 'routing/app_router.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_spacing.dart';
@@ -246,6 +247,21 @@ class V1MoreHomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.s),
 
+          _buildTile(
+            context,
+            icon: Icons.notifications_active_rounded,
+            title: 'تشخيص إشعارات سِراج الخارجية',
+            subtitle: 'فحص ومنح أذونات الإشعارات خارج التطبيق واختبارها',
+            color: const Color(0xFF16A34A),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SirajNotificationsDiagnosticScreen(),
+                ),
+              );
+            },
+          ),
           _buildTile(
             context,
             icon: Icons.shield_rounded,

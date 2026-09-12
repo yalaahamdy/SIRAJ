@@ -40,6 +40,7 @@ import 'theme/app_theme_controller.dart';
 import '../core/audio/siraj_feedback_audio_service.dart';
 import '../core/notifications/siraj_notification_manager.dart';
 import '../core/notifications/siraj_media_notification_service.dart';
+import '../core/notifications/siraj_native_overlay_bridge.dart';
 import 'prayer/screens/siraj_athan_full_screen_view.dart';
 import '../core/notifications/siraj_auto_scheduler_service.dart';
 import 'v1_more_screen.dart';
@@ -226,6 +227,15 @@ class _V1AppShellState extends State<V1AppShell> with WidgetsBindingObserver {
         Permission.location,
       ].request();
       await SirajNotificationManager.instance.requestPermissions();
+
+      // الإصلاح الجذري: طلب استثناء توفير الطاقة (ضروري لعمل AlarmManager في الخلفية)
+      final isIgnoringBattery = await SirajNativeOverlayBridge.isIgnoringBatteryOptimizations();
+      if (!isIgnoringBattery) {
+        await SirajNativeOverlayBridge.requestIgnoreBatteryOptimizations();
+      }
+
+      // طلب إذن الشاشة الكاملة (مطلوب على Android 14+)
+      await SirajNativeOverlayBridge.requestFullScreenIntentPermission();
     } catch (_) {}
 
     if (mounted) {
