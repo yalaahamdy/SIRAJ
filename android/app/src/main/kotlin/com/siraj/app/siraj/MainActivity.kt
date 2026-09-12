@@ -77,6 +77,21 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
                 }
+                "requestExactAlarmsPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        try {
+                            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    } else {
+                        result.success(true)
+                    }
+                }
                 "requestOverlayPermission" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         val intent = Intent(
@@ -139,7 +154,7 @@ class MainActivity : FlutterActivity() {
                         val id = call.argument<Int>("id") ?: 99998
                         val title = call.argument<String>("title") ?: "أذان سِراج — الله أكبر"
                         val body = call.argument<String>("body") ?: "حي على الصلاة، حي على الفلاح"
-                        val triggerAtMillis = call.argument<Long>("triggerAtMillis") ?: (System.currentTimeMillis() + 10000)
+                        val triggerAtMillis = (call.argument<Number>("triggerAtMillis"))?.toLong() ?: (System.currentTimeMillis() + 10000)
                         val sound = call.argument<String>("sound") ?: "athan_abdulbasit"
 
                         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager

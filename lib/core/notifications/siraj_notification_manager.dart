@@ -40,7 +40,7 @@ class SirajNotificationManager {
   void Function(String? payload)? onNotificationTapped;
 
   // 1. القناة المخصصة للأذان الصوتي الكامل ذو الأولوية القصوى (Alarm Priority)
-  static const String athanChannelId = 'siraj_athan_channel_v5';
+  static const String athanChannelId = 'siraj_athan_channel_v6';
   static const String athanChannelName = 'صوت وأذان الصلاة الشريف';
   static const String athanChannelDescription = 'تنبيهات الأذان بصوت الشيخ عبد الباسط عبد الصمد في مواقيت الصلاة';
 
@@ -128,6 +128,7 @@ class SirajNotificationManager {
             'siraj_athan_channel_v2',
             'siraj_athan_channel_v3',
             'siraj_athan_channel_v4',
+            'siraj_athan_channel_v5',
             'siraj_standard_channel_v3',
             'siraj_standard_channel_v4',
           ]) {

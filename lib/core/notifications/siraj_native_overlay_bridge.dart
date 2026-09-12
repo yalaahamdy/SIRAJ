@@ -125,6 +125,18 @@ class SirajNativeOverlayBridge {
     }
   }
 
+  /// يطلب إذن جدولة المنبهات الدقيقة بفتح شاشة المنبهات والتذكيرات في أندرويد 12+
+  static Future<bool> requestExactAlarmsPermission() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+    try {
+      final res = await _channel.invokeMethod<bool>('requestExactAlarmsPermission');
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error requesting exact alarms permission: $e');
+      return false;
+    }
+  }
+
   /// جدولة منبه دقيق بأعلى أولوية في نظام أندرويد (AlarmClock) عبر الكود الأصلي للتحرر من أي قيود
   static Future<bool> scheduleNativeAlarm({
     required int id,

@@ -19,7 +19,7 @@ import androidx.core.app.NotificationCompat
 class SirajAlarmReceiver : BroadcastReceiver() {
 
     companion object {
-        const val CHANNEL_ID = "siraj_athan_channel_v5"
+        const val CHANNEL_ID = "siraj_athan_channel_v6"
         const val CHANNEL_NAME = "صوت وأذان الصلاة الشريف"
         const val EXTRA_ID = "siraj_alarm_id"
         const val EXTRA_TITLE = "siraj_alarm_title"
@@ -70,14 +70,16 @@ class SirajAlarmReceiver : BroadcastReceiver() {
             ).apply {
                 description = "تنبيهات الأذان الشريف في مواقيت الصلاة"
                 enableVibration(true)
-                setSound(soundUri, audioAttr)
+                if (soundResName.isNotEmpty()) {
+                    setSound(soundUri, audioAttr)
+                }
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             notificationManager.createNotificationChannel(channel)
         }
 
         // 3. Launch intent for clicking or full screen
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+        val launchIntent = (context.packageManager.getLaunchIntentForPackage(context.packageName) ?: Intent(context, MainActivity::class.java)).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("payload", "siraj_athan_alarm")
         }
@@ -97,7 +99,7 @@ class SirajAlarmReceiver : BroadcastReceiver() {
         )
 
         val smallIconResId = context.resources.getIdentifier("ic_notification", "drawable", context.packageName).let {
-            if (it != 0) it else android.R.drawable.ic_lock_idle_alarm
+            if (it != 0) it else context.applicationInfo.icon
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -110,8 +112,11 @@ class SirajAlarmReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setFullScreenIntent(pendingIntent, true)
-            .setSound(soundUri, AudioManager.STREAM_ALARM)
             .addAction(android.R.drawable.ic_media_pause, "إيقاف الأذان", stopPendingIntent)
+
+        if (soundResName.isNotEmpty()) {
+            builder.setSound(soundUri, AudioManager.STREAM_ALARM)
+        }
 
         try {
             notificationManager.notify(id, builder.build())
@@ -120,32 +125,49 @@ class SirajAlarmReceiver : BroadcastReceiver() {
         }
 
         // 4. Guaranteed Audio playback via MediaPlayer directly
-        try {
-            stopActiveSound()
-            activeMediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                setDataSource(context, soundUri)
-                prepare()
-                start()
-                setOnCompletionListener { mp ->
-                    try {
-                        mp.release()
-                    } catch (_: Exception) {}
-                    activeMediaPlayer = null
+        if (soundResName.isNotEmpty()) {
+            val soundId = context.resources.getIdentifier(soundResName, "raw", context.packageName)
+            if (soundId != 0) {
+                try {
+                    stopActiveSound()
+                    activeMediaPlayer = MediaPlayer().apply {
+                        setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
+                        setDataSource(context, soundUri)
+                        prepare()
+                        start()
+                        setOnCompletionListener { mp ->
+                            try {
+                                mp.release()
+                            } catch (_: Exception) {}
+                            activeMediaPlayer = null
+                            try {
+                                if (wakeLock?.isHeld == true) {
+                                    wakeLock.release()
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("SirajAlarmReceiver", "Error playing media player: ${e.message}")
                     try {
                         if (wakeLock?.isHeld == true) {
                             wakeLock.release()
                         }
                     } catch (_: Exception) {}
                 }
+            } else {
+                try {
+                    if (wakeLock?.isHeld == true) {
+                        wakeLock.release()
+                    }
+                } catch (_: Exception) {}
             }
-        } catch (e: Exception) {
-            Log.e("SirajAlarmReceiver", "Error playing media player: ${e.message}")
+        } else {
             try {
                 if (wakeLock?.isHeld == true) {
                     wakeLock.release()

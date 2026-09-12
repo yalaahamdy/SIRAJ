@@ -164,7 +164,10 @@ class _SirajNotificationsDiagnosticScreenState
                     subtitle: 'مطلوب لظهور الإشعار في الستارة وشاشة القفل',
                     isGranted: _notificationsEnabled ?? false,
                     onRequest: () async {
-                      await SirajNotificationManager.instance.requestPermissions();
+                      final granted = await SirajNotificationManager.instance.requestPermissions();
+                      if (!granted) {
+                        await SirajNativeOverlayBridge.openNotificationSettings();
+                      }
                       _checkAllPermissions();
                     },
                   ),
@@ -178,6 +181,7 @@ class _SirajNotificationsDiagnosticScreenState
                     isGranted: _exactAlarmsEnabled ?? false,
                     onRequest: () async {
                       try {
+                        await SirajNativeOverlayBridge.requestExactAlarmsPermission();
                         final androidPlugin = SirajNotificationManager
                             .instance
                             .notificationsPlugin
