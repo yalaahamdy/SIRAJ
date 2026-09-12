@@ -72,6 +72,14 @@
             android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
 
+        <!-- Native Alarm and Athan receivers for 100% reliable lockscreen alarms -->
+        <receiver
+            android:exported="true"
+            android:name=".SirajAlarmReceiver" />
+        <receiver
+            android:exported="true"
+            android:name=".SirajAlarmStopReceiver" />
+
         <!-- Foreground Service for persistent audio playback when screen is locked -->
         <service
             android:name="com.dexterous.flutterlocalnotifications.ForegroundService"

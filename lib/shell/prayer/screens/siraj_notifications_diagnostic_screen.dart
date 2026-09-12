@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../core/notifications/siraj_notification_manager.dart';
 import '../../../core/notifications/siraj_native_overlay_bridge.dart';
 
-/// شاشة تشخيص صلاحيات الإشعارات الخارجية لسِراج
+/// شاشة تشخيص صلاحيات ومنظومة الإشعارات الخارجية لسِراج
 class SirajNotificationsDiagnosticScreen extends StatefulWidget {
   const SirajNotificationsDiagnosticScreen({super.key});
 
@@ -18,12 +19,19 @@ class _SirajNotificationsDiagnosticScreenState
   bool? _exactAlarmsEnabled;
   bool? _batteryOptimizationIgnored;
   bool _isLoading = true;
-  bool _testScheduled = false;
+  int _countdownSeconds = 0;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
     _checkAllPermissions();
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkAllPermissions() async {
@@ -48,18 +56,64 @@ class _SirajNotificationsDiagnosticScreenState
     }
   }
 
-  Future<void> _scheduleTestNotification() async {
-    await SirajNotificationManager.instance.scheduleQuickTestNotification(seconds: 5);
+  Future<void> _triggerImmediateTest() async {
+    final res = await SirajNotificationManager.instance.showImmediateTestNotification();
     if (mounted) {
-      setState(() => _testScheduled = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            res
+                ? '🔔 تم إرسال الإشعار الفوري الآن! اسحب شريط الإشعارات العلوي للتحقق'
+                : 'تعذر إرسال الإشعار، يرجى مراجعة إعدادات الإشعارات',
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: res ? const Color(0xFF16A34A) : Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  Future<void> _schedule10SecondsTest() async {
+    _countdownTimer?.cancel();
+    setState(() => _countdownSeconds = 10);
+
+    await SirajNotificationManager.instance.scheduleQuickTestNotification(seconds: 10);
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_countdownSeconds <= 1) {
+        timer.cancel();
+        setState(() => _countdownSeconds = 0);
+      } else {
+        setState(() => _countdownSeconds--);
+      }
+    });
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            '✅ تم جدولة إشعار اختباري بعد 5 ثوانٍ\nأغلق التطبيق أو اقفل الشاشة الآن للتأكد',
+            '⏰ تم ضبط المنبه بعد 10 ثوانٍ!\nاقفل شاشة هاتفك الآن وضع الهاتف جانباً',
             textAlign: TextAlign.center,
           ),
-          duration: Duration(seconds: 5),
-          backgroundColor: Colors.green,
+          duration: Duration(seconds: 6),
+          backgroundColor: Color(0xFF2563EB),
+        ),
+      );
+    }
+  }
+
+  Future<void> _stopSound() async {
+    await SirajNativeOverlayBridge.stopActiveSound();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم إيقاف صوت الأذان', textAlign: TextAlign.center),
+          duration: Duration(seconds: 2),
         ),
       );
     }
@@ -95,25 +149,32 @@ class _SirajNotificationsDiagnosticScreenState
                 children: [
                   _buildHeader(theme, isDark),
                   const SizedBox(height: 20),
+
+                  // أذونات النظام
+                  Text(
+                    'حالة الأذونات المطلوبة',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
                   _buildPermissionCard(
                     theme: theme,
                     isDark: isDark,
                     icon: Icons.notifications_active_rounded,
                     title: 'إذن الإشعارات العام',
-                    subtitle: 'مطلوب لعرض أي إشعار من التطبيق',
+                    subtitle: 'مطلوب لظهور الإشعار في الستارة وشاشة القفل',
                     isGranted: _notificationsEnabled ?? false,
                     onRequest: () async {
                       await SirajNotificationManager.instance.requestPermissions();
                       _checkAllPermissions();
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   _buildPermissionCard(
                     theme: theme,
                     isDark: isDark,
                     icon: Icons.alarm_rounded,
-                    title: 'جدولة المنبهات الدقيقة',
-                    subtitle: 'مطلوب للإشعارات في وقتها تماماً (Android 12+)',
+                    title: 'جدولة المنبهات الدقيقة (Exact Alarm)',
+                    subtitle: 'مطلوب لدقة موعد الأذان بالثانية دون تأخير',
                     isGranted: _exactAlarmsEnabled ?? false,
                     onRequest: () async {
                       try {
@@ -127,23 +188,52 @@ class _SirajNotificationsDiagnosticScreenState
                       _checkAllPermissions();
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   _buildPermissionCard(
                     theme: theme,
                     isDark: isDark,
                     icon: Icons.battery_saver_rounded,
-                    title: 'استثناء توفير الطاقة',
-                    subtitle: 'يمنع النظام من إيقاف إشعارات سِراج عند قفل الشاشة',
+                    title: 'استثناء توفير الطاقة (Battery Optimization)',
+                    subtitle: 'يمنع النظام من إيقاف منبهات سِراج عند قفل الشاشة',
                     isGranted: _batteryOptimizationIgnored ?? false,
                     onRequest: () async {
                       await SirajNativeOverlayBridge.requestIgnoreBatteryOptimizations();
                       _checkAllPermissions();
                     },
                   ),
-                  const SizedBox(height: 24),
-                  _buildTestButton(theme, isDark),
+                  const SizedBox(height: 20),
+
+                  // مركز الاختبارات العملية
+                  Text(
+                    'مركز الاختبار المباشر',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildImmediateTestButton(theme, isDark),
                   const SizedBox(height: 12),
+                  _buildLockscreenTestButton(theme, isDark),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _stopSound,
+                    icon: const Icon(Icons.volume_off_rounded, color: Colors.red),
+                    label: const Text('إيقاف صوت الأذان الشغال حالياً', style: TextStyle(color: Colors.red)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(14),
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // اختصارات إعدادات النظام الحيوية
+                  Text(
+                    'حلول إضافية لهواتف شاومي وسامسونج وهواوي',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSystemSettingsCard(theme, isDark),
+                  const SizedBox(height: 16),
                   _buildStatusSummary(theme, isDark),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -169,8 +259,8 @@ class _SirajNotificationsDiagnosticScreenState
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'ما سبب عدم ظهور الإشعارات؟',
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  'ضمان انطلاق صوت الأذان والإشعارات خارجياً',
+                  style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF3B82F6),
                   ),
@@ -180,10 +270,9 @@ class _SirajNotificationsDiagnosticScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'لكي تعمل إشعارات الأذان والتذكيرات خارج التطبيق، '
-            'يحتاج سِراج إلى الأذونات التالية. '
-            'إذا كان أي إذن ناقصاً، اضغط "منح" بجانبه.',
-            style: theme.textTheme.bodyMedium?.copyWith(
+            'تطبق أنظمة أندرويد قيوداً صارمة لمنع التطبيقات من العمل أثناء قفل الشاشة. '
+            'جرّب أولاً "إرسال إشعار فوري" للتأكد من خروج الصوت، ثم استخدم "اختبار المنبه الخارجي" واقفل الشاشة.',
+            style: theme.textTheme.bodySmall?.copyWith(
               color: isDark ? Colors.grey[300] : Colors.grey[700],
               height: 1.5,
             ),
@@ -209,18 +298,11 @@ class _SirajNotificationsDiagnosticScreenState
         : Colors.red.withValues(alpha: 0.4);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -256,7 +338,7 @@ class _SirajNotificationsDiagnosticScreenState
           ),
           const SizedBox(width: 8),
           if (isGranted)
-            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 28)
+            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 26)
           else
             TextButton(
               onPressed: onRequest,
@@ -268,26 +350,72 @@ class _SirajNotificationsDiagnosticScreenState
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('منح', style: TextStyle(fontSize: 12)),
+              child: const Text('منح', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildTestButton(ThemeData theme, bool isDark) {
+  Widget _buildImmediateTestButton(ThemeData theme, bool isDark) {
     return FilledButton.icon(
-      onPressed: _testScheduled ? null : _scheduleTestNotification,
-      icon: const Icon(Icons.send_rounded),
+      onPressed: _triggerImmediateTest,
+      icon: const Icon(Icons.notifications_active_rounded),
+      label: const Text('1. إرسال إشعار فوري حالاً (الآن)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.all(16),
+        backgroundColor: const Color(0xFF16A34A),
+      ),
+    );
+  }
+
+  Widget _buildLockscreenTestButton(ThemeData theme, bool isDark) {
+    final isCounting = _countdownSeconds > 0;
+    return FilledButton.icon(
+      onPressed: isCounting ? null : _schedule10SecondsTest,
+      icon: Icon(isCounting ? Icons.hourglass_top_rounded : Icons.timer_rounded),
       label: Text(
-        _testScheduled
-            ? '✅ تم الإرسال — أغلق التطبيق الآن للاختبار'
-            : 'اختبار إشعار خارجي (بعد 5 ثوانٍ)',
+        isCounting
+            ? '⏳ ينطلق بعد $_countdownSeconds ثوانٍ — اقفل الشاشة الآن!'
+            : '2. اختبار منبه خارجي (بعد 10 ثوانٍ فوق القفل)',
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
       ),
       style: FilledButton.styleFrom(
         padding: const EdgeInsets.all(16),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        backgroundColor: _testScheduled ? Colors.grey : const Color(0xFF16A34A),
+        backgroundColor: isCounting ? Colors.amber[800] : const Color(0xFF2563EB),
+      ),
+    );
+  }
+
+  Widget _buildSystemSettingsCard(ThemeData theme, bool isDark) {
+    final cardBg = isDark ? const Color(0xFF1F2937) : Colors.white;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.settings_suggest_rounded, color: Color(0xFF856404)),
+            title: const Text('إعدادات إشعارات سِراج بالنظام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            subtitle: const Text('للتأكد من تفعيل الظهور فوق الشاشة وصوت المنبه', style: TextStyle(fontSize: 12)),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+            onTap: () => SirajNativeOverlayBridge.openNotificationSettings(),
+          ),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.power_settings_new_rounded, color: Color(0xFF1E3A8A)),
+            title: const Text('إعدادات التشغيل التلقائي (Auto-start)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            subtitle: const Text('ضروري جداً لهواتف Xiaomi, Huawei, Oppo, Samsung', style: TextStyle(fontSize: 12)),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+            onTap: () => SirajNativeOverlayBridge.openAutoStartSettings(),
+          ),
+        ],
       ),
     );
   }
@@ -320,8 +448,8 @@ class _SirajNotificationsDiagnosticScreenState
           Expanded(
             child: Text(
               allGranted
-                  ? 'جميع الأذونات ممنوحة ✅ — الإشعارات ستعمل خارج التطبيق'
-                  : 'بعض الأذونات ناقصة — امنحها جميعاً لضمان عمل الإشعارات',
+                  ? 'جميع الأذونات ممنوحة بنجاح ✅'
+                  : 'بعض الأذونات ناقصة — امنحها لضمان انطلاق المنبهات',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: allGranted
                     ? (isDark ? Colors.green[300] : Colors.green[700])

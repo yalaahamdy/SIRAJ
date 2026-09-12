@@ -2,6 +2,7 @@ package com.siraj.app.siraj
 
 import android.app.AlarmManager
 import android.app.KeyguardManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.audiofx.Equalizer
@@ -132,6 +133,122 @@ class MainActivity : FlutterActivity() {
                     } else {
                         result.success(true)
                     }
+                }
+                "scheduleNativeAlarm" -> {
+                    try {
+                        val id = call.argument<Int>("id") ?: 99998
+                        val title = call.argument<String>("title") ?: "أذان سِراج — الله أكبر"
+                        val body = call.argument<String>("body") ?: "حي على الصلاة، حي على الفلاح"
+                        val triggerAtMillis = call.argument<Long>("triggerAtMillis") ?: (System.currentTimeMillis() + 10000)
+                        val sound = call.argument<String>("sound") ?: "athan_abdulbasit"
+
+                        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                        val intent = Intent(this, SirajAlarmReceiver::class.java).apply {
+                            putExtra(SirajAlarmReceiver.EXTRA_ID, id)
+                            putExtra(SirajAlarmReceiver.EXTRA_TITLE, title)
+                            putExtra(SirajAlarmReceiver.EXTRA_BODY, body)
+                            putExtra(SirajAlarmReceiver.EXTRA_SOUND, sound)
+                        }
+
+                        val pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT or
+                                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+                        val pendingIntent = PendingIntent.getBroadcast(this, id, intent, pendingFlags)
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, pendingIntent)
+                            alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                        } else {
+                            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                        }
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "cancelNativeAlarm" -> {
+                    try {
+                        val id = call.argument<Int>("id") ?: 99998
+                        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                        val intent = Intent(this, SirajAlarmReceiver::class.java)
+                        val pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT or
+                                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+                        val pendingIntent = PendingIntent.getBroadcast(this, id, intent, pendingFlags)
+                        alarmManager.cancel(pendingIntent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "showNativeNotificationNow" -> {
+                    try {
+                        val id = call.argument<Int>("id") ?: 99999
+                        val title = call.argument<String>("title") ?: "تجربة أذان سِراج الفورية"
+                        val body = call.argument<String>("body") ?: "الله أكبر — التنبيهات والصوت تعمل بنجاح فوري!"
+                        val sound = call.argument<String>("sound") ?: "athan_abdulbasit"
+
+                        val intent = Intent(this, SirajAlarmReceiver::class.java).apply {
+                            putExtra(SirajAlarmReceiver.EXTRA_ID, id)
+                            putExtra(SirajAlarmReceiver.EXTRA_TITLE, title)
+                            putExtra(SirajAlarmReceiver.EXTRA_BODY, body)
+                            putExtra(SirajAlarmReceiver.EXTRA_SOUND, sound)
+                        }
+                        sendBroadcast(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "stopActiveSound" -> {
+                    SirajAlarmReceiver.stopActiveSound()
+                    result.success(true)
+                }
+                "openNotificationSettings" -> {
+                    try {
+                        val intent = Intent().apply {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                            } else {
+                                action = "android.settings.APP_NOTIFICATION_SETTINGS"
+                                putExtra("app_package", packageName)
+                                putExtra("app_uid", applicationInfo.uid)
+                            }
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "openAutoStartSettings" -> {
+                    val intents = listOf(
+                        Intent().setComponent(android.content.ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.letv.android.letvsafe", "com.letv.android.letvsafe.AutobootManageActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager")),
+                        Intent().setComponent(android.content.ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.htc.pitroad", "com.htc.pitroad.landingpage.activity.LandingPageActivity")),
+                        Intent().setComponent(android.content.ComponentName("com.asus.mobilemanager", "com.asus.mobilemanager.entry.FunctionActivity"))
+                    )
+                    var opened = false
+                    for (intent in intents) {
+                        try {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(intent)
+                            opened = true
+                            break
+                        } catch (_: Exception) {}
+                    }
+                    result.success(opened)
                 }
                 else -> result.notImplemented()
             }

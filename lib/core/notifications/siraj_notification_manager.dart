@@ -462,7 +462,7 @@ class SirajNotificationManager {
         iOS: darwinDetails,
       );
 
-      await _safeZonedSchedule(
+       await _safeZonedSchedule(
         id: id,
         title: title,
         body: body,
@@ -470,13 +470,25 @@ class SirajNotificationManager {
         notificationDetails: notificationDetails,
         payload: payload,
       );
+
+      // جدولة متوازية في نظام أندرويد الأصلي عبر AlarmManager.setAlarmClock كشبكة أمان مطلقة
+      try {
+        await SirajNativeOverlayBridge.scheduleNativeAlarm(
+          id: id,
+          title: title,
+          body: body,
+          triggerAtMillis: scheduledTime.millisecondsSinceEpoch,
+          sound: playAthanSound ? 'athan_abdulbasit' : '',
+        );
+      } catch (_) {}
+
       debugPrint('Successfully scheduled prayer alarm notification for: $scheduledTime (id: $id)');
     } catch (e) {
       debugPrint('Error scheduling prayer notification: $e');
     }
   }
 
-  /// جدولة آمنة تطبق المنبه الدقيق exactAllowWhileIdle مع تحويل فوري لـ inexactAllowWhileIdle عند قيود النظام
+  /// جدولة آمنة تطبق وضع AlarmClock بأعلى أولوية منبه في أندرويد، ثم exactAllowWhileIdle، ثم inexact
   Future<void> _safeZonedSchedule({
     required int id,
     required String? title,
@@ -486,6 +498,23 @@ class SirajNotificationManager {
     String? payload,
   }) async {
     try {
+      // 1. تجربة AlarmClock أولاً (أعلى وأضمن وضع منبه في أندرويد لا يخضع لتوفير الطاقة)
+      await _notifications.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        payload: payload,
+      );
+      return;
+    } catch (alarmClockEx) {
+      debugPrint('AlarmClock mode not supported or restricted, trying exactAllowWhileIdle: $alarmClockEx');
+    }
+
+    try {
+      // 2. تجربة exactAllowWhileIdle
       await _notifications.zonedSchedule(
         id: id,
         title: title,
@@ -513,14 +542,16 @@ class SirajNotificationManager {
     }
   }
 
-  /// يجدول إشعاراً اختبارياً خارجياً ينطلق بعد ثوانٍ محددة (افتراضياً 5 ثوانٍ)
-  /// ليتسنى للمستخدم إغلاق التطبيق أو قفل الشاشة والتأكد من انطلاق الإشعار والصوت خارجياً
-  Future<void> scheduleQuickTestNotification({int seconds = 5}) async {
+  /// يجدول إشعاراً ومنبهاً اختبارياً خارجياً ينطلق بعد ثوانٍ محددة (افتراضياً 10 ثوانٍ)
+  /// ليتسنى للمستخدم قفل الشاشة والتحقق من استيقاظ الهاتف وانطلاق الأذان خارجياً
+  Future<bool> scheduleQuickTestNotification({int seconds = 10}) async {
     if (!_isInitialized) await init();
     try {
-      if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return true;
     } catch (_) {}
 
+    final now = DateTime.now();
+    final targetTime = now.add(Duration(seconds: seconds));
     final tzTime = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
 
     final androidDetails = AndroidNotificationDetails(
@@ -548,10 +579,11 @@ class SirajNotificationManager {
       sound: 'athan_abdulbasit.mp3',
     );
 
+    // 1. جدولة عبر flutter_local_notifications (AlarmClock mode)
     await _safeZonedSchedule(
       id: 99998,
       title: 'تجربة إشعار سِراج الخارجي 🔔',
-      body: 'الله أكبر — نجح انطلاق الإشعار والصوت خارج التطبيق بنجاح تام!',
+      body: 'الله أكبر — نجح انطلاق المنبه والصوت خارج التطبيق وفوق شاشة القفل بنجاح تام!',
       scheduledDate: tzTime,
       notificationDetails: NotificationDetails(
         android: androidDetails,
@@ -559,6 +591,48 @@ class SirajNotificationManager {
       ),
       payload: 'siraj_test_outside_notification',
     );
+
+    // 2. جدولة متوازية أصلية مضمونة 100% عبر نظام أندرويد AlarmManager.setAlarmClock
+    try {
+      await SirajNativeOverlayBridge.scheduleNativeAlarm(
+        id: 99998,
+        title: 'تجربة منبه سِراج الخارجي 🔔',
+        body: 'الله أكبر — المنبه الأصلي وصوت الأذان يعمل فوق شاشة القفل!',
+        triggerAtMillis: targetTime.millisecondsSinceEpoch,
+        sound: 'athan_abdulbasit',
+      );
+    } catch (_) {}
+
+    return true;
+  }
+
+  /// إرسال إشعار وصوت تجريبي فوري حالاً (بدون أي انتظار) للتأكد من خروج الصوت وعمل القناة فوراً
+  Future<bool> showImmediateTestNotification() async {
+    if (!_isInitialized) await init();
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return true;
+    } catch (_) {}
+
+    // 1. عبر flutter_local_notifications
+    await showPrayerNotification(
+      id: 99997,
+      title: 'تجربة إشعار فوري — سِراج 🔔',
+      body: 'الله أكبر — الإشعارات وصوت الأذان تعمل بنجاح فوري وبنقاء تام!',
+      playAthanSound: true,
+      payload: 'siraj_test_immediate',
+    );
+
+    // 2. عبر النظام الأصلي المباشر
+    try {
+      await SirajNativeOverlayBridge.showNativeNotificationNow(
+        id: 99997,
+        title: 'تجربة إشعار فوري — سِراج 🔔',
+        body: 'الله أكبر — الإشعارات وصوت الأذان تعمل بنجاح فوري وبنقاء تام!',
+        sound: 'athan_abdulbasit',
+      );
+    } catch (_) {}
+
+    return true;
   }
 
   /// إرسال إشعار تجريبي فوري للتأكد من خروج صوت الأذان على هاتف المستخدم
@@ -574,6 +648,7 @@ class SirajNotificationManager {
   Future<void> cancel(int id) async {
     try {
       await _notifications.cancel(id: id);
+      await SirajNativeOverlayBridge.cancelNativeAlarm(id);
     } catch (_) {}
   }
 

@@ -124,5 +124,99 @@ class SirajNativeOverlayBridge {
       return true;
     }
   }
+
+  /// جدولة منبه دقيق بأعلى أولوية في نظام أندرويد (AlarmClock) عبر الكود الأصلي للتحرر من أي قيود
+  static Future<bool> scheduleNativeAlarm({
+    required int id,
+    required String title,
+    required String body,
+    required int triggerAtMillis,
+    String sound = 'athan_abdulbasit',
+  }) async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('scheduleNativeAlarm', {
+        'id': id,
+        'title': title,
+        'body': body,
+        'triggerAtMillis': triggerAtMillis,
+        'sound': sound,
+      });
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error scheduling native alarm: $e');
+      return false;
+    }
+  }
+
+  /// إلغاء منبه أصلي مجدول
+  static Future<bool> cancelNativeAlarm(int id) async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('cancelNativeAlarm', {'id': id});
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error canceling native alarm: $e');
+      return false;
+    }
+  }
+
+  /// إطلاق إشعار وصوت أذان فوري عبر النظام الأصلي (بدون أي تأخير للتأكد من خروج الصوت فورا)
+  static Future<bool> showNativeNotificationNow({
+    int id = 99999,
+    String title = 'تجربة أذان سِراج الفورية 🔔',
+    String body = 'الله أكبر — التنبيهات والصوت تعمل بنجاح فوري وبنقاء تام!',
+    String sound = 'athan_abdulbasit',
+  }) async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('showNativeNotificationNow', {
+        'id': id,
+        'title': title,
+        'body': body,
+        'sound': sound,
+      });
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error showing native notification now: $e');
+      return false;
+    }
+  }
+
+  /// إيقاف صوت المنبه أو الأذان الشغال حالياً
+  static Future<bool> stopActiveSound() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('stopActiveSound');
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error stopping active sound: $e');
+      return false;
+    }
+  }
+
+  /// فتح شاشة إعدادات إشعارات التطبيق في إعدادات النظام مباشرة
+  static Future<bool> openNotificationSettings() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('openNotificationSettings');
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error opening notification settings: $e');
+      return false;
+    }
+  }
+
+  /// فتح شاشة إعدادات التشغيل التلقائي (Auto-start) لهواتف شاومي، هواوي، أوبو، سامسونج
+  static Future<bool> openAutoStartSettings() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('openAutoStartSettings');
+      return res ?? false;
+    } catch (e) {
+      debugPrint('Error opening auto-start settings: $e');
+      return false;
+    }
+  }
 }
 
